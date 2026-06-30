@@ -335,7 +335,7 @@ function renderAdminLockButtons(){
   const unlocked = isAdminUnlocked();
   [$('#btn-admin-lock-content'), $('#btn-admin-lock-rewards')].forEach(btn => {
     if(!btn) return;
-    btn.textContent = unlocked ? '🔓 mode admin actif' : '🔒 mode admin';
+    btn.textContent = unlocked ? '🔓 dev. mod actif' : '🔒 dev. mod';
     btn.title = unlocked ? 'Mode admin actif — appuie pour reverrouiller' : 'Déverrouiller le mode admin';
     btn.classList.toggle('unlocked', unlocked);
   });
