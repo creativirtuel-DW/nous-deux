@@ -14,7 +14,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<link rel="stylesheet" href="style.css?v=10">
+<link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 
@@ -97,12 +97,9 @@
 
       <!-- VUE PALIERS / RÉCOMPENSES -->
       <div id="view-rewards" class="view">
-        <div class="view-header admin-header">
-          <div>
-            <h2>Paliers &amp; récompenses</h2>
-            <p>Score d'équipe actuel : <strong id="team-score">0</strong> points</p>
-          </div>
-          <button class="admin-lock-btn" id="btn-admin-lock-rewards">🔒</button>
+        <div class="view-header">
+          <h2>Paliers &amp; récompenses</h2>
+          <p>Score d'équipe actuel : <strong id="team-score">0</strong> points</p>
         </div>
         <div id="rewards-list" class="rewards-list"></div>
 
@@ -112,16 +109,15 @@
           <h3 class="danger-title">Zone sensible</h3>
           <button class="btn-ghost danger-btn" id="btn-reset-scores">↺ Réinitialiser les scores &amp; l'historique</button>
         </div>
+
+        <button class="admin-lock-discreet" id="btn-admin-lock-rewards">🔒 mode admin</button>
       </div>
 
       <!-- VUE CONTENU -->
       <div id="view-content" class="view">
-        <div class="view-header admin-header">
-          <div>
-            <h2>Vos cartes</h2>
-            <p>Tout le monde peut ajouter. Modifier/supprimer est protégé par un code.</p>
-          </div>
-          <button class="admin-lock-btn" id="btn-admin-lock-content">🔒</button>
+        <div class="view-header">
+          <h2>Vos cartes</h2>
+          <p>Tout le monde peut ajouter une carte. Consulter, modifier ou supprimer la liste est protégé par un code.</p>
         </div>
 
         <form id="form-add-card" class="add-card-form">
@@ -140,10 +136,12 @@
           <button type="submit" class="btn-primary">Ajouter la carte</button>
         </form>
 
-        <div class="custom-cards-toolbar">
+        <div class="custom-cards-toolbar" id="custom-cards-toolbar" style="display:none;">
           <button class="filter-chip" id="btn-filter-blanks">🔍 Afficher seulement les cartes à compléter</button>
         </div>
         <div id="custom-cards-list" class="custom-cards-list"></div>
+
+        <button class="admin-lock-discreet" id="btn-admin-lock-content">🔒 mode admin</button>
       </div>
 
       <!-- VUE HISTORIQUE -->
@@ -167,7 +165,7 @@
 
 </div>
 
-<script src="cards-data.js?v=10"></script>
-<script src="app.js?v=10"></script>
+<script src="cards-data.js?v=11"></script>
+<script src="app.js?v=11"></script>
 </body>
 </html>

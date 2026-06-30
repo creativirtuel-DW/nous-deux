@@ -335,7 +335,7 @@ function renderAdminLockButtons(){
   const unlocked = isAdminUnlocked();
   [$('#btn-admin-lock-content'), $('#btn-admin-lock-rewards')].forEach(btn => {
     if(!btn) return;
-    btn.textContent = unlocked ? '🔓' : '🔒';
+    btn.textContent = unlocked ? '🔓 mode admin actif' : '🔒 mode admin';
     btn.title = unlocked ? 'Mode admin actif — appuie pour reverrouiller' : 'Déverrouiller le mode admin';
     btn.classList.toggle('unlocked', unlocked);
   });
@@ -620,7 +620,20 @@ const BLANK_MARKER = '[ … complète ici ]';
 
 function renderCustomCards(){
   const wrap = $('#custom-cards-list');
+  const toolbar = $('#custom-cards-toolbar');
   wrap.innerHTML = '';
+
+  if(!isAdminUnlocked()){
+    toolbar.style.display = 'none';
+    wrap.innerHTML = `
+      <div class="locked-notice">
+        <span class="locked-icon">🔒</span>
+        <p>La liste des cartes est privée.<br>Déverrouille le mode admin (en bas de page) pour la consulter.</p>
+      </div>
+    `;
+    return;
+  }
+  toolbar.style.display = 'block';
 
   const iconMap = { question:'💬', defi:'🔥', gage:'😈', surprise:'🎲', distance:'📱' };
   const disabled = (state && state.disabledDefaults) || {};
