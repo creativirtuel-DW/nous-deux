@@ -42,6 +42,24 @@ const DEFAULT_CARDS_RAW = [
   { cat:'surprise', text:"Organise un mini rendez-vous improvisé dans les 48h qui suivent.", pts:25 },
   { cat:'surprise', text:"Offre un massage de 5 minutes sans qu'on te le demande deux fois.", pts:15 },
   { cat:'surprise', text:"Prépare le petit-déjeuner ou le dîner surprise de l'autre, sans lui dire.", pts:20 },
+
+  // CONTENU SENSUEL (mêlé aux catégories existantes — pour pimenter la soirée)
+  { cat:'question', text:"Quel est ton fantasme que tu n'as encore jamais osé me dire ?", pts:20 },
+  { cat:'question', text:"Quelle partie de mon corps préfères-tu, et pourquoi ?", pts:15 },
+  { cat:'question', text:"Décris le moment où tu m'as désiré(e) le plus fort.", pts:15 },
+  { cat:'question', text:"Qu'est-ce que tu aimerais qu'on essaie ensemble, qu'on n'a jamais fait ?", pts:20 },
+  { cat:'question', text:"Sur une échelle de 1 à 10, à quel point as-tu envie de moi là, maintenant ?", pts:10 },
+
+  { cat:'defi', text:"Murmure-moi à l'oreille ce que tu as envie de me faire ce soir.", pts:20 },
+  { cat:'defi', text:"Embrasse-moi pendant 30 secondes, lentement, sans t'arrêter.", pts:15 },
+  { cat:'defi', text:"Déshabille-moi d'un seul vêtement, à ta façon.", pts:20 },
+  { cat:'defi', text:"Fais-moi un massage sensuel de 5 minutes, où tu veux.", pts:20 },
+  { cat:'defi', text:"Décris-moi, les yeux dans les yeux, ce que tu as envie qu'on fasse au lit ce soir.", pts:25 },
+
+  { cat:'gage', text:"Tu dois rester en sous-vêtements pour le reste de la soirée.", pts:20 },
+  { cat:'gage', text:"Envoie-moi un message coquin maintenant, peu importe où tu es.", pts:15 },
+  { cat:'gage', text:"Laisse-moi choisir ta tenue (ou ton absence de tenue) pour la suite de la soirée.", pts:20 },
+  { cat:'gage', text:"Pendant 10 minutes, tu dois répondre à toutes mes demandes sans discuter.", pts:25 },
 ];
 const DEFAULT_CARDS = DEFAULT_CARDS_RAW.map((c, i) => ({ ...c, id: 'd' + i }));
 
