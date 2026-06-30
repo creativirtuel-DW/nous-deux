@@ -350,6 +350,18 @@ main#views{ flex:1; min-height:0; position:relative; }
 .reward-check{ font-size:18px; color: var(--gold); }
 .add-btn{ margin-top:6px; }
 
+.danger-zone{
+  margin-top:24px;
+  padding-top:18px;
+  border-top:1px solid var(--line);
+}
+.danger-title{
+  font-size:11px; text-transform:uppercase; letter-spacing:0.08em;
+  color: var(--muted); margin:0 0 10px;
+}
+.danger-btn{ border-color: rgba(226,96,122,0.4); color: var(--rose); }
+.danger-btn:active{ background: rgba(226,96,122,0.1); }
+
 .add-reward-form{
   background: var(--surface);
   border:1px solid var(--line);

@@ -326,6 +326,8 @@ function renderAdminLockButtons(){
     btn.title = unlocked ? 'Mode admin actif — appuie pour reverrouiller' : 'Déverrouiller le mode admin';
     btn.classList.toggle('unlocked', unlocked);
   });
+  const dangerZone = $('#danger-zone');
+  if(dangerZone) dangerZone.style.display = unlocked ? 'block' : 'none';
 }
 
 // ====== TABS ======
@@ -509,6 +511,20 @@ function setupRewardsView(){
       roomRef.child('customRewards/'+key).set({ pts, desc });
       form.remove();
       $('#btn-add-reward').textContent = '+ Ajouter un palier';
+    });
+  });
+
+  $('#btn-reset-scores').addEventListener('click', () => {
+    const ok = confirm(
+      "Ça va remettre les deux scores à 0, vider l'historique, vider les cartes en attente et réinitialiser les compteurs de passes.\n\nLes cartes/paliers personnalisés ne sont PAS touchés.\n\nConfirmer la réinitialisation ?"
+    );
+    if(!ok) return;
+    roomRef.update({
+      'scores/p1': 0,
+      'scores/p2': 0,
+      'history': null,
+      'pendingCards': null,
+      'skipCounts': null
     });
   });
 }
