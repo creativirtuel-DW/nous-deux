@@ -190,7 +190,7 @@ function render(){
 function renderPendingCard(){
   const allPending = getPendingEntries();
   const mine = allPending.filter(([k,p]) => p.by === me.id);
-  const toValidate = allPending.filter(([k,p]) => p.by !== me.id);
+  const toValidate = allPending.filter(([k,p]) => p.by !== me.id && p.status === 'review');
 
   const catPicker = $('#cat-picker');
   const turnBanner = $('#turn-banner');
@@ -204,7 +204,7 @@ function renderPendingCard(){
 
   const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Gage', distance:'📱 À distance' };
 
-  // Cartes que JE dois valider (jouées par mon/ma partenaire)
+  // Cartes que JE dois valider (jouées et déjà répondues/réalisées par mon/ma partenaire)
   const toValSection = $('#pending-to-validate-section');
   const toValList = $('#pending-to-validate-list');
   toValSection.style.display = toValidate.length ? 'block' : 'none';
@@ -212,12 +212,16 @@ function renderPendingCard(){
   toValidate.forEach(([key, p]) => {
     const row = document.createElement('div');
     row.className = 'pending-card';
+    const answerBlock = p.answer
+      ? `<div class="pending-answer"><span class="pending-answer-label">Sa réponse :</span> ${escapeHtml(p.answer)}</div>`
+      : '';
     row.innerHTML = `
       <div class="pending-card-top">
         <span class="pending-cat">${labelMap[p.cat]||'Carte'}</span>
         <span class="pending-who">${escapeHtml(state.players[p.by]||'')}</span>
       </div>
       <p class="pending-text">${escapeHtml(p.text)}</p>
+      ${answerBlock}
       <div class="pending-actions">
         <button class="btn-ghost pending-refuse">Refuser</button>
         <button class="btn-primary pending-validate">Valider ! +${p.pts}</button>
@@ -228,25 +232,66 @@ function renderPendingCard(){
     toValList.appendChild(row);
   });
 
-  // Mes cartes en attente de validation par l'autre
+  // Mes cartes : soit je dois encore répondre/agir (drafting), soit j'attends la validation (review)
   const mineSection = $('#pending-mine-section');
   const mineList = $('#pending-mine-list');
   mineSection.style.display = mine.length ? 'block' : 'none';
   mineList.innerHTML = '';
   mine.forEach(([key, p]) => {
     const row = document.createElement('div');
-    row.className = 'pending-card waiting';
-    row.innerHTML = `
-      <div class="pending-card-top">
-        <span class="pending-cat">${labelMap[p.cat]||'Carte'}</span>
-        <span class="pending-who">+${p.pts} en attente…</span>
-      </div>
-      <p class="pending-text">${escapeHtml(p.text)}</p>
-      <div class="pending-actions">
-        <button class="btn-ghost pending-cancel">Annuler (0 point)</button>
-      </div>
-    `;
-    row.querySelector('.pending-cancel').addEventListener('click', () => cancelPending(key));
+    row.className = 'pending-card' + (p.status === 'review' ? ' waiting' : '');
+
+    if(p.status === 'review'){
+      row.innerHTML = `
+        <div class="pending-card-top">
+          <span class="pending-cat">${labelMap[p.cat]||'Carte'}</span>
+          <span class="pending-who">+${p.pts} en attente…</span>
+        </div>
+        <p class="pending-text">${escapeHtml(p.text)}</p>
+        ${p.answer ? `<div class="pending-answer"><span class="pending-answer-label">Ta réponse :</span> ${escapeHtml(p.answer)}</div>` : ''}
+        <div class="pending-actions">
+          <button class="btn-ghost pending-cancel">Annuler (0 point)</button>
+        </div>
+      `;
+      row.querySelector('.pending-cancel').addEventListener('click', () => cancelPending(key));
+
+    } else if(p.cat === 'question'){
+      row.innerHTML = `
+        <div class="pending-card-top">
+          <span class="pending-cat">${labelMap[p.cat]||'Carte'}</span>
+          <span class="pending-who">+${p.pts} si validé</span>
+        </div>
+        <p class="pending-text">${escapeHtml(p.text)}</p>
+        <textarea class="pending-answer-input" placeholder="Écris ta réponse ici…" rows="3"></textarea>
+        <div class="pending-actions">
+          <button class="btn-ghost pending-cancel">Annuler</button>
+          <button class="btn-primary pending-submit">Envoyer pour validation</button>
+        </div>
+      `;
+      row.querySelector('.pending-cancel').addEventListener('click', () => cancelPending(key));
+      row.querySelector('.pending-submit').addEventListener('click', () => {
+        const text = row.querySelector('.pending-answer-input').value.trim();
+        if(!text) return;
+        submitAnswer(key, text);
+      });
+
+    } else {
+      // défi / gage / distance : pas de texte, juste fait ou non
+      row.innerHTML = `
+        <div class="pending-card-top">
+          <span class="pending-cat">${labelMap[p.cat]||'Carte'}</span>
+          <span class="pending-who">+${p.pts} si validé</span>
+        </div>
+        <p class="pending-text">${escapeHtml(p.text)}</p>
+        <div class="pending-actions">
+          <button class="btn-ghost pending-nope">Non, je passe</button>
+          <button class="btn-primary pending-ok">OK, c'est fait !</button>
+        </div>
+      `;
+      row.querySelector('.pending-nope').addEventListener('click', () => cancelPending(key));
+      row.querySelector('.pending-ok').addEventListener('click', () => markDone(key));
+    }
+
     mineList.appendChild(row);
   });
 }
@@ -330,8 +375,22 @@ function drawCard(cat){
     cat: realCat,
     text: card.text,
     pts: card.pts,
+    status: 'drafting', // en cours de réponse/réalisation par celui/celle qui a pioché
+    answer: '',
     ts: Date.now()
   });
+}
+
+function submitAnswer(key, answerText){
+  const pending = state.pendingCards && state.pendingCards[key];
+  if(!pending || pending.by !== me.id) return;
+  roomRef.child('pendingCards/'+key).update({ status:'review', answer: answerText });
+}
+
+function markDone(key){
+  const pending = state.pendingCards && state.pendingCards[key];
+  if(!pending || pending.by !== me.id) return;
+  roomRef.child('pendingCards/'+key).update({ status:'review' });
 }
 
 function cancelPending(key){

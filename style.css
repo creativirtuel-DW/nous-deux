@@ -291,6 +291,28 @@ main#views{ flex:1; min-height:0; position:relative; }
 .pending-cat{ font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color: var(--gold-soft); }
 .pending-who{ font-size:11px; color: var(--muted); }
 .pending-text{ font-family:'Fraunces', serif; font-size:17px; line-height:1.4; margin:0 0 12px; }
+.pending-answer-input{
+  width:100%;
+  background: rgba(0,0,0,0.18);
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:12px 14px;
+  color:var(--cream);
+  font-family:'Inter', sans-serif;
+  font-size:14px;
+  resize:none;
+  margin-bottom:12px;
+}
+.pending-answer{
+  background: rgba(0,0,0,0.18);
+  border-left:2px solid var(--gold);
+  border-radius:8px;
+  padding:10px 12px;
+  font-size:14px;
+  line-height:1.4;
+  margin-bottom:12px;
+}
+.pending-answer-label{ color: var(--gold-soft); font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; margin-right:4px; }
 .pending-actions{ display:flex; gap:10px; }
 .pending-actions .btn-ghost{ flex: 0 0 100px; padding:11px 0; font-size:13px; }
 .pending-actions .btn-primary{ flex:1; padding:11px 0; font-size:13px; }
