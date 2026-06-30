@@ -1,5 +1,6 @@
 // Banque de cartes par défaut. category: 'question' | 'defi' | 'gage'
-const DEFAULT_CARDS = [
+// Chaque carte a un id stable ("d0", "d1"...) pour pouvoir être masquée/éditée depuis l'appli.
+const DEFAULT_CARDS_RAW = [
   // QUESTIONS (découverte / complicité)
   { cat:'question', text:"Quel est le souvenir le plus tendre que tu gardes de nous deux ?", pts:10 },
   { cat:'question', text:"Si on pouvait revivre une seule de nos journées ensemble, laquelle choisirais-tu ?", pts:10 },
@@ -42,6 +43,7 @@ const DEFAULT_CARDS = [
   { cat:'surprise', text:"Offre un massage de 5 minutes sans qu'on te le demande deux fois.", pts:15 },
   { cat:'surprise', text:"Prépare le petit-déjeuner ou le dîner surprise de l'autre, sans lui dire.", pts:20 },
 ];
+const DEFAULT_CARDS = DEFAULT_CARDS_RAW.map((c, i) => ({ ...c, id: 'd' + i }));
 
 const DEFAULT_REWARDS = [
   { pts: 50,  desc: "Un massage complet offert par l'autre" },
