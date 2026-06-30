@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+<title>Nous Deux</title>
+<meta name="theme-color" content="#2B1B2E">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Nous Deux">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ÉCRAN D'ACCUEIL / CONNEXION -->
+  <section id="screen-login" class="screen active">
+    <div class="login-wrap">
+      <div class="brand">
+        <span class="brand-mark">✦</span>
+        <h1>Nous&nbsp;Deux</h1>
+        <p class="brand-sub">Questions, défis &amp; petits gages à deux</p>
+      </div>
+
+      <div class="login-card">
+        <label class="field">
+          <span>Ton prénom</span>
+          <input type="text" id="input-name" placeholder="Ex : Yann" maxlength="20">
+        </label>
+
+        <label class="field">
+          <span>Code du couple</span>
+          <input type="text" id="input-room" placeholder="Ex : YANN-LOVE" maxlength="24" autocapitalize="characters">
+        </label>
+        <p class="hint">Invente un code unique et partage-le à ton/ta partenaire — il/elle devra saisir exactement le même pour vous synchroniser.</p>
+
+        <button id="btn-join" class="btn-primary">Entrer dans la partie</button>
+        <p id="login-error" class="error"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- APPLI PRINCIPALE -->
+  <section id="screen-main" class="screen">
+
+    <header class="topbar">
+      <div class="topbar-room">
+        <span class="dot"></span>
+        <span id="room-label">—</span>
+      </div>
+      <div class="scores">
+        <div class="score-pill" id="score-me">
+          <span class="score-name" id="name-me">Moi</span>
+          <span class="score-val" id="val-me">0</span>
+        </div>
+        <span class="score-vs">+</span>
+        <div class="score-pill" id="score-partner">
+          <span class="score-name" id="name-partner">Partenaire</span>
+          <span class="score-val" id="val-partner">0</span>
+        </div>
+      </div>
+    </header>
+
+    <main id="views">
+
+      <!-- VUE JEU -->
+      <div id="view-play" class="view active">
+        <div class="turn-banner" id="turn-banner">À ton tour de piocher</div>
+
+        <div class="stage">
+          <div class="card-zone" id="card-zone">
+            <div class="card3d" id="card3d">
+              <div class="card-face card-back">
+                <span class="card-back-mark">✦</span>
+                <span class="card-back-text">Nous Deux</span>
+              </div>
+              <div class="card-face card-front" id="card-front">
+                <span class="card-cat" id="card-cat">Question</span>
+                <p class="card-text" id="card-text"></p>
+                <span class="card-points" id="card-points">+10</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="cat-picker" id="cat-picker">
+            <button class="cat-btn" data-cat="question">💬<span>Question</span></button>
+            <button class="cat-btn" data-cat="defi">🔥<span>Défi</span></button>
+            <button class="cat-btn" data-cat="gage">😈<span>Gage</span></button>
+            <button class="cat-btn" data-cat="surprise">🎲<span>Surprise</span></button>
+          </div>
+
+          <div class="resolve-actions" id="resolve-actions">
+            <button class="btn-ghost" id="btn-skip">Passer</button>
+            <button class="btn-primary" id="btn-validate">Relevé ! Gagner les points</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- VUE PALIERS / RÉCOMPENSES -->
+      <div id="view-rewards" class="view">
+        <div class="view-header">
+          <h2>Paliers &amp; récompenses</h2>
+          <p>Score d'équipe actuel : <strong id="team-score">0</strong> points</p>
+        </div>
+        <div id="rewards-list" class="rewards-list"></div>
+
+        <button class="btn-ghost add-btn" id="btn-add-reward">+ Ajouter un palier</button>
+      </div>
+
+      <!-- VUE CONTENU -->
+      <div id="view-content" class="view">
+        <div class="view-header">
+          <h2>Vos cartes perso</h2>
+          <p>Ajoutez vos propres questions, défis ou gages.</p>
+        </div>
+
+        <form id="form-add-card" class="add-card-form">
+          <div class="seg" id="seg-newcat">
+            <button type="button" class="seg-btn active" data-cat="question">Question</button>
+            <button type="button" class="seg-btn" data-cat="defi">Défi</button>
+            <button type="button" class="seg-btn" data-cat="gage">Gage</button>
+          </div>
+          <textarea id="input-card-text" placeholder="Écris ta carte ici…" maxlength="200" rows="3"></textarea>
+          <div class="points-row">
+            <span>Points :</span>
+            <input type="range" id="input-card-points" min="5" max="50" step="5" value="10">
+            <span id="points-display">10</span>
+          </div>
+          <button type="submit" class="btn-primary">Ajouter la carte</button>
+        </form>
+
+        <div id="custom-cards-list" class="custom-cards-list"></div>
+      </div>
+
+      <!-- VUE HISTORIQUE -->
+      <div id="view-history" class="view">
+        <div class="view-header">
+          <h2>Historique</h2>
+        </div>
+        <div id="history-list" class="history-list"></div>
+      </div>
+
+    </main>
+
+    <nav class="tabbar">
+      <button class="tab active" data-view="view-play"><span class="tab-ic">✦</span>Jouer</button>
+      <button class="tab" data-view="view-rewards"><span class="tab-ic">🏆</span>Paliers</button>
+      <button class="tab" data-view="view-content"><span class="tab-ic">✎</span>Cartes</button>
+      <button class="tab" data-view="view-history"><span class="tab-ic">☰</span>Historique</button>
+    </nav>
+
+  </section>
+
+</div>
+
+<script src="cards-data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+{
+  "name": "Nous Deux",
+  "short_name": "Nous Deux",
+  "description": "Questions, défis et gages à deux",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#241420",
+  "theme_color": "#2B1B2E",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
