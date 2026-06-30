@@ -123,7 +123,6 @@ function joinRoom(){
       const initial = {
         players: { p1: name, p2: null },
         scores: { p1: 0, p2: 0 },
-        turn: 'p1',
         customCards: {},
         customRewards: {},
         history: {}
@@ -179,15 +178,77 @@ function render(){
   $('#name-partner').textContent = state.players[partnerId] || 'En attente…';
   $('#val-partner').textContent = partnerScore;
 
-  // Tour
-  const myTurn = state.turn === me.id;
-  $('#turn-banner').textContent = myTurn ? "✦ À toi de piocher une carte" : `En attente de ${state.players[state.turn] || 'ton/ta partenaire'}…`;
-  $$('.cat-btn').forEach(b => b.classList.toggle('disabled', !myTurn || !!currentDrawnCard));
+  // Le bandeau et le picker sont maintenant gérés entièrement dans renderPendingCard()
 
+  renderPendingCard();
   renderRewards();
   renderHistory();
   renderCustomCards();
   renderAdminLockButtons();
+}
+
+function renderPendingCard(){
+  const allPending = getPendingEntries();
+  const mine = allPending.filter(([k,p]) => p.by === me.id);
+  const toValidate = allPending.filter(([k,p]) => p.by !== me.id);
+
+  const catPicker = $('#cat-picker');
+  const turnBanner = $('#turn-banner');
+  const full = allPending.length >= MAX_PENDING;
+
+  catPicker.style.display = 'grid';
+  $$('.cat-btn').forEach(b => b.classList.toggle('disabled', full));
+  turnBanner.textContent = full
+    ? `🚫 File pleine (${MAX_PENDING}/${MAX_PENDING}) — attends une validation`
+    : `✦ Pioche une carte (${allPending.length}/${MAX_PENDING} en attente)`;
+
+  const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Gage' };
+
+  // Cartes que JE dois valider (jouées par mon/ma partenaire)
+  const toValSection = $('#pending-to-validate-section');
+  const toValList = $('#pending-to-validate-list');
+  toValSection.style.display = toValidate.length ? 'block' : 'none';
+  toValList.innerHTML = '';
+  toValidate.forEach(([key, p]) => {
+    const row = document.createElement('div');
+    row.className = 'pending-card';
+    row.innerHTML = `
+      <div class="pending-card-top">
+        <span class="pending-cat">${labelMap[p.cat]||'Carte'}</span>
+        <span class="pending-who">${escapeHtml(state.players[p.by]||'')}</span>
+      </div>
+      <p class="pending-text">${escapeHtml(p.text)}</p>
+      <div class="pending-actions">
+        <button class="btn-ghost pending-refuse">Refuser</button>
+        <button class="btn-primary pending-validate">Valider ! +${p.pts}</button>
+      </div>
+    `;
+    row.querySelector('.pending-refuse').addEventListener('click', () => validatePending(key, false));
+    row.querySelector('.pending-validate').addEventListener('click', () => validatePending(key, true));
+    toValList.appendChild(row);
+  });
+
+  // Mes cartes en attente de validation par l'autre
+  const mineSection = $('#pending-mine-section');
+  const mineList = $('#pending-mine-list');
+  mineSection.style.display = mine.length ? 'block' : 'none';
+  mineList.innerHTML = '';
+  mine.forEach(([key, p]) => {
+    const row = document.createElement('div');
+    row.className = 'pending-card waiting';
+    row.innerHTML = `
+      <div class="pending-card-top">
+        <span class="pending-cat">${labelMap[p.cat]||'Carte'}</span>
+        <span class="pending-who">+${p.pts} en attente…</span>
+      </div>
+      <p class="pending-text">${escapeHtml(p.text)}</p>
+      <div class="pending-actions">
+        <button class="btn-ghost pending-cancel">Annuler (0 point)</button>
+      </div>
+    `;
+    row.querySelector('.pending-cancel').addEventListener('click', () => cancelPending(key));
+    mineList.appendChild(row);
+  });
 }
 
 function renderAdminLockButtons(){
@@ -220,8 +281,7 @@ function setupPlayView(){
       drawCard(btn.dataset.cat);
     });
   });
-  $('#btn-validate').addEventListener('click', () => resolveCard(true));
-  $('#btn-skip').addEventListener('click', () => resolveCard(false));
+  // Les actions des boutons sont ré-attribuées dynamiquement à chaque rendu (cf. renderPendingCard)
 }
 
 function getActiveDefaultCards(){
@@ -239,7 +299,6 @@ function getAllCardsForCategory(cat){
   }
   const defaults = activeDefaults.filter(c => c.cat === cat);
   if(cat === 'surprise'){
-    // mélange de tout (cartes actives uniquement)
     const allCustom = [];
     if(state && state.customCards){
       Object.entries(state.customCards).forEach(([key,c]) => allCustom.push({...c, id:key, custom:true}));
@@ -249,54 +308,54 @@ function getAllCardsForCategory(cat){
   return defaults.concat(customForCat);
 }
 
+const MAX_PENDING = 5;
+
+function getPendingEntries(){
+  if(!state.pendingCards) return [];
+  return Object.entries(state.pendingCards).sort((a,b)=> a[1].ts - b[1].ts);
+}
+
 function drawCard(cat){
+  const pending = getPendingEntries();
+  if(pending.length >= MAX_PENDING) return; // file pleine, on bloque
+
   const pool = getAllCardsForCategory(cat);
   if(pool.length === 0) return;
   const card = pool[Math.floor(Math.random()*pool.length)];
-  currentDrawnCard = card;
-  currentCardCategory = cat === 'surprise' ? card.cat : cat;
+  const realCat = cat === 'surprise' ? card.cat : cat;
 
-  const labelMap = { question:'Question', defi:'Défi', gage:'Gage' };
-  $('#card-cat').textContent = labelMap[currentCardCategory] || 'Carte';
-  $('#card-text').textContent = card.text;
-  $('#card-points').textContent = '+' + card.pts;
-
-  const card3d = $('#card3d');
-  card3d.classList.remove('flipped');
-  // force reflow puis flip
-  void card3d.offsetWidth;
-  setTimeout(()=> card3d.classList.add('flipped'), 60);
-
-  $('#cat-picker').style.display = 'none';
-  $('#resolve-actions').classList.add('active');
-  $$('.cat-btn').forEach(b => b.classList.add('disabled'));
+  const key = db.ref('rooms/'+roomCode+'/pendingCards').push().key;
+  roomRef.child('pendingCards/'+key).set({
+    by: me.id,
+    cat: realCat,
+    text: card.text,
+    pts: card.pts,
+    ts: Date.now()
+  });
 }
 
-function resolveCard(validated){
-  if(!currentDrawnCard) return;
-  const pts = validated ? currentDrawnCard.pts : 0;
+function cancelPending(key){
+  const pending = state.pendingCards && state.pendingCards[key];
+  if(!pending || pending.by !== me.id) return;
+  roomRef.child('pendingCards/'+key).remove();
+}
 
+function validatePending(key, approved){
+  const pending = state.pendingCards && state.pendingCards[key];
+  if(!pending || pending.by === me.id) return; // seul le/la partenaire peut valider
+
+  const drawerId = pending.by;
+  const pts = approved ? pending.pts : 0;
   const updates = {};
-  updates['scores/' + me.id] = (state.scores[me.id]||0) + pts;
-  updates['turn'] = partnerId;
+  updates['scores/' + drawerId] = (state.scores[drawerId]||0) + pts;
+  updates['pendingCards/'+key] = null;
 
   const histKey = db.ref('rooms/'+roomCode+'/history').push().key;
   updates['history/' + histKey] = {
-    who: me.name,
-    cat: currentCardCategory,
-    text: currentDrawnCard.text,
-    pts: pts,
-    validated: validated,
-    ts: Date.now()
+    who: state.players[drawerId], cat: pending.cat, text: pending.text, pts: pts, validated: approved, ts: Date.now()
   };
 
   roomRef.update(updates);
-
-  // reset visuel
-  currentDrawnCard = null; currentCardCategory = null;
-  $('#card3d').classList.remove('flipped');
-  $('#resolve-actions').classList.remove('active');
-  $('#cat-picker').style.display = 'grid';
 }
 
 // ====== VUE RÉCOMPENSES ======

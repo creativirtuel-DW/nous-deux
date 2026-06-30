@@ -272,6 +272,29 @@ main#views{ flex:1; min-height:0; position:relative; }
 .resolve-actions .btn-ghost{ flex: 0 0 110px; }
 .resolve-actions .btn-primary{ flex:1; }
 
+/* ---------- FILE D'ATTENTE DE CARTES ---------- */
+.pending-section{ width:100%; max-width:420px; margin-top:6px; }
+.pending-title{
+  font-family:'Fraunces', serif; font-style:italic; font-weight:600;
+  font-size:16px; color: var(--gold-soft); margin:0 0 10px;
+}
+.pending-list{ display:flex; flex-direction:column; gap:10px; }
+.pending-card{
+  background: linear-gradient(160deg, var(--surface-2), var(--surface) 75%);
+  border:1px solid var(--line);
+  border-radius:18px;
+  padding:14px 16px;
+  box-shadow: var(--shadow);
+}
+.pending-card.waiting{ opacity:0.8; }
+.pending-card-top{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.pending-cat{ font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color: var(--gold-soft); }
+.pending-who{ font-size:11px; color: var(--muted); }
+.pending-text{ font-family:'Fraunces', serif; font-size:17px; line-height:1.4; margin:0 0 12px; }
+.pending-actions{ display:flex; gap:10px; }
+.pending-actions .btn-ghost{ flex: 0 0 100px; padding:11px 0; font-size:13px; }
+.pending-actions .btn-primary{ flex:1; padding:11px 0; font-size:13px; }
+
 /* ---------- REWARDS ---------- */
 .rewards-list{ display:flex; flex-direction:column; gap:12px; }
 .reward-card{
