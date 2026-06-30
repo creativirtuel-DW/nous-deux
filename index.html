@@ -14,7 +14,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<link rel="stylesheet" href="style.css?v=6">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 
@@ -135,6 +135,9 @@
           <button type="submit" class="btn-primary">Ajouter la carte</button>
         </form>
 
+        <div class="custom-cards-toolbar">
+          <button class="filter-chip" id="btn-filter-blanks">🔍 Afficher seulement les cartes à compléter</button>
+        </div>
         <div id="custom-cards-list" class="custom-cards-list"></div>
       </div>
 
@@ -159,7 +162,7 @@
 
 </div>
 
-<script src="cards-data.js?v=6"></script>
-<script src="app.js?v=6"></script>
+<script src="cards-data.js?v=7"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>
