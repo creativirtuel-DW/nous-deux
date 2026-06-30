@@ -105,9 +105,12 @@
 
       <!-- VUE PALIERS / RÉCOMPENSES -->
       <div id="view-rewards" class="view">
-        <div class="view-header">
-          <h2>Paliers &amp; récompenses</h2>
-          <p>Score d'équipe actuel : <strong id="team-score">0</strong> points</p>
+        <div class="view-header admin-header">
+          <div>
+            <h2>Paliers &amp; récompenses</h2>
+            <p>Score d'équipe actuel : <strong id="team-score">0</strong> points</p>
+          </div>
+          <button class="admin-lock-btn" id="btn-admin-lock-rewards">🔒</button>
         </div>
         <div id="rewards-list" class="rewards-list"></div>
 
@@ -116,9 +119,12 @@
 
       <!-- VUE CONTENU -->
       <div id="view-content" class="view">
-        <div class="view-header">
-          <h2>Vos cartes perso</h2>
-          <p>Ajoutez vos propres questions, défis ou gages.</p>
+        <div class="view-header admin-header">
+          <div>
+            <h2>Vos cartes</h2>
+            <p>Tout le monde peut ajouter. Modifier/supprimer est protégé par un code.</p>
+          </div>
+          <button class="admin-lock-btn" id="btn-admin-lock-content">🔒</button>
         </div>
 
         <form id="form-add-card" class="add-card-form">

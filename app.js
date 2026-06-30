@@ -19,9 +19,59 @@ let roomRef = null;
 let state = null;                        // dernier snapshot de la room
 let currentDrawnCard = null;
 let currentCardCategory = null;
+let adminUnlockedThisSession = false;
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => document.querySelectorAll(sel);
+
+// ====== ADMIN (code de protection pour éditer/supprimer) ======
+function adminStorageKey(){ return 'nousdeux_admin_' + roomCode; }
+
+function isAdminUnlocked(){
+  if(adminUnlockedThisSession) return true;
+  try{
+    return sessionStorage.getItem(adminStorageKey()) === 'true';
+  }catch(e){ return false; }
+}
+
+function unlockAdminLocally(){
+  adminUnlockedThisSession = true;
+  try{ sessionStorage.setItem(adminStorageKey(), 'true'); }catch(e){}
+}
+
+function handleAdminLockClick(){
+  if(isAdminUnlocked()){
+    // re-verrouiller
+    adminUnlockedThisSession = false;
+    try{ sessionStorage.removeItem(adminStorageKey()); }catch(e){}
+    render();
+    return;
+  }
+
+  const existingPin = state && state.adminPin;
+
+  if(!existingPin){
+    const newPin = prompt("Aucun code admin n'est encore défini pour cette room.\nChoisis un code (4 chiffres ou plus) qui protégera l'édition/suppression des cartes et paliers :");
+    if(!newPin || newPin.trim().length < 4){
+      if(newPin !== null) alert("Le code doit faire au moins 4 caractères.");
+      return;
+    }
+    roomRef.child('adminPin').set(newPin.trim()).then(() => {
+      unlockAdminLocally();
+      render();
+    });
+    return;
+  }
+
+  const entered = prompt("Code admin requis pour modifier/supprimer :");
+  if(entered === null) return;
+  if(entered.trim() === existingPin){
+    unlockAdminLocally();
+    render();
+  } else {
+    alert("Code incorrect.");
+  }
+}
 
 // ====== PERSISTENCE LOCALE (identité du joueur sur ce téléphone) ======
 function loadLocalIdentity(){
@@ -47,6 +97,8 @@ window.addEventListener('DOMContentLoaded', () => {
   setupPlayView();
   setupContentView();
   setupRewardsView();
+  $('#btn-admin-lock-content').addEventListener('click', handleAdminLockClick);
+  $('#btn-admin-lock-rewards').addEventListener('click', handleAdminLockClick);
 });
 
 function joinRoom(){
@@ -135,6 +187,17 @@ function render(){
   renderRewards();
   renderHistory();
   renderCustomCards();
+  renderAdminLockButtons();
+}
+
+function renderAdminLockButtons(){
+  const unlocked = isAdminUnlocked();
+  [$('#btn-admin-lock-content'), $('#btn-admin-lock-rewards')].forEach(btn => {
+    if(!btn) return;
+    btn.textContent = unlocked ? '🔓' : '🔒';
+    btn.title = unlocked ? 'Mode admin actif — appuie pour reverrouiller' : 'Déverrouiller le mode admin';
+    btn.classList.toggle('unlocked', unlocked);
+  });
 }
 
 // ====== TABS ======
@@ -161,17 +224,27 @@ function setupPlayView(){
   $('#btn-skip').addEventListener('click', () => resolveCard(false));
 }
 
+function getActiveDefaultCards(){
+  const disabled = (state && state.disabledDefaults) || {};
+  return DEFAULT_CARDS.filter(c => !disabled[c.id]);
+}
+
 function getAllCardsForCategory(cat){
+  const activeDefaults = getActiveDefaultCards();
   const customForCat = [];
   if(state && state.customCards){
-    Object.values(state.customCards).forEach(c => {
-      if(c.cat === cat) customForCat.push(c);
+    Object.entries(state.customCards).forEach(([key, c]) => {
+      if(c.cat === cat) customForCat.push({...c, id:key, custom:true});
     });
   }
-  const defaults = DEFAULT_CARDS.filter(c => c.cat === cat);
+  const defaults = activeDefaults.filter(c => c.cat === cat);
   if(cat === 'surprise'){
-    // mélange de tout
-    return DEFAULT_CARDS.concat(customForCat);
+    // mélange de tout (cartes actives uniquement)
+    const allCustom = [];
+    if(state && state.customCards){
+      Object.entries(state.customCards).forEach(([key,c]) => allCustom.push({...c, id:key, custom:true}));
+    }
+    return activeDefaults.concat(allCustom);
   }
   return defaults.concat(customForCat);
 }
@@ -259,10 +332,12 @@ function renderRewards(){
   const team = myScore + partnerScore;
   $('#team-score').textContent = team;
 
-  let all = DEFAULT_REWARDS.map(r => ({...r}));
+  let all = DEFAULT_REWARDS.map((r,i) => ({...r, id:'r'+i, custom:false}));
   if(state.customRewards){
-    Object.entries(state.customRewards).forEach(([key,r]) => all.push({...r, custom:true, key}));
+    Object.entries(state.customRewards).forEach(([key,r]) => all.push({...r, custom:true, id:key}));
   }
+  const disabledRewards = (state.disabledRewards) || {};
+  all = all.filter(r => !disabledRewards[r.id]);
   all.sort((a,b)=>a.pts-b.pts);
 
   const list = $('#rewards-list');
@@ -278,7 +353,14 @@ function renderRewards(){
         <div class="reward-desc">${escapeHtml(r.desc)}</div>
       </div>
       ${unlocked ? '<div class="reward-check">✓</div>' : ''}
+      ${isAdminUnlocked() ? `<button class="ccard-del reward-del" data-id="${r.id}" data-custom="${r.custom}">✕</button>` : ''}
     `;
+    if(isAdminUnlocked()){
+      div.querySelector('.reward-del').addEventListener('click', () => {
+        if(r.custom){ roomRef.child('customRewards/'+r.id).remove(); }
+        else { roomRef.child('disabledRewards/'+r.id).set(true); }
+      });
+    }
     list.appendChild(div);
   });
 }
@@ -310,25 +392,97 @@ function setupContentView(){
 function renderCustomCards(){
   const wrap = $('#custom-cards-list');
   wrap.innerHTML = '';
-  if(!state.customCards){
-    wrap.innerHTML = '<p class="empty-state">Aucune carte perso pour l\'instant.</p>';
+
+  const iconMap = { question:'💬', defi:'🔥', gage:'😈', surprise:'🎲' };
+  const disabled = (state && state.disabledDefaults) || {};
+
+  const defaults = DEFAULT_CARDS
+    .filter(c => !disabled[c.id])
+    .map(c => ({ ...c, custom:false }));
+
+  const customs = [];
+  if(state && state.customCards){
+    Object.entries(state.customCards).forEach(([key,c]) => customs.push({...c, id:key, custom:true}));
+  }
+  customs.sort((a,b)=> (b.ts||0)-(a.ts||0));
+
+  const all = defaults.concat(customs);
+
+  if(all.length === 0){
+    wrap.innerHTML = '<p class="empty-state">Plus aucune carte active. Ajoutez-en une !</p>';
     return;
   }
-  const iconMap = { question:'💬', defi:'🔥', gage:'😈' };
-  const entries = Object.entries(state.customCards).sort((a,b)=> (b[1].ts||0)-(a[1].ts||0));
-  entries.forEach(([key, c]) => {
+
+  all.forEach(c => {
     const row = document.createElement('div');
     row.className = 'custom-card-row';
+    const adminBtns = isAdminUnlocked() ? `
+      <button class="ccard-edit" data-id="${c.id}" title="Modifier">✎</button>
+      <button class="ccard-del" data-id="${c.id}" title="Supprimer">✕</button>
+    ` : '';
     row.innerHTML = `
       <span class="ccard-cat">${iconMap[c.cat]||'✦'}</span>
-      <span class="ccard-text">${escapeHtml(c.text)}</span>
+      <span class="ccard-text">${escapeHtml(c.text)}${c.custom ? '' : ' <span style=\"color:var(--muted);font-size:11px;\">· défaut</span>'}</span>
       <span class="ccard-pts">+${c.pts}</span>
-      <button class="ccard-del" data-key="${key}">✕</button>
+      ${adminBtns}
     `;
-    row.querySelector('.ccard-del').addEventListener('click', () => {
-      roomRef.child('customCards/'+key).remove();
-    });
+
+    if(isAdminUnlocked()){
+      row.querySelector('.ccard-del').addEventListener('click', () => {
+        if(c.custom){
+          roomRef.child('customCards/'+c.id).remove();
+        } else {
+          roomRef.child('disabledDefaults/'+c.id).set(true);
+        }
+      });
+
+      row.querySelector('.ccard-edit').addEventListener('click', () => {
+        openEditRow(row, c);
+      });
+    }
+
     wrap.appendChild(row);
+  });
+}
+
+function openEditRow(row, c){
+  // évite plusieurs formulaires ouverts à la fois
+  const existing = document.getElementById('inline-edit-card');
+  if(existing) existing.remove();
+
+  const form = document.createElement('div');
+  form.id = 'inline-edit-card';
+  form.className = 'add-card-form';
+  form.style.marginTop = '8px';
+  form.innerHTML = `
+    <textarea id="edit-text" maxlength="200" rows="3">${c.text}</textarea>
+    <div class="points-row">
+      <span>Points :</span>
+      <input type="range" id="edit-points" min="5" max="50" step="5" value="${c.pts}">
+      <span id="edit-points-display">${c.pts}</span>
+    </div>
+    <button class="btn-primary" id="confirm-edit">Enregistrer les modifications</button>
+  `;
+  row.insertAdjacentElement('afterend', form);
+
+  $('#edit-points').addEventListener('input', e => {
+    $('#edit-points-display').textContent = e.target.value;
+  });
+
+  $('#confirm-edit').addEventListener('click', () => {
+    const newText = $('#edit-text').value.trim();
+    const newPts = parseInt($('#edit-points').value, 10);
+    if(!newText) return;
+
+    if(c.custom){
+      roomRef.child('customCards/'+c.id).update({ text:newText, pts:newPts });
+    } else {
+      // on désactive la carte par défaut et on la remplace par une version perso éditée
+      roomRef.child('disabledDefaults/'+c.id).set(true);
+      const key = db.ref('rooms/'+roomCode+'/customCards').push().key;
+      roomRef.child('customCards/'+key).set({ cat:c.cat, text:newText, pts:newPts, by: me.name, ts: Date.now() });
+    }
+    form.remove();
   });
 }
 
