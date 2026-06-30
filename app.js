@@ -202,7 +202,7 @@ function renderPendingCard(){
     ? `🚫 File pleine (${MAX_PENDING}/${MAX_PENDING}) — attends une validation`
     : `✦ Pioche une carte (${allPending.length}/${MAX_PENDING} en attente)`;
 
-  const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Gage', distance:'📱 À distance' };
+  const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Cap ou pas', distance:'📱 À distance' };
 
   // Cartes que JE dois valider (jouées et déjà répondues/réalisées par mon/ma partenaire)
   const toValSection = $('#pending-to-validate-section');
@@ -215,6 +215,9 @@ function renderPendingCard(){
     const answerBlock = p.answer
       ? `<div class="pending-answer"><span class="pending-answer-label">Sa réponse :</span> ${escapeHtml(p.answer)}</div>`
       : '';
+    const commentBlock = p.comment
+      ? `<div class="pending-answer"><span class="pending-answer-label">Son commentaire :</span> ${escapeHtml(p.comment)}</div>`
+      : '';
     row.innerHTML = `
       <div class="pending-card-top">
         <span class="pending-cat">${labelMap[p.cat]||'Carte'}</span>
@@ -222,6 +225,7 @@ function renderPendingCard(){
       </div>
       <p class="pending-text">${escapeHtml(p.text)}</p>
       ${answerBlock}
+      ${commentBlock}
       <div class="pending-actions">
         <button class="btn-ghost pending-refuse">Refuser</button>
         <button class="btn-primary pending-validate">Valider ! +${p.pts}</button>
@@ -249,6 +253,7 @@ function renderPendingCard(){
         </div>
         <p class="pending-text">${escapeHtml(p.text)}</p>
         ${p.answer ? `<div class="pending-answer"><span class="pending-answer-label">Ta réponse :</span> ${escapeHtml(p.answer)}</div>` : ''}
+        ${p.comment ? `<div class="pending-answer"><span class="pending-answer-label">Ton commentaire :</span> ${escapeHtml(p.comment)}</div>` : ''}
         <div class="pending-actions">
           <button class="btn-ghost pending-cancel">Annuler (0 point)</button>
         </div>
@@ -289,10 +294,14 @@ function renderPendingCard(){
         });
 
       } else {
-        // défi / gage / distance : pas de texte, juste fait ou non
+        // défi / gage / distance : pas de texte de réponse, juste fait ou non
+        // (le défi a en plus un commentaire optionnel visible par le/la partenaire)
         const skipOrPenaltyBtn = limitReached
           ? `<button class="btn-ghost pending-penalty">Accepter de perdre ${SKIP_PENALTY} points</button>`
           : `<button class="btn-ghost pending-nope">Non, je passe</button>`;
+        const commentField = p.cat === 'defi'
+          ? `<textarea class="pending-comment-input" placeholder="Petit commentaire pour ${escapeHtml(state.players[partnerId]||'ton/ta partenaire')} (optionnel)…" rows="2"></textarea>`
+          : '';
         row.innerHTML = `
           <div class="pending-card-top">
             <span class="pending-cat">${labelMap[p.cat]||'Carte'}</span>
@@ -300,6 +309,7 @@ function renderPendingCard(){
           </div>
           <p class="pending-text">${escapeHtml(p.text)}</p>
           ${skipNote}
+          ${commentField}
           <div class="pending-actions">
             ${skipOrPenaltyBtn}
             <button class="btn-primary pending-ok">OK, c'est fait !</button>
@@ -310,7 +320,10 @@ function renderPendingCard(){
         } else {
           row.querySelector('.pending-nope').addEventListener('click', () => skipCard(key));
         }
-        row.querySelector('.pending-ok').addEventListener('click', () => markDone(key));
+        row.querySelector('.pending-ok').addEventListener('click', () => {
+          const commentInput = row.querySelector('.pending-comment-input');
+          markDone(key, commentInput ? commentInput.value.trim() : '');
+        });
       }
     }
 
@@ -423,11 +436,12 @@ function submitAnswer(key, answerText){
   });
 }
 
-function markDone(key){
+function markDone(key, comment){
   const pending = state.pendingCards && state.pendingCards[key];
   if(!pending || pending.by !== me.id) return;
   roomRef.update({
     ['pendingCards/'+key+'/status']: 'review',
+    ['pendingCards/'+key+'/comment']: comment || '',
     ['skipCounts/'+me.id+'/'+pending.cat]: 0
   });
 }
@@ -482,7 +496,9 @@ function validatePending(key, approved){
 
   const histKey = db.ref('rooms/'+roomCode+'/history').push().key;
   updates['history/' + histKey] = {
-    who: state.players[drawerId], cat: pending.cat, text: pending.text, pts: pts, validated: approved, ts: Date.now()
+    who: state.players[drawerId], cat: pending.cat, text: pending.text,
+    answer: pending.answer || '', comment: pending.comment || '',
+    pts: pts, validated: approved, ts: Date.now()
   };
 
   roomRef.update(updates);
@@ -722,7 +738,7 @@ function renderHistory(){
     wrap.innerHTML = '<p class="empty-state">Aucune partie jouée pour l\'instant. Lancez-vous !</p>';
     return;
   }
-  const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Gage', distance:'📱 À distance' };
+  const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Cap ou pas', distance:'📱 À distance' };
   const entries = Object.values(state.history).sort((a,b)=> b.ts-a.ts).slice(0,50);
   entries.forEach(h => {
     const row = document.createElement('div');
