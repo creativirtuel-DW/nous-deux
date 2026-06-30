@@ -22,7 +22,9 @@ body{
   color: var(--cream);
   font-family:'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
+  position:fixed;
   overflow:hidden;
+  width:100%;
 }
 
 #app{height:100vh; height:100dvh; width:100vw; position:relative;}
