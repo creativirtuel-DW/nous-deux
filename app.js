@@ -202,7 +202,7 @@ function renderPendingCard(){
     ? `🚫 File pleine (${MAX_PENDING}/${MAX_PENDING}) — attends une validation`
     : `✦ Pioche une carte (${allPending.length}/${MAX_PENDING} en attente)`;
 
-  const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Gage' };
+  const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Gage', distance:'📱 À distance' };
 
   // Cartes que JE dois valider (jouées par mon/ma partenaire)
   const toValSection = $('#pending-to-validate-section');
@@ -452,7 +452,7 @@ function renderCustomCards(){
   const wrap = $('#custom-cards-list');
   wrap.innerHTML = '';
 
-  const iconMap = { question:'💬', defi:'🔥', gage:'😈', surprise:'🎲' };
+  const iconMap = { question:'💬', defi:'🔥', gage:'😈', surprise:'🎲', distance:'📱' };
   const disabled = (state && state.disabledDefaults) || {};
 
   const defaults = DEFAULT_CARDS
@@ -553,7 +553,7 @@ function renderHistory(){
     wrap.innerHTML = '<p class="empty-state">Aucune partie jouée pour l\'instant. Lancez-vous !</p>';
     return;
   }
-  const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Gage' };
+  const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Gage', distance:'📱 À distance' };
   const entries = Object.values(state.history).sort((a,b)=> b.ts-a.ts).slice(0,50);
   entries.forEach(h => {
     const row = document.createElement('div');

@@ -2,7 +2,7 @@
 // Chaque carte a un id stable ("d0", "d1"...) pour pouvoir être masquée/éditée depuis l'appli.
 const DEFAULT_CARDS_RAW = [
   // QUESTIONS (découverte / complicité)
-  { cat:'question', text:"Quel est le souvenir le plus exceptionnel que tu ai aprécié depuis que l'on est ensemble ?", pts:10 },
+  { cat:'question', text:"Quel est le souvenir le plus tendre que tu gardes de nous deux ?", pts:10 },
   { cat:'question', text:"Si on pouvait revivre une seule de nos journées ensemble, laquelle choisirais-tu ?", pts:10 },
   { cat:'question', text:"Quelle qualité chez moi t'a fait craquer au tout début ?", pts:10 },
   { cat:'question', text:"Quel est le rêve qu'on n'a pas encore réalisé ensemble ?", pts:15 },
@@ -50,14 +50,14 @@ const DEFAULT_CARDS_RAW = [
   { cat:'question', text:"Qu'est-ce que tu aimerais qu'on essaie ensemble, qu'on n'a jamais fait ?", pts:20 },
   { cat:'question', text:"Sur une échelle de 1 à 10, à quel point as-tu envie de moi là, maintenant ?", pts:10 },
 
-  { cat:'defi', text:"Envoi moi un sms de que tu aimerai que je te fasse pour te faire plaisir.", pts:20 },
+  { cat:'defi', text:"Murmure-moi à l'oreille ce que tu as envie de me faire ce soir.", pts:20 },
   { cat:'defi', text:"Embrasse-moi pendant 30 secondes, lentement, sans t'arrêter.", pts:15 },
   { cat:'defi', text:"Déshabille-moi d'un seul vêtement, à ta façon.", pts:20 },
   { cat:'defi', text:"Fais-moi un massage sensuel de 5 minutes, où tu veux.", pts:20 },
   { cat:'defi', text:"Décris-moi, les yeux dans les yeux, ce que tu as envie qu'on fasse au lit ce soir.", pts:25 },
 
   { cat:'gage', text:"Tu dois rester en sous-vêtements pour le reste de la soirée.", pts:20 },
-  { cat:'gage', text:"Envoie-moi un message coquin maintenant, qui saura m'exiter à coup sûr", pts:15 },
+  { cat:'gage', text:"Envoie-moi un message coquin maintenant, peu importe où tu es.", pts:15 },
   { cat:'gage', text:"Laisse-moi choisir ta tenue (ou ton absence de tenue) pour la suite de la soirée.", pts:20 },
   { cat:'gage', text:"Pendant 10 minutes, tu dois répondre à toutes mes demandes sans discuter.", pts:25 },
 
@@ -172,6 +172,36 @@ const DEFAULT_CARDS_RAW = [
   { cat:'question', text:"Quel objet parmi un foulard en guise de bandeau te tente le plus pour la suite de la soirée ?", pts:15 },
   { cat:'defi', text:"Improvise un strip-tease de 1 minute sur la musique de ton choix.", pts:25 },
   { cat:'gage', text:"Tu dois me toucher le ventre à chaque fois que tu passes près de moi, pour toute la soirée.", pts:20 },
+
+  // CATÉGORIE "À DISTANCE" + DÉFIS PLUS DIRECTS
+  { cat:'distance', text:"Envoie un message qui commence par 'J'ai hâte de...' et termine-le sincèrement.", pts:20 },
+  { cat:'distance', text:"Envoie un message qui décrit ce que tu portes en ce moment, pendant ta pause.", pts:10 },
+  { cat:'distance', text:"Envoie-moi une question coquine à laquelle je dois répondre dans l'heure.", pts:15 },
+  { cat:'defi', text:"Guide ma bouche vers [ … complète ici ] et dis-moi exactement comment.", pts:25 },
+  { cat:'distance', text:"Envoie une photo (habillé·e) de l'endroit où tu es, avec une légende coquine.", pts:10 },
+  { cat:'distance', text:"Décris par message un scénario qu'on pourrait jouer à notre prochaine rencontre.", pts:15 },
+  { cat:'distance', text:"Envoie-moi un mot doux et un mot coquin, dans le même message.", pts:10 },
+  { cat:'defi', text:"Chuchote-moi en détail le scénario que tu imagines pour la suite de la soirée.", pts:25 },
+  { cat:'distance', text:"Pendant dans l'heure, tu dois m'envoyer un message toutes les 15 minutes sur ce que tu ressens.", pts:15 },
+  { cat:'distance', text:"Envoie-moi trois mots qui résument ton humeur du moment, sans réfléchir.", pts:15 },
+  { cat:'distance', text:"Pendant dans les 10 prochaines minutes, tu dois m'envoyer un message toutes les 15 minutes sur ce que tu ressens.", pts:15 },
+  { cat:'distance', text:"Pendant avant ce soir, tu dois m'envoyer un message toutes les 15 minutes sur ce que tu ressens.", pts:15 },
+  { cat:'distance', text:"Envoie un message qui décrit ce que tu portes en ce moment, au réveil.", pts:10 },
+  { cat:'distance', text:"Envoie un message qui décrit ce que tu portes en ce moment, en pleine réunion (discrètement !).", pts:10 },
+  { cat:'distance', text:"Décris par message, en 3 phrases, ce que tu as envie qu'on fasse à notre prochaine soirée ensemble.", pts:20 },
+  { cat:'distance', text:"Planifie et envoie-moi l'heure et le lieu de notre prochain moment rien qu'à deux.", pts:15 },
+  { cat:'distance', text:"Envoie-moi une photo de ta main, avec une légende sur ce que tu voudrais qu'elle touche [ … complète ici ].", pts:15 },
+  { cat:'defi', text:"Dis-moi, sans filtre, ce que tu ressens quand je touche [ … complète ici ].", pts:30 },
+  { cat:'distance', text:"Envoie un vocal de 20 secondes où tu murmures ce que tu ressens là, maintenant.", pts:10 },
+  { cat:'defi', text:"Décris-moi exactement ce que tu as envie de me faire à [ … complète ici ], sans rien retenir.", pts:25 },
+  { cat:'defi', text:"Mime, sans un mot, ce que tu as envie qu'on fasse dans les 5 prochaines minutes.", pts:25 },
+  { cat:'distance', text:"Raconte par message un souvenir précis de nous qui te fait sourire.", pts:15 },
+  { cat:'defi', text:"Donne-moi 3 instructions précises sur [ … complète ici ], que je dois suivre à la lettre.", pts:25 },
+  { cat:'distance', text:"Envoie un message qui décrit ce que tu portes en ce moment, juste avant de dormir.", pts:20 },
+  { cat:'defi', text:"Montre-moi, sur toi-même, ce que tu aimerais que je fasse à [ … complète ici ].", pts:25 },
+  { cat:'distance', text:"Pendant avant que tu te couches ce soir, tu dois m'envoyer un message toutes les 15 minutes sur ce que tu ressens.", pts:10 },
+  { cat:'distance', text:"Décris-moi par message [ … complète ici ], comme si j'étais à côté de toi.", pts:10 },
+  { cat:'distance', text:"Envoie un vocal où tu me dis ce que tu feras en premier dès qu'on se retrouve.", pts:10 },
 ];
 const DEFAULT_CARDS = DEFAULT_CARDS_RAW.map((c, i) => ({ ...c, id: 'd' + i }));
 
