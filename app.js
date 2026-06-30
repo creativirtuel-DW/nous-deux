@@ -484,6 +484,8 @@ function renderRewards(){
 }
 
 // ====== VUE CONTENU (cartes perso) ======
+let showOnlyBlanks = false;
+
 function setupContentView(){
   let selectedCat = 'question';
   $$('#seg-newcat .seg-btn').forEach(btn => {
@@ -505,7 +507,15 @@ function setupContentView(){
     roomRef.child('customCards/'+key).set({ cat:selectedCat, text, pts, by: me.name });
     $('#input-card-text').value = '';
   });
+
+  $('#btn-filter-blanks').addEventListener('click', () => {
+    showOnlyBlanks = !showOnlyBlanks;
+    $('#btn-filter-blanks').classList.toggle('active', showOnlyBlanks);
+    renderCustomCards();
+  });
 }
+
+const BLANK_MARKER = '[ … complète ici ]';
 
 function renderCustomCards(){
   const wrap = $('#custom-cards-list');
@@ -524,10 +534,21 @@ function renderCustomCards(){
   }
   customs.sort((a,b)=> (b.ts||0)-(a.ts||0));
 
-  const all = defaults.concat(customs);
+  let all = defaults.concat(customs);
+
+  const totalBlanks = all.filter(c => c.text.includes(BLANK_MARKER)).length;
+  $('#btn-filter-blanks').textContent = showOnlyBlanks
+    ? `🔍 Toutes les cartes (${all.length})`
+    : `🔍 Afficher seulement les cartes à compléter (${totalBlanks})`;
+
+  if(showOnlyBlanks){
+    all = all.filter(c => c.text.includes(BLANK_MARKER));
+  }
 
   if(all.length === 0){
-    wrap.innerHTML = '<p class="empty-state">Plus aucune carte active. Ajoutez-en une !</p>';
+    wrap.innerHTML = showOnlyBlanks
+      ? '<p class="empty-state">Plus aucune carte à compléter — tout est rempli !</p>'
+      : '<p class="empty-state">Plus aucune carte active. Ajoutez-en une !</p>';
     return;
   }
 
@@ -538,9 +559,13 @@ function renderCustomCards(){
       <button class="ccard-edit" data-id="${c.id}" title="Modifier">✎</button>
       <button class="ccard-del" data-id="${c.id}" title="Supprimer">✕</button>
     ` : '';
+    const highlightedText = escapeHtml(c.text).replace(
+      BLANK_MARKER.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+      `<mark class="blank-highlight">${BLANK_MARKER}</mark>`
+    );
     row.innerHTML = `
       <span class="ccard-cat">${iconMap[c.cat]||'✦'}</span>
-      <span class="ccard-text">${escapeHtml(c.text)}${c.custom ? '' : ' <span style=\"color:var(--muted);font-size:11px;\">· défaut</span>'}</span>
+      <span class="ccard-text">${highlightedText}${c.custom ? '' : ' <span style=\"color:var(--muted);font-size:11px;\">· défaut</span>'}</span>
       <span class="ccard-pts">+${c.pts}</span>
       ${adminBtns}
     `;
