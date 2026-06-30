@@ -255,41 +255,63 @@ function renderPendingCard(){
       `;
       row.querySelector('.pending-cancel').addEventListener('click', () => cancelPending(key));
 
-    } else if(p.cat === 'question'){
-      row.innerHTML = `
-        <div class="pending-card-top">
-          <span class="pending-cat">${labelMap[p.cat]||'Carte'}</span>
-          <span class="pending-who">+${p.pts} si validé</span>
-        </div>
-        <p class="pending-text">${escapeHtml(p.text)}</p>
-        <textarea class="pending-answer-input" placeholder="Écris ta réponse ici…" rows="3"></textarea>
-        <div class="pending-actions">
-          <button class="btn-ghost pending-cancel">Annuler</button>
-          <button class="btn-primary pending-submit">Envoyer pour validation</button>
-        </div>
-      `;
-      row.querySelector('.pending-cancel').addEventListener('click', () => cancelPending(key));
-      row.querySelector('.pending-submit').addEventListener('click', () => {
-        const text = row.querySelector('.pending-answer-input').value.trim();
-        if(!text) return;
-        submitAnswer(key, text);
-      });
-
     } else {
-      // défi / gage / distance : pas de texte, juste fait ou non
-      row.innerHTML = `
-        <div class="pending-card-top">
-          <span class="pending-cat">${labelMap[p.cat]||'Carte'}</span>
-          <span class="pending-who">+${p.pts} si validé</span>
-        </div>
-        <p class="pending-text">${escapeHtml(p.text)}</p>
-        <div class="pending-actions">
-          <button class="btn-ghost pending-nope">Non, je passe</button>
-          <button class="btn-primary pending-ok">OK, c'est fait !</button>
-        </div>
-      `;
-      row.querySelector('.pending-nope').addEventListener('click', () => cancelPending(key));
-      row.querySelector('.pending-ok').addEventListener('click', () => markDone(key));
+      const skipsUsed = getSkipCount(me.id, p.cat);
+      const limitReached = skipsUsed >= SKIP_LIMIT;
+      const skipNote = `<div class="skip-note">${limitReached ? '🚫 Limite de passes atteinte pour cette catégorie' : `Passes utilisées dans cette catégorie : ${skipsUsed}/${SKIP_LIMIT}`}</div>`;
+
+      if(p.cat === 'question'){
+        const skipOrPenaltyBtn = limitReached
+          ? `<button class="btn-ghost pending-penalty">Accepter de perdre ${SKIP_PENALTY} points</button>`
+          : `<button class="btn-ghost pending-cancel">Non, je passe</button>`;
+        row.innerHTML = `
+          <div class="pending-card-top">
+            <span class="pending-cat">${labelMap[p.cat]||'Carte'}</span>
+            <span class="pending-who">+${p.pts} si validé</span>
+          </div>
+          <p class="pending-text">${escapeHtml(p.text)}</p>
+          ${skipNote}
+          <textarea class="pending-answer-input" placeholder="Écris ta réponse ici…" rows="3"></textarea>
+          <div class="pending-actions">
+            ${skipOrPenaltyBtn}
+            <button class="btn-primary pending-submit">Envoyer pour validation</button>
+          </div>
+        `;
+        if(limitReached){
+          row.querySelector('.pending-penalty').addEventListener('click', () => payPenalty(key));
+        } else {
+          row.querySelector('.pending-cancel').addEventListener('click', () => skipCard(key));
+        }
+        row.querySelector('.pending-submit').addEventListener('click', () => {
+          const text = row.querySelector('.pending-answer-input').value.trim();
+          if(!text) return;
+          submitAnswer(key, text);
+        });
+
+      } else {
+        // défi / gage / distance : pas de texte, juste fait ou non
+        const skipOrPenaltyBtn = limitReached
+          ? `<button class="btn-ghost pending-penalty">Accepter de perdre ${SKIP_PENALTY} points</button>`
+          : `<button class="btn-ghost pending-nope">Non, je passe</button>`;
+        row.innerHTML = `
+          <div class="pending-card-top">
+            <span class="pending-cat">${labelMap[p.cat]||'Carte'}</span>
+            <span class="pending-who">+${p.pts} si validé</span>
+          </div>
+          <p class="pending-text">${escapeHtml(p.text)}</p>
+          ${skipNote}
+          <div class="pending-actions">
+            ${skipOrPenaltyBtn}
+            <button class="btn-primary pending-ok">OK, c'est fait !</button>
+          </div>
+        `;
+        if(limitReached){
+          row.querySelector('.pending-penalty').addEventListener('click', () => payPenalty(key));
+        } else {
+          row.querySelector('.pending-nope').addEventListener('click', () => skipCard(key));
+        }
+        row.querySelector('.pending-ok').addEventListener('click', () => markDone(key));
+      }
     }
 
     mineList.appendChild(row);
@@ -360,6 +382,13 @@ function getPendingEntries(){
   return Object.entries(state.pendingCards).sort((a,b)=> a[1].ts - b[1].ts);
 }
 
+const SKIP_LIMIT = 5;
+const SKIP_PENALTY = 15;
+
+function getSkipCount(playerId, cat){
+  return (state.skipCounts && state.skipCounts[playerId] && state.skipCounts[playerId][cat]) || 0;
+}
+
 function drawCard(cat){
   const pending = getPendingEntries();
   if(pending.length >= MAX_PENDING) return; // file pleine, on bloque
@@ -384,16 +413,56 @@ function drawCard(cat){
 function submitAnswer(key, answerText){
   const pending = state.pendingCards && state.pendingCards[key];
   if(!pending || pending.by !== me.id) return;
-  roomRef.child('pendingCards/'+key).update({ status:'review', answer: answerText });
+  // On "accepte" la carte : le compteur de passes de cette catégorie repart à zéro.
+  roomRef.update({
+    ['pendingCards/'+key+'/status']: 'review',
+    ['pendingCards/'+key+'/answer']: answerText,
+    ['skipCounts/'+me.id+'/'+pending.cat]: 0
+  });
 }
 
 function markDone(key){
   const pending = state.pendingCards && state.pendingCards[key];
   if(!pending || pending.by !== me.id) return;
-  roomRef.child('pendingCards/'+key).update({ status:'review' });
+  roomRef.update({
+    ['pendingCards/'+key+'/status']: 'review',
+    ['skipCounts/'+me.id+'/'+pending.cat]: 0
+  });
+}
+
+function skipCard(key){
+  const pending = state.pendingCards && state.pendingCards[key];
+  if(!pending || pending.by !== me.id) return;
+  if(getSkipCount(me.id, pending.cat) >= SKIP_LIMIT) return; // protection, le bouton ne devrait plus être visible
+
+  const histKey = db.ref('rooms/'+roomCode+'/history').push().key;
+  const updates = {};
+  updates['pendingCards/'+key] = null;
+  updates['skipCounts/'+me.id+'/'+pending.cat] = getSkipCount(me.id, pending.cat) + 1;
+  updates['history/'+histKey] = {
+    who: me.name, cat: pending.cat, text: pending.text, pts: 0, validated: 'skipped', ts: Date.now()
+  };
+  roomRef.update(updates);
+}
+
+function payPenalty(key){
+  const pending = state.pendingCards && state.pendingCards[key];
+  if(!pending || pending.by !== me.id) return;
+
+  const histKey = db.ref('rooms/'+roomCode+'/history').push().key;
+  const updates = {};
+  updates['pendingCards/'+key] = null;
+  updates['scores/'+me.id] = (state.scores[me.id]||0) - SKIP_PENALTY;
+  updates['skipCounts/'+me.id+'/'+pending.cat] = 0; // on "accepte" la conséquence, le compteur repart à zéro
+  updates['history/'+histKey] = {
+    who: me.name, cat: pending.cat, text: pending.text, pts: -SKIP_PENALTY, validated: 'penalty', ts: Date.now()
+  };
+  roomRef.update(updates);
 }
 
 function cancelPending(key){
+  // Retrait d'une carte déjà répondue/réalisée (statut "review"), avant validation par le/la partenaire.
+  // N'affecte pas le compteur de passes (ce n'est pas un "passe", juste un retrait).
   const pending = state.pendingCards && state.pendingCards[key];
   if(!pending || pending.by !== me.id) return;
   roomRef.child('pendingCards/'+key).remove();
@@ -642,12 +711,17 @@ function renderHistory(){
   entries.forEach(h => {
     const row = document.createElement('div');
     row.className = 'hist-row';
+    let ptsLabel, statusNote = '';
+    if(h.validated === 'skipped'){ ptsLabel = '⏭ 0'; statusNote = ' (passée)'; }
+    else if(h.validated === 'penalty'){ ptsLabel = h.pts; statusNote = ' (limite de passes — pénalité acceptée)'; }
+    else if(h.validated){ ptsLabel = '+'+h.pts; }
+    else { ptsLabel = '0'; statusNote = ' (refusée)'; }
     row.innerHTML = `
       <div class="hist-left">
-        <span class="hist-who">${escapeHtml(h.who)}</span> — ${labelMap[h.cat]||'Carte'}<br>
+        <span class="hist-who">${escapeHtml(h.who)}</span> — ${labelMap[h.cat]||'Carte'}${statusNote}<br>
         <span style="color:var(--muted); font-size:12.5px;">${escapeHtml(h.text)}</span>
       </div>
-      <div class="hist-pts">${h.validated ? '+'+h.pts : '0'}</div>
+      <div class="hist-pts">${ptsLabel}</div>
     `;
     wrap.appendChild(row);
   });

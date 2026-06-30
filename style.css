@@ -314,7 +314,13 @@ main#views{ flex:1; min-height:0; position:relative; }
 }
 .pending-answer-label{ color: var(--gold-soft); font-weight:700; font-size:12px; text-transform:uppercase; letter-spacing:0.04em; margin-right:4px; }
 .pending-actions{ display:flex; gap:10px; }
+.skip-note{
+  font-size:11.5px;
+  color: var(--muted);
+  margin-bottom:10px;
+}
 .pending-actions .btn-ghost{ flex: 0 0 100px; padding:11px 0; font-size:13px; }
+.pending-actions .btn-ghost.pending-penalty{ flex: 1.3; font-size:12px; padding:11px 6px; }
 .pending-actions .btn-primary{ flex:1; padding:11px 0; font-size:13px; }
 
 /* ---------- REWARDS ---------- */
