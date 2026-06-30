@@ -291,7 +291,7 @@ main#views{ flex:1; min-height:0; position:relative; }
 .pending-cat{ font-size:11px; text-transform:uppercase; letter-spacing:0.08em; color: var(--gold-soft); }
 .pending-who{ font-size:11px; color: var(--muted); }
 .pending-text{ font-family:'Fraunces', serif; font-size:17px; line-height:1.4; margin:0 0 12px; }
-.pending-answer-input{
+.pending-answer-input, .pending-comment-input{
   width:100%;
   background: rgba(0,0,0,0.18);
   border:1px solid var(--line);
