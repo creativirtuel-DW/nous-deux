@@ -649,15 +649,19 @@ function renderJDS(){
   const myGain = (j && j.gains && j.gains[me.id]) || '';
 
   if(iValidated){
+    // Gain masqué (illisible), mais modifiable en cliquant tant que les deux
+    // partenaires n'ont pas tous les deux validé (ici le partenaire n'a pas encore validé).
     body.innerHTML = `
       <div class="jds-card">
         <span class="jds-label">Ton gain est scellé 🔒</span>
-        <div class="jds-gain-box"><div class="jds-winner-gain">${escapeHtml(myGain)}</div></div>
+        <button class="jds-masked" id="jds-edit" title="Clique pour modifier ton gain">
+          <span class="jds-masked-dots">• • • • • • • •</span>
+          <span class="jds-masked-hint">Masqué — clique pour modifier</span>
+        </button>
       </div>
-      <p class="jds-status">${ partnerValidated
-        ? 'Les deux gains sont prêts…'
-        : `En attente du gain de <strong>${escapeHtml(partnerName)}</strong>…` }</p>
+      <p class="jds-status">En attente du gain de <strong>${escapeHtml(partnerName)}</strong>…</p>
     `;
+    $('#jds-edit').addEventListener('click', editMyGain);
     return;
   }
 
@@ -684,6 +688,12 @@ function validateMyGain(text){
   updates['jds/validated/'+me.id] = true;
   if(!state.jds || !state.jds.ts) updates['jds/ts'] = Date.now();
   roomRef.update(updates);
+}
+
+function editMyGain(){
+  // Repasse mon gain en "non validé" : l'éditeur se rouvre (pré-rempli avec le texte
+  // existant). Possible seulement tant que les deux n'ont pas verrouillé ensemble.
+  roomRef.child('jds/validated/'+me.id).set(false);
 }
 
 function openLockedCard(){ roomRef.child('jds/opened/'+me.id).set(true); }
