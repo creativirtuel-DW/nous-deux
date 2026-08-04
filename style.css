@@ -575,6 +575,21 @@ main#views{ flex:1; min-height:0; position:relative; }
 }
 .jds-winner-gain{ font-family:'Fraunces', serif; font-size:19px; line-height:1.4; }
 
+.jds-masked{
+  width:100%;
+  display:flex; flex-direction:column; align-items:center; gap:6px;
+  background: rgba(0,0,0,0.2);
+  border:1px dashed var(--line);
+  border-radius:12px;
+  padding:16px;
+  color: var(--muted);
+  cursor:pointer;
+  font-family:'Inter', sans-serif;
+}
+.jds-masked:active{ background: rgba(0,0,0,0.28); }
+.jds-masked-dots{ font-size:20px; letter-spacing:3px; color: var(--gold-soft); }
+.jds-masked-hint{ font-size:12px; }
+
 .jds-status{ text-align:center; font-size:13px; color: var(--muted); line-height:1.5; margin:4px 0 0; }
 .jds-status strong{ color: var(--gold-soft); }
 
