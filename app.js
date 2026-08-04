@@ -10,6 +10,14 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
+const auth = firebase.auth();
+
+// Authentification anonyme : chaque appareil obtient une identité vérifiable,
+// sans aucun login à taper. Les règles de sécurité exigent d'être authentifié.
+function ensureAuth(){
+  if(auth.currentUser) return Promise.resolve(auth.currentUser);
+  return auth.signInAnonymously().then(cred => cred.user);
+}
 
 // ====== ÉTAT LOCAL ======
 let me = { name: '', id: '' };          // id = 'p1' ou 'p2'
@@ -87,6 +95,7 @@ function saveLocalIdentity(obj){
 
 // ====== DÉMARRAGE ======
 window.addEventListener('DOMContentLoaded', () => {
+  ensureAuth().catch(err => console.error('Auth anonyme échouée :', err));
   const saved = loadLocalIdentity();
   if(saved && saved.name && saved.room){
     $('#input-name').value = saved.name;
@@ -113,7 +122,7 @@ function joinRoom(){
   roomCode = room;
   roomRef = db.ref('rooms/' + roomCode);
 
-  roomRef.once('value').then(snap => {
+  ensureAuth().then(() => roomRef.once('value')).then(snap => {
     const data = snap.val();
 
     if(!data || !data.players){
