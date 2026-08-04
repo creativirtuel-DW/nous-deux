@@ -190,6 +190,7 @@ function render(){
   // Le bandeau et le picker sont maintenant gérés entièrement dans renderPendingCard()
 
   renderPendingCard();
+  renderJDS();
   renderRewards();
   renderHistory();
   renderCustomCards();
@@ -197,16 +198,28 @@ function render(){
 }
 
 function renderPendingCard(){
+  const catPicker = $('#cat-picker');
+  const turnBanner = $('#turn-banner');
+
+  // Quand le panneau "Jeu de société" est ouvert, on masque la pioche normale.
+  if(jdsActive){
+    catPicker.style.display = 'none';
+    turnBanner.style.display = 'none';
+    $('#pending-to-validate-section').style.display = 'none';
+    $('#pending-mine-section').style.display = 'none';
+    return;
+  }
+
   const allPending = getPendingEntries();
   const mine = allPending.filter(([k,p]) => p.by === me.id);
   const toValidate = allPending.filter(([k,p]) => p.by !== me.id && p.status === 'review');
 
-  const catPicker = $('#cat-picker');
-  const turnBanner = $('#turn-banner');
   const full = allPending.length >= MAX_PENDING;
 
   catPicker.style.display = 'grid';
-  $$('.cat-btn').forEach(b => b.classList.toggle('disabled', full));
+  turnBanner.style.display = '';
+  // le bouton "Jeu de société" n'est jamais bloqué par la file d'attente
+  $$('.cat-btn').forEach(b => { if(b.dataset.cat !== 'jds') b.classList.toggle('disabled', full); });
   turnBanner.textContent = full
     ? `🚫 File pleine (${MAX_PENDING}/${MAX_PENDING}) — attends une validation`
     : `✦ Pioche une carte (${allPending.length}/${MAX_PENDING} en attente)`;
@@ -350,6 +363,21 @@ function renderAdminLockButtons(){
   });
   const dangerZone = $('#danger-zone');
   if(dangerZone) dangerZone.style.display = unlocked ? 'block' : 'none';
+
+  // L'onglet Historique n'existe que pour l'admin.
+  const histTab = $('#tab-history');
+  if(histTab){
+    histTab.style.display = unlocked ? '' : 'none';
+    const histView = $('#view-history');
+    if(!unlocked && histView && histView.classList.contains('active')){
+      // on reverrouille alors qu'on est sur l'historique : retour à "Jouer"
+      $$('.tab').forEach(t=>t.classList.remove('active'));
+      $$('.view').forEach(v=>v.classList.remove('active'));
+      const playTab = document.querySelector('.tab[data-view="view-play"]');
+      if(playTab) playTab.classList.add('active');
+      $('#view-play').classList.add('active');
+    }
+  }
 }
 
 // ====== TABS ======
@@ -369,11 +397,20 @@ function setupPlayView(){
   $$('.cat-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       if(btn.classList.contains('disabled')) return;
+      if(btn.dataset.cat === 'jds'){ openJDS(); return; }
       drawCard(btn.dataset.cat);
     });
   });
+  const back = $('#jds-back');
+  if(back) back.addEventListener('click', closeJDS);
   // Les actions des boutons sont ré-attribuées dynamiquement à chaque rendu (cf. renderPendingCard)
 }
+
+// ====== JEU DE SOCIÉTÉ (pari sur une partie physique) ======
+let jdsActive = false;
+
+function openJDS(){ jdsActive = true; render(); }
+function closeJDS(){ jdsActive = false; render(); }
 
 function getActiveDefaultCards(){
   const disabled = (state && state.disabledDefaults) || {};
@@ -513,6 +550,171 @@ function validatePending(key, approved){
   roomRef.update(updates);
 }
 
+// ====== RENDU DU PANNEAU "JEU DE SOCIÉTÉ" ======
+let jdsFinalizing = false;
+
+function renderJDS(){
+  const panel = $('#jds-panel');
+  if(!panel) return;
+  if(!jdsActive){ panel.style.display = 'none'; return; }
+  panel.style.display = 'flex';
+
+  const body = $('#jds-body');
+  const j = state.jds || null;
+  const partnerName = state.players[partnerId] || 'ton/ta partenaire';
+
+  const bothValidated = j && j.validated && j.validated.p1 && j.validated.p2;
+  const bothOpened   = j && j.opened   && j.opened.p1   && j.opened.p2;
+  const hasWinner    = j && j.winner;
+
+  // ---------- PHASE : RÉSOLU ----------
+  if(hasWinner){
+    const winnerId = j.winner;
+    const loserId  = winnerId === 'p1' ? 'p2' : 'p1';
+    const winnerName = state.players[winnerId] || '';
+    const winnerGain = (j.gains && j.gains[winnerId]) || '';
+    body.innerHTML = `
+      <div class="jds-winner">
+        <div class="jds-lock-icon">🎉</div>
+        <div class="jds-winner-name">${escapeHtml(winnerName)} a gagné !</div>
+        <div class="jds-gain-box">
+          <span class="jds-label">Gain à honorer</span>
+          <div class="jds-winner-gain">${escapeHtml(winnerGain)}</div>
+        </div>
+        <div class="jds-smoke"><span class="jds-smoke-puff">💨</span><br>Le gain de ${escapeHtml(state.players[loserId]||'')} est parti en fumée…</div>
+      </div>
+      <button class="btn-primary" id="jds-new">🎲 Nouveau pari</button>
+    `;
+    $('#jds-new').addEventListener('click', startNewBet);
+    return;
+  }
+
+  // ---------- PHASE : VOTE (les deux ont ouvert la carte) ----------
+  if(bothValidated && bothOpened){
+    const votes = j.votes || {};
+    const myVote = votes[me.id];
+    const bothVoted = votes.p1 && votes.p2;
+    const agree = bothVoted && votes.p1 === votes.p2;
+
+    if(bothVoted && agree){ finalizeJDS(votes.p1, j); }
+
+    let statusHtml = '';
+    if(bothVoted && !agree){
+      statusHtml = `
+        <p class="jds-status">🤔 Vous avez désigné des gagnants différents. Remettez-vous d'accord, puis recommencez.</p>
+        <button class="btn-ghost" id="jds-revote">Recommencer le vote</button>`;
+    } else if(myVote){
+      statusHtml = `<p class="jds-status">Ton choix est enregistré. En attente de <strong>${escapeHtml(partnerName)}</strong>…</p>`;
+    }
+
+    body.innerHTML = `
+      <div class="jds-card">
+        <span class="jds-label">La partie est finie — qui a gagné ?</span>
+        <div class="jds-vote-row">
+          <button class="jds-vote-btn ${myVote===me.id?'chosen':''}" data-vote="${me.id}">${escapeHtml(me.name)}</button>
+          <button class="jds-vote-btn ${myVote===partnerId?'chosen':''}" data-vote="${partnerId}">${escapeHtml(partnerName)}</button>
+        </div>
+        ${statusHtml}
+      </div>
+    `;
+    body.querySelectorAll('.jds-vote-btn').forEach(b => {
+      b.addEventListener('click', () => voteWinner(b.dataset.vote));
+    });
+    const revote = $('#jds-revote');
+    if(revote) revote.addEventListener('click', resetVotes);
+    return;
+  }
+
+  // ---------- PHASE : VERROUILLÉ (les deux gains sont scellés) ----------
+  if(bothValidated){
+    const iOpened = j.opened && j.opened[me.id];
+    body.innerHTML = `
+      <div class="jds-locked">
+        <div class="jds-lock-icon">🔒</div>
+        <h4>Vos gains sont scellés</h4>
+        <p>Jouez votre partie pour de vrai. Quand c'est terminé, chacun ouvre la carte pour révéler le gain du gagnant.</p>
+      </div>
+      ${ iOpened
+        ? `<p class="jds-status">✅ Tu as ouvert ta carte. En attente de <strong>${escapeHtml(partnerName)}</strong>…</p>`
+        : `<button class="btn-primary" id="jds-open">🔓 Ouvrir la carte (partie terminée)</button>` }
+    `;
+    const openBtn = $('#jds-open');
+    if(openBtn) openBtn.addEventListener('click', openLockedCard);
+    return;
+  }
+
+  // ---------- PHASE : SAISIE DES GAINS ----------
+  const iValidated = j && j.validated && j.validated[me.id];
+  const partnerValidated = j && j.validated && j.validated[partnerId];
+  const myGain = (j && j.gains && j.gains[me.id]) || '';
+
+  if(iValidated){
+    body.innerHTML = `
+      <div class="jds-card">
+        <span class="jds-label">Ton gain est scellé 🔒</span>
+        <div class="jds-gain-box"><div class="jds-winner-gain">${escapeHtml(myGain)}</div></div>
+      </div>
+      <p class="jds-status">${ partnerValidated
+        ? 'Les deux gains sont prêts…'
+        : `En attente du gain de <strong>${escapeHtml(partnerName)}</strong>…` }</p>
+    `;
+    return;
+  }
+
+  body.innerHTML = `
+    <div class="jds-card">
+      <span class="jds-label">Ton gain secret</span>
+      <textarea class="jds-gain-input" id="jds-gain-input" rows="3" maxlength="200" placeholder="Ce que tu remportes si TU gagnes la partie…">${escapeHtml(myGain)}</textarea>
+      <button class="btn-primary" id="jds-validate">Valider mon gain 🔒</button>
+    </div>
+    <p class="jds-status">${ partnerValidated
+      ? `<strong>${escapeHtml(partnerName)}</strong> a déjà scellé son gain. À toi !`
+      : `Personne ne verra ton gain tant que la partie n'est pas jouée.` }</p>
+  `;
+  $('#jds-validate').addEventListener('click', () => {
+    const t = $('#jds-gain-input').value.trim();
+    if(!t) return;
+    validateMyGain(t);
+  });
+}
+
+function validateMyGain(text){
+  const updates = {};
+  updates['jds/gains/'+me.id] = text;
+  updates['jds/validated/'+me.id] = true;
+  if(!state.jds || !state.jds.ts) updates['jds/ts'] = Date.now();
+  roomRef.update(updates);
+}
+
+function openLockedCard(){ roomRef.child('jds/opened/'+me.id).set(true); }
+function voteWinner(id){ roomRef.child('jds/votes/'+me.id).set(id); }
+function resetVotes(){ roomRef.child('jds/votes').remove(); }
+function startNewBet(){ roomRef.child('jds').remove(); }
+
+function finalizeJDS(winnerId, j){
+  if(jdsFinalizing) return;
+  jdsFinalizing = true;
+  // Transaction : un seul des deux appareils fixe le gagnant et écrit l'historique.
+  roomRef.child('jds/winner').transaction(
+    cur => (cur ? undefined : winnerId),
+    (err, committed, snap) => {
+      jdsFinalizing = false;
+      if(!err && committed && snap && snap.val() === winnerId){
+        const loserId = winnerId === 'p1' ? 'p2' : 'p1';
+        const histKey = db.ref('rooms/'+roomCode+'/jdsHistory').push().key;
+        roomRef.child('jdsHistory/'+histKey).set({
+          winnerName: state.players[winnerId] || '',
+          winnerGain: (j.gains && j.gains[winnerId]) || '',
+          loserName:  state.players[loserId] || '',
+          loserGain:  (j.gains && j.gains[loserId]) || '',
+          ts: Date.now()
+        });
+        roomRef.child('jds/resolvedTs').set(Date.now());
+      }
+    }
+  );
+}
+
 // ====== VUE RÉCOMPENSES ======
 function setupRewardsView(){
   $('#btn-add-reward').addEventListener('click', () => {
@@ -541,7 +743,7 @@ function setupRewardsView(){
 
   $('#btn-reset-scores').addEventListener('click', () => {
     const ok = confirm(
-      "Ça va remettre les deux scores à 0, vider l'historique, vider les cartes en attente et réinitialiser les compteurs de passes.\n\nLes cartes/paliers personnalisés ne sont PAS touchés.\n\nConfirmer la réinitialisation ?"
+      "Ça va remettre les deux scores à 0, vider l'historique, vider les cartes en attente, réinitialiser les compteurs de passes et annuler un pari « Jeu de société » en cours.\n\nLes cartes/paliers personnalisés et l'historique secret des paris ne sont PAS touchés.\n\nConfirmer la réinitialisation ?"
     );
     if(!ok) return;
     roomRef.update({
@@ -549,7 +751,8 @@ function setupRewardsView(){
       'scores/p2': 0,
       'history': null,
       'pendingCards': null,
-      'skipCounts': null
+      'skipCounts': null,
+      'jds': null
     });
   });
 }
@@ -750,12 +953,13 @@ function openEditRow(row, c){
 function renderHistory(){
   const wrap = $('#history-list');
   wrap.innerHTML = '';
-  if(!state.history){
-    wrap.innerHTML = '<p class="empty-state">Aucune partie jouée pour l\'instant. Lancez-vous !</p>';
-    return;
-  }
+
   const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Cap ou pas', distance:'📱 À distance' };
-  const entries = Object.values(state.history).sort((a,b)=> b.ts-a.ts).slice(0,50);
+  const entries = state.history ? Object.values(state.history).sort((a,b)=> b.ts-a.ts).slice(0,50) : [];
+
+  if(entries.length === 0){
+    wrap.innerHTML = '<p class="empty-state">Aucune partie jouée pour l\'instant. Lancez-vous !</p>';
+  }
   entries.forEach(h => {
     const row = document.createElement('div');
     row.className = 'hist-row';
@@ -773,6 +977,29 @@ function renderHistory(){
     `;
     wrap.appendChild(row);
   });
+
+  // ---- Historique secret des paris "Jeu de société" (admin uniquement) ----
+  if(isAdminUnlocked() && state.jdsHistory){
+    const jdsEntries = Object.values(state.jdsHistory).sort((a,b)=> b.ts - a.ts);
+    if(jdsEntries.length){
+      const sec = document.createElement('div');
+      sec.className = 'jds-hist-section';
+      sec.innerHTML = `<h3 class="jds-hist-title">♟️ Paris « Jeu de société » (secret)</h3>`;
+      jdsEntries.forEach(h => {
+        const d = new Date(h.ts);
+        const dateStr = d.toLocaleDateString('fr-FR') + ' · ' + d.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+        const row = document.createElement('div');
+        row.className = 'jds-hist-row';
+        row.innerHTML = `
+          <div>🏆 <span class="jds-hist-win">${escapeHtml(h.winnerName)}</span> — <span class="jds-hist-gain">${escapeHtml(h.winnerGain)}</span></div>
+          <div class="jds-hist-lose">💨 ${escapeHtml(h.loserName)} — ${escapeHtml(h.loserGain)}</div>
+          <div class="jds-hist-date">${dateStr}</div>
+        `;
+        sec.appendChild(row);
+      });
+      wrap.appendChild(sec);
+    }
+  }
 }
 
 // ====== UTIL ======
