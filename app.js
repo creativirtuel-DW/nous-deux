@@ -106,6 +106,7 @@ window.addEventListener('DOMContentLoaded', () => {
   setupPlayView();
   setupContentView();
   setupRewardsView();
+  setupHistoryView();
   $('#btn-admin-lock-content').addEventListener('click', handleAdminLockClick);
   $('#btn-admin-lock-rewards').addEventListener('click', handleAdminLockClick);
 });
@@ -960,6 +961,19 @@ function openEditRow(row, c){
 }
 
 // ====== VUE HISTORIQUE ======
+function setupHistoryView(){
+  const btn = $('#btn-clear-card-history');
+  if(!btn) return;
+  btn.addEventListener('click', () => {
+    if(!isAdminUnlocked()) return;
+    const ok = confirm(
+      "Vider TOUT l'historique des cartes jouées ?\n\nLes scores, les cartes/paliers et l'historique secret des paris « Jeu de société » ne sont PAS touchés."
+    );
+    if(!ok) return;
+    roomRef.child('history').remove();
+  });
+}
+
 function renderHistory(){
   const wrap = $('#history-list');
   wrap.innerHTML = '';
