@@ -192,6 +192,8 @@ function render(){
 
   renderPendingCard();
   renderJDS();
+  renderPhotoDefi();
+  pdCheckGageDeadline();
   renderRewards();
   renderHistory();
   renderCustomCards();
@@ -203,7 +205,7 @@ function renderPendingCard(){
   const turnBanner = $('#turn-banner');
 
   // Quand le panneau "Jeu de société" est ouvert, on masque la pioche normale.
-  if(jdsActive){
+  if(jdsActive || photoActive){
     catPicker.style.display = 'none';
     turnBanner.style.display = 'none';
     $('#pending-to-validate-section').style.display = 'none';
@@ -250,9 +252,13 @@ function renderPendingCard(){
       ${answerBlock}
       ${commentBlock}
       <div class="pending-actions">
-        <button class="btn-ghost pending-refuse">Refuser</button>
-        <button class="btn-primary pending-validate">Valider ! +${p.pts}</button>
+        ${p.pdGage
+          ? `<button class="btn-ghost pending-refuse">Pas réalisé (+${PD_POINTS} pour moi)</button>
+             <button class="btn-primary pending-validate">Gage réalisé ✓</button>`
+          : `<button class="btn-ghost pending-refuse">Refuser</button>
+             <button class="btn-primary pending-validate">Valider ! +${p.pts}</button>`}
       </div>
+      ${p.pdGage ? `<div class="skip-note">⏳ À valider avant le ${pdGageDeadlineLabel(p.pdGage.deadline)} (${pdGageRestant(p.pdGage.deadline)}). Sans validation, le gage s'annule et tu prends ${PD_POINTS} points.</div>` : ''}
     `;
     row.querySelector('.pending-refuse').addEventListener('click', () => validatePending(key, false));
     row.querySelector('.pending-validate').addEventListener('click', () => validatePending(key, true));
@@ -278,10 +284,12 @@ function renderPendingCard(){
         ${p.answer ? `<div class="pending-answer"><span class="pending-answer-label">Ta réponse :</span> ${escapeHtml(p.answer)}</div>` : ''}
         ${p.comment ? `<div class="pending-answer"><span class="pending-answer-label">Ton commentaire :</span> ${escapeHtml(p.comment)}</div>` : ''}
         <div class="pending-actions">
-          <button class="btn-ghost pending-cancel">Annuler (0 point)</button>
+          ${p.pdGage ? '' : `<button class="btn-ghost pending-cancel">Annuler (0 point)</button>`}
         </div>
+        ${p.pdGage ? `<div class="skip-note">⏳ ${escapeHtml(state.players[p.pdGage.author]||'')} doit valider avant le ${pdGageDeadlineLabel(p.pdGage.deadline)}.</div>` : ''}
       `;
-      row.querySelector('.pending-cancel').addEventListener('click', () => cancelPending(key));
+      const cancelBtn = row.querySelector('.pending-cancel');
+      if(cancelBtn) cancelBtn.addEventListener('click', () => cancelPending(key));
 
     } else {
       const skipsUsed = getSkipCount(me.id, p.cat);
@@ -319,9 +327,11 @@ function renderPendingCard(){
       } else {
         // défi / gage / distance : pas de texte de réponse, juste fait ou non
         // (le défi a en plus un commentaire optionnel visible par le/la partenaire)
-        const skipOrPenaltyBtn = limitReached
-          ? `<button class="btn-ghost pending-penalty">Accepter de perdre ${SKIP_PENALTY} points</button>`
-          : `<button class="btn-ghost pending-nope">Non, je passe</button>`;
+        const skipOrPenaltyBtn = p.pdGage
+          ? ''
+          : (limitReached
+            ? `<button class="btn-ghost pending-penalty">Accepter de perdre ${SKIP_PENALTY} points</button>`
+            : `<button class="btn-ghost pending-nope">Non, je passe</button>`);
         const commentField = p.cat === 'defi'
           ? `<textarea class="pending-comment-input" placeholder="Petit commentaire pour ${escapeHtml(state.players[partnerId]||'ton/ta partenaire')} (optionnel)…" rows="2"></textarea>`
           : '';
@@ -331,17 +341,21 @@ function renderPendingCard(){
             <span class="pending-who">+${p.pts} si validé</span>
           </div>
           <p class="pending-text">${escapeHtml(p.text)}</p>
-          ${skipNote}
+          ${p.pdGage
+            ? `<div class="skip-note">🎯 Gage accepté à la place des ${PD_POINTS} points. ${escapeHtml(state.players[p.pdGage.author]||'')} doit le valider avant le ${pdGageDeadlineLabel(p.pdGage.deadline)} — sinon il s'annule et tu perds les ${PD_POINTS} points.</div>`
+            : skipNote}
           ${commentField}
           <div class="pending-actions">
             ${skipOrPenaltyBtn}
             <button class="btn-primary pending-ok">OK, c'est fait !</button>
           </div>
         `;
-        if(limitReached){
-          row.querySelector('.pending-penalty').addEventListener('click', () => payPenalty(key));
-        } else {
-          row.querySelector('.pending-nope').addEventListener('click', () => skipCard(key));
+        if(!p.pdGage){
+          if(limitReached){
+            row.querySelector('.pending-penalty').addEventListener('click', () => payPenalty(key));
+          } else {
+            row.querySelector('.pending-nope').addEventListener('click', () => skipCard(key));
+          }
         }
         row.querySelector('.pending-ok').addEventListener('click', () => {
           const commentInput = row.querySelector('.pending-comment-input');
@@ -399,11 +413,14 @@ function setupPlayView(){
     btn.addEventListener('click', () => {
       if(btn.classList.contains('disabled')) return;
       if(btn.dataset.cat === 'jds'){ openJDS(); return; }
+      if(btn.dataset.cat === 'photo'){ openPhoto(); return; }
       drawCard(btn.dataset.cat);
     });
   });
   const back = $('#jds-back');
   if(back) back.addEventListener('click', closeJDS);
+  const pback = $('#photo-back');
+  if(pback) pback.addEventListener('click', closePhoto);
   // Les actions des boutons sont ré-attribuées dynamiquement à chaque rendu (cf. renderPendingCard)
 }
 
@@ -496,6 +513,7 @@ function markDone(key, comment){
 function skipCard(key){
   const pending = state.pendingCards && state.pendingCards[key];
   if(!pending || pending.by !== me.id) return;
+  if(pending.pdGage) return; // un gage de Défi Photo ne se passe pas
   if(getSkipCount(me.id, pending.cat) >= SKIP_LIMIT) return; // protection, le bouton ne devrait plus être visible
 
   const histKey = db.ref('rooms/'+roomCode+'/history').push().key;
@@ -511,6 +529,7 @@ function skipCard(key){
 function payPenalty(key){
   const pending = state.pendingCards && state.pendingCards[key];
   if(!pending || pending.by !== me.id) return;
+  if(pending.pdGage) return;
 
   const histKey = db.ref('rooms/'+roomCode+'/history').push().key;
   const updates = {};
@@ -528,12 +547,19 @@ function cancelPending(key){
   // N'affecte pas le compteur de passes (ce n'est pas un "passe", juste un retrait).
   const pending = state.pendingCards && state.pendingCards[key];
   if(!pending || pending.by !== me.id) return;
+  if(pending.pdGage) return;
   roomRef.child('pendingCards/'+key).remove();
 }
 
 function validatePending(key, approved){
   const pending = state.pendingCards && state.pendingCards[key];
   if(!pending || pending.by === me.id) return; // seul le/la partenaire peut valider
+
+  // Gage de Défi Photo refusé par son auteur : le gage saute, les points s'appliquent.
+  if(pending.pdGage && !approved){
+    pdGageFallback(key, pending, 'Gage refusé par son auteur — bascule sur les points');
+    return;
+  }
 
   const drawerId = pending.by;
   const pts = approved ? pending.pts : 0;
