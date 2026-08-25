@@ -12,6 +12,54 @@
 const BATTLE_TIRAGE = { quotidien: 2, souvenir: 1, coquin: 2 };
 const OSMOSE_PAR_REPONSE = 10;
 
+// Une réponse dont le libellé commence par « Autre » ouvre un champ de saisie.
+function battleEstLibre(libelle){
+  return /^\s*autre/i.test(libelle || '');
+}
+
+// Normalisation pour comparer deux réponses libres : minuscules, accents et
+// ponctuation retirés, espaces réduits. « Dans l'ascenseur ! » == « ascenseur ».
+function battleNormalise(t){
+  return (t || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9 ]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Deux textes libres correspondent s'ils sont identiques une fois normalisés,
+// ou si l'un contient l'autre (au moins 3 caractères, pour éviter les hasards).
+function battleTextesConcordent(t1, t2){
+  const a = battleNormalise(t1), b = battleNormalise(t2);
+  if(!a || !b) return false;
+  if(a === b) return true;
+  if(a.length >= 3 && b.length >= 3 && (a.indexOf(b) !== -1 || b.indexOf(a) !== -1)) return true;
+  return false;
+}
+
+// Libellé affiché à la révélation : la réponse libre remplace « Autre : ».
+function battleLibelle(q, choix, textes, i){
+  if(choix === null || choix === undefined) return '—';
+  const brut = q.a[choix];
+  if(brut === undefined) return '—';
+  if(battleEstLibre(brut)){
+    const t = textes && textes[String(i)];
+    return t ? (brut.replace(/\s*:\s*$/, '') + ' : ' + t) : brut;
+  }
+  return brut;
+}
+
+// La grille est complète quand les 5 réponses sont choisies et qu'aucune
+// réponse libre n'a été laissée vide.
+function battleGrilleComplete(questions, reponses, textes){
+  return questions.every((q, i) => {
+    if(reponses[i] === null || reponses[i] === undefined) return false;
+    if(battleEstLibre(q.a[reponses[i]])) return !!(textes[String(i)] || '').trim();
+    return true;
+  });
+}
+
 let battleActive = false;
 let battleBrouillon = null;   // réponses en cours de saisie, avant envoi
 let battleAOublier = [];      // ids à libérer : catégorie épuisée, nouveau cycle
@@ -79,20 +127,21 @@ function battleLancer(){
   if(battleGet()) return;                 // une seule Battle à la fois
   const questions = battleTirage();
   if(questions.length < 5){ alert("Il n'y a pas assez de questions pour lancer une Battle."); return; }
-  battleBrouillon = { questions: questions, reponses: [null, null, null, null, null] };
+  battleBrouillon = { questions: questions, reponses: [null, null, null, null, null], textes: {} };
   render();
 }
 
 // Le lanceur envoie ses réponses : la série part chez le/la partenaire.
 function battleEnvoyer(){
   if(!battleBrouillon) return;
-  if(battleBrouillon.reponses.some(r => r === null)) return;
+  if(!battleGrilleComplete(battleBrouillon.questions, battleBrouillon.reponses, battleBrouillon.textes)) return;
   const questions = battleBrouillon.questions;
   const updates = {};
   updates['battle'] = {
     by: me.id,
     questions: questions,
     reponses: { [me.id]: battleBrouillon.reponses },
+    textes: { [me.id]: battleNettoieTextes(questions, battleBrouillon.reponses, battleBrouillon.textes) },
     status: 'attente',
     ts: Date.now()
   };
@@ -109,18 +158,43 @@ function battleEnvoyer(){
 }
 
 // Le/la partenaire répond : on calcule l'Osmose et on révèle tout.
-function battleRepondre(reponses){
+// On ne garde que les textes des questions réellement répondues « Autre ».
+function battleNettoieTextes(questions, reponses, textes){
+  const propre = {};
+  questions.forEach((q, i) => {
+    if(reponses[i] !== null && reponses[i] !== undefined && battleEstLibre(q.a[reponses[i]])){
+      const t = ((textes || {})[String(i)] || '').trim();
+      if(t) propre[String(i)] = t;
+    }
+  });
+  return propre;
+}
+
+// Deux réponses correspondent si le même bouton a été choisi ; pour une
+// réponse libre, il faut en plus que les deux textes concordent.
+function battleReponsesConcordent(q, i, choixA, textesA, choixB, textesB){
+  if(choixA !== choixB) return false;
+  if(!battleEstLibre(q.a[choixA])) return true;
+  return battleTextesConcordent((textesA || {})[String(i)], (textesB || {})[String(i)]);
+}
+
+function battleRepondre(reponses, mesTextes){
   const b = battleGet();
   if(!b || b.by === me.id || b.status !== 'attente') return;
-  if(reponses.some(r => r === null)) return;
+  if(!battleGrilleComplete(b.questions, reponses, mesTextes || {})) return;
 
   const siennes = b.reponses[b.by] || [];
+  const sesTextes = (b.textes && b.textes[b.by]) || {};
+  const propres = battleNettoieTextes(b.questions, reponses, mesTextes);
   let communes = 0;
-  reponses.forEach((r, i) => { if(r === siennes[i]) communes++; });
+  reponses.forEach((r, i) => {
+    if(battleReponsesConcordent(b.questions[i], i, r, propres, siennes[i], sesTextes)) communes++;
+  });
   const delta = (communes * OSMOSE_PAR_REPONSE) - ((reponses.length - communes) * OSMOSE_PAR_REPONSE);
 
   const updates = {};
   updates['battle/reponses/' + me.id] = reponses;
+  updates['battle/textes/' + me.id] = propres;
   updates['battle/status'] = 'termine';
   updates['battle/communes'] = communes;
   updates['battle/delta'] = delta;
@@ -152,7 +226,8 @@ function battleAnnuler(){
 }
 
 // ---------- RENDU ----------
-function battleGrilleHTML(questions, reponses, verrouille){
+function battleGrilleHTML(questions, reponses, verrouille, textes){
+  textes = textes || {};
   return questions.map((q, i) => `
     <div class="bt-q">
       <div class="bt-q-num">Question ${i + 1}/5</div>
@@ -161,19 +236,32 @@ function battleGrilleHTML(questions, reponses, verrouille){
         ${q.a.map((rep, j) => `
           <button class="bt-choix-btn${reponses[i] === j ? ' choisi' : ''}"
                   data-q="${i}" data-r="${j}"${verrouille ? ' disabled' : ''}>${escapeHtml(rep)}</button>
+          ${battleEstLibre(rep) && reponses[i] === j
+            ? `<input type="text" class="bt-libre" data-q="${i}" maxlength="60"
+                      placeholder="ta réponse" value="${escapeHtml(textes[String(i)] || '')}"${verrouille ? ' disabled' : ''}>`
+            : ''}
         `).join('')}
       </div>
     </div>
   `).join('');
 }
 
-function battleBrancheChoix(racine, reponses, onChange){
+function battleBrancheChoix(racine, reponses, onChange, textes){
   racine.querySelectorAll('.bt-choix-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const i = parseInt(btn.dataset.q, 10);
       reponses[i] = parseInt(btn.dataset.r, 10);
       onChange();
     });
+  });
+  // Le champ libre ne doit pas provoquer de re-rendu à chaque frappe : on se
+  // contente de mémoriser la saisie et de rafraîchir l'état du bouton d'envoi.
+  racine.querySelectorAll('.bt-libre').forEach(champ => {
+    champ.addEventListener('input', () => {
+      textes[String(champ.dataset.q)] = champ.value;
+      if(typeof onChange === 'function') onChange(true);
+    });
+    if(document.activeElement !== champ && champ.value === '') champ.focus();
   });
 }
 
@@ -189,20 +277,24 @@ function renderBattle(){
 
   // ---------- SAISIE EN COURS (le lanceur remplit sa grille) ----------
   if(battleBrouillon){
-    const complet = battleBrouillon.reponses.every(r => r !== null);
+    if(!battleBrouillon.textes) battleBrouillon.textes = {};
+    const complet = battleGrilleComplete(battleBrouillon.questions, battleBrouillon.reponses, battleBrouillon.textes);
     body.innerHTML = `
       <div class="jds-intro">
         <span class="jds-emoji">⚔️</span>
         <h3 class="jds-title">Battle</h3>
         <p class="jds-sub">Réponds à ces 5 questions. ${escapeHtml(partnerName)} recevra exactement la même série — chaque réponse identique vaut <strong>+10 d'Osmose</strong>, chaque divergence <strong>−10</strong>.</p>
       </div>
-      ${battleGrilleHTML(battleBrouillon.questions, battleBrouillon.reponses, false)}
+      ${battleGrilleHTML(battleBrouillon.questions, battleBrouillon.reponses, false, battleBrouillon.textes)}
       <button class="btn-primary" id="bt-send"${complet ? '' : ' disabled'}>
         ${complet ? 'Envoyer à ' + escapeHtml(partnerName) : 'Réponds aux 5 questions'}
       </button>
       <button class="btn-ghost" id="bt-abandon">Abandonner cette série</button>
     `;
-    battleBrancheChoix(body, battleBrouillon.reponses, () => renderBattle());
+    battleBrancheChoix(body, battleBrouillon.reponses, (saisie) => {
+      if(saisie) battleMajBouton('#bt-send', battleBrouillon.questions, battleBrouillon.reponses, battleBrouillon.textes, partnerName);
+      else renderBattle();
+    }, battleBrouillon.textes);
     $('#bt-send').addEventListener('click', battleEnvoyer);
     $('#bt-abandon').addEventListener('click', () => { battleBrouillon = null; render(); });
     return;
@@ -248,23 +340,28 @@ function renderBattle(){
     if(!battleBrouillon) battleBrouillon = null;
     const mesReponses = window._btRep && window._btRep.length === 5 ? window._btRep : [null, null, null, null, null];
     window._btRep = mesReponses;
-    const complet = mesReponses.every(r => r !== null);
+    if(!window._btTxt) window._btTxt = {};
+    const mesTextes = window._btTxt;
+    const complet = battleGrilleComplete(b.questions, mesReponses, mesTextes);
     body.innerHTML = `
       <div class="jds-intro">
         <span class="jds-emoji">⚔️</span>
         <h3 class="jds-title">${escapeHtml(state.players[b.by] || '')} te défie</h3>
         <p class="jds-sub">Réponds aux mêmes 5 questions. Essaie de tomber juste : chaque réponse identique vaut <strong>+10 d'Osmose</strong>.</p>
       </div>
-      ${battleGrilleHTML(b.questions, mesReponses, false)}
+      ${battleGrilleHTML(b.questions, mesReponses, false, mesTextes)}
       <button class="btn-primary" id="bt-answer"${complet ? '' : ' disabled'}>
         ${complet ? 'Valider mes réponses' : 'Réponds aux 5 questions'}
       </button>
     `;
-    battleBrancheChoix(body, mesReponses, () => renderBattle());
+    battleBrancheChoix(body, mesReponses, (saisie) => {
+      if(saisie) battleMajBouton('#bt-answer', b.questions, mesReponses, mesTextes, null);
+      else renderBattle();
+    }, mesTextes);
     $('#bt-answer').addEventListener('click', () => {
-      const r = window._btRep;
-      window._btRep = null;
-      battleRepondre(r);
+      const r = window._btRep, t = window._btTxt;
+      window._btRep = null; window._btTxt = null;
+      battleRepondre(r, t);
     });
     return;
   }
@@ -273,6 +370,8 @@ function renderBattle(){
   const rA = b.reponses[b.by] || [];
   const autreId = b.by === 'p1' ? 'p2' : 'p1';
   const rB = b.reponses[autreId] || [];
+  const tA = (b.textes && b.textes[b.by]) || {};
+  const tB = (b.textes && b.textes[autreId]) || {};
   const nomA = state.players[b.by] || '';
   const nomB = state.players[autreId] || '';
 
@@ -283,18 +382,32 @@ function renderBattle(){
       <div class="bt-delta">${b.delta >= 0 ? '+' : ''}${b.delta} d'Osmose</div>
     </div>
     ${b.questions.map((q, i) => {
-      const ok = rA[i] === rB[i];
+      const ok = battleReponsesConcordent(q, i, rA[i], tA, rB[i], tB);
       return `
         <div class="bt-detail ${ok ? 'ok' : 'ko'}">
           <div class="bt-detail-q">${ok ? '💗' : '💔'} ${escapeHtml(q.q)}</div>
-          <div class="bt-detail-rep"><span>${escapeHtml(nomA)}</span> ${escapeHtml(q.a[rA[i]] || '—')}</div>
-          <div class="bt-detail-rep"><span>${escapeHtml(nomB)}</span> ${escapeHtml(q.a[rB[i]] || '—')}</div>
+          <div class="bt-detail-rep"><span>${escapeHtml(nomA)}</span> ${escapeHtml(battleLibelle(q, rA[i], tA, i))}</div>
+          <div class="bt-detail-rep"><span>${escapeHtml(nomB)}</span> ${escapeHtml(battleLibelle(q, rB[i], tB, i))}</div>
         </div>
       `;
     }).join('')}
     <button class="btn-primary" id="bt-new">⚔️ Nouvelle Battle</button>
   `;
   $('#bt-new').addEventListener('click', battleNouvelle);
+}
+
+// Rafraîchit le seul bouton d'envoi, pour ne pas reconstruire la grille
+// pendant que l'utilisateur tape dans un champ libre (il perdrait le focus).
+function battleMajBouton(selecteur, questions, reponses, textes, nomPartenaire){
+  const btn = $(selecteur);
+  if(!btn) return;
+  const complet = battleGrilleComplete(questions, reponses, textes);
+  btn.disabled = !complet;
+  if(nomPartenaire !== null && nomPartenaire !== undefined){
+    btn.textContent = complet ? 'Envoyer à ' + nomPartenaire : 'Réponds aux 5 questions';
+  }else{
+    btn.textContent = complet ? 'Valider mes réponses' : 'Réponds aux 5 questions';
+  }
 }
 
 // ---------- LE CŒUR D'OSMOSE, DANS L'EN-TÊTE ----------
