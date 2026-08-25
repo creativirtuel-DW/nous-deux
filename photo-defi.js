@@ -2,13 +2,14 @@
 //  DÉFI PHOTO
 //  A envoie une photo + la vraie date (mois/année) + un gage secret.
 //  B la voit 10 s, puis a 60 s pour deviner le mois et l'année.
-//  Tolérance : 1 mois d'écart. Réussi -> +25 pts pour B.
+//  Tolérance : PD_TOLERANCE mois d'écart. Réussi -> +25 pts pour B.
 //  Raté -> B choisit : -25 pts (récupérés par A) ou le gage (0 pt, gage révélé).
 //  La photo est effacée de la base dès la fin des 10 s.
 // =========================================================
 const PD_VIEW_MS   = 10000;
 const PD_ANSWER_MS = 60000;
 const PD_POINTS    = 25;
+const PD_TOLERANCE = 5;    // écart de mois accepté pour la réponse
 const PD_GAGE_MS   = 24 * 60 * 60 * 1000;   // délai pour valider le gage
 const PD_MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 
@@ -59,6 +60,7 @@ function pdSend(dataUrl, month, year, gage){
     by: me.id, photo: dataUrl, month: month, year: year,
     gage: gage, status: 'sent', ts: Date.now()
   });
+  notifyPartner('📸 Défi Photo', me.name + ' t' + String.fromCharCode(39) + 'envoie une photo à dater. 10 secondes pour la mémoriser !', 'photo');
 }
 
 function pdCancel(){
@@ -83,7 +85,7 @@ function pdEndViewing(){
 function pdSubmit(month, year){
   const d = pdGet();
   if(!d || d.by === me.id || d.status !== 'answering') return;
-  const ok = (month !== null) && pdEcartMois({month: month, year: year}, {month: d.month, year: d.year}) <= 1;
+  const ok = (month !== null) && pdEcartMois({month: month, year: year}, {month: d.month, year: d.year}) <= PD_TOLERANCE;
 
   if(ok){
     const updates = {};
@@ -96,11 +98,13 @@ function pdSubmit(month, year){
       pts: PD_POINTS, validated: true, ts: Date.now()
     };
     roomRef.update(updates);
+    notifyPartner('🎯 Défi Photo réussi', me.name + ' a trouvé la bonne date et te prend ' + PD_POINTS + ' points.', 'photo');
   }else{
     pdRef().update({
       status: 'lost', photo: null,
       answer: month === null ? null : { month: month, year: year }
     });
+    notifyPartner('💔 Défi Photo perdu', me.name + ' s' + String.fromCharCode(39) + 'est trompé·e et choisit sa sanction…', 'photo');
   }
 }
 
@@ -120,6 +124,7 @@ function pdChoosePoints(){
     pts: -PD_POINTS, validated: false, ts: Date.now()
   };
   roomRef.update(updates);
+  notifyPartner('➖ Points plutôt que gage', me.name + ' préfère perdre ' + PD_POINTS + ' points. Ton gage reste secret.', 'photo');
 }
 
 // Perdu, option 2 : le gage devient une carte à réaliser. Aucun point ne bouge.
@@ -141,6 +146,7 @@ function pdChooseGage(){
     comment: 'A choisi le gage', pts: 0, validated: false, ts: Date.now()
   };
   roomRef.update(updates);
+  notifyPartner('🎯 Ton gage est accepté !', me.name + ' préfère ton gage aux points. À toi de le valider sous 24 h.', 'photo');
 }
 
 function pdSelects(prefix, defM, defY){
@@ -188,7 +194,7 @@ function renderPhotoDefi(){
       +   '<div id="pd-preview" class="pd-preview" style="display:none;"><img id="pd-preview-img" alt=""></div>'
       +   '<span class="jds-label" style="margin-top:18px;">2 · La vraie date</span>'
       +   pdSelects('pd', now.getMonth(), now.getFullYear())
-      +   '<p class="pd-note">Une erreur d\'un mois sera acceptée.</p>'
+      +   '<p class="pd-note">Une erreur de ' + PD_TOLERANCE + ' mois sera acceptée.</p>'
       +   '<div class="pd-stakes">'
       +     '<span class="jds-label" style="margin-bottom:10px;">Les enjeux</span>'
       +     '<div class="pd-stake"><span class="pd-stake-ic">✅</span><span>' + escapeHtml(partnerName) + ' <strong>trouve</strong> : il/elle me prend <strong>' + PD_POINTS + ' points</strong>.</span></div>'

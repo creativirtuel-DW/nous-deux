@@ -169,6 +169,8 @@ function startApp(){
   $('#screen-main').classList.add('active');
   $('#room-label').textContent = roomCode;
 
+  syncPushSubscription();
+
   roomRef.on('value', snap => {
     state = snap.val();
     if(!state) return;
@@ -194,6 +196,7 @@ function render(){
   renderJDS();
   renderPhotoDefi();
   pdCheckGageDeadline();
+  renderPushBanner();
   renderRewards();
   renderHistory();
   renderCustomCards();
@@ -498,6 +501,7 @@ function submitAnswer(key, answerText){
     ['pendingCards/'+key+'/answer']: answerText,
     ['skipCounts/'+me.id+'/'+pending.cat]: 0
   });
+  notifyPartner('✍️ Une carte à valider', me.name + ' a répondu à une carte.', 'valider');
 }
 
 function markDone(key, comment){
@@ -508,6 +512,7 @@ function markDone(key, comment){
     ['pendingCards/'+key+'/comment']: comment || '',
     ['skipCounts/'+me.id+'/'+pending.cat]: 0
   });
+  notifyPartner('✅ Une carte à valider', me.name + ' a fait sa carte : ' + pending.text.slice(0, 60), 'valider');
 }
 
 function skipCard(key){
@@ -575,6 +580,12 @@ function validatePending(key, approved){
   };
 
   roomRef.update(updates);
+
+  notifyPartner(
+    approved ? '🎉 Carte validée' : '🙅 Carte refusée',
+    approved ? me.name + ' a validé ta carte : +' + pts + ' points !'
+             : me.name + ' n' + String.fromCharCode(39) + 'a pas validé ta carte.',
+    'resultat');
 }
 
 // ====== RENDU DU PANNEAU "JEU DE SOCIÉTÉ" ======

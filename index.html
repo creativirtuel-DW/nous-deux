@@ -17,7 +17,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<link rel="stylesheet" href="style.css?v=20">
+<link rel="stylesheet" href="style.css?v=21">
 </head>
 <body>
 
@@ -75,6 +75,7 @@
 
       <!-- VUE JEU -->
       <div id="view-play" class="view active">
+        <div id="push-banner" class="push-banner" style="display:none;"></div>
         <div class="turn-banner" id="turn-banner">Pioche une carte (5 en attente max.)</div>
 
         <div class="stage">
@@ -228,6 +229,7 @@
 
 <script src="cards-data.js?v=13"></script>
 <script src="app.js?v=20"></script>
-<script src="photo-defi.js?v=2"></script>
+<script src="photo-defi.js?v=3"></script>
+<script src="push.js?v=2"></script>
 </body>
 </html>
