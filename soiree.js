@@ -15,10 +15,16 @@ function soireePoints(pts){ return Math.round(pts / SOIREE_DIVISEUR); }
 // paliers : les points visés pour chacune des 10 cartes, de l'échauffement au
 // bouquet final. C'est ce qui donne sa forme à la soirée.
 const SOIREE_NIVEAUX = [
-  { id:'tendre', emoji:'🌸', label:'Tendre',      max:25,   paliers:[10, 10, 15, 15, 20, 20, 20, 25, 25, 25],  desc:"Complicité, tendresse, rien qui brûle." },
-  { id:'chaud',  emoji:'🔥', label:'Chaud',       max:50,   paliers:[10, 10, 15, 20, 20, 25, 25, 30, 30, 40],  desc:"Ça monte franchement, sans aller au bout." },
-  { id:'libre',  emoji:'💥', label:'Sans limite', max:9999, paliers:[10, 15, 20, 20, 25, 25, 30, 40, 50, 100], desc:"Tout est permis, et ça finit sur une carte à 100." },
+  { id:'tendre', emoji:'🌸', label:'Tendre',      max:25,   suite:'chaud', paliers:[10, 10, 15, 15, 20, 20, 20, 25, 25, 25], desc:"Complicité, tendresse, rien qui brûle." },
+  { id:'chaud',  emoji:'🔥', label:'Chaud',       max:40,   suite:'libre', paliers:[10, 10, 15, 20, 20, 25, 25, 30, 30, 40], desc:"Ça monte franchement, sans aller au bout." },
+  { id:'libre',  emoji:'💥', label:'Sans limite', max:9999, suite:null,    paliers:[10, 15, 20, 20, 25, 25, 30, 40, 50, 50], desc:"Tout est permis, jusqu'aux cartes les plus fortes." },
 ];
+
+// Au-delà de 50 points, les cartes ne se hiérarchisent plus entre elles : une
+// carte à 50, à 70 ou à 100 demande le même engagement. Le bouquet final les
+// tire donc à égalité, plutôt que d'exiger la valeur la plus haute — sans quoi
+// « Sans limite » finirait toujours sur les deux ou trois mêmes cartes.
+const SOIREE_PALIER_HAUT = 50;
 
 let soireeActive = false;
 let soireeBusy = false;   // garde-fou : la transition ne doit être jouée qu'une fois
@@ -51,8 +57,9 @@ function soireePool(niveau){
 // disponible), sans jamais redescendre sous la carte précédente. Découper le
 // vivier en cinq quantiles ne suffisait pas : les cartes à 10-30 points sont
 // si nombreuses qu'une soirée « Sans limite » pouvait finir sur du 25.
-function soireeTirer(niveau){
-  const pool = soireePool(niveau);
+function soireeTirer(niveau, exclus){
+  const dejaVues = exclus || [];
+  const pool = soireePool(niveau).filter(c => dejaVues.indexOf(c.id) === -1);
   if(pool.length === 0) return [];
   const cartes = [];
   const pris = new Set();
@@ -68,7 +75,8 @@ function soireeTirer(niveau){
     // dans tout le haut du panier — mais lui seul, sinon la soirée atteint son
     // plafond dès la troisième carte.
     const dernier = i === niveau.paliers.length - 1;
-    let choix = dernier ? dispo.filter(c => c.pts >= cible) : [];
+    const plafondHaut = cible >= SOIREE_PALIER_HAUT;
+    let choix = dernier ? dispo.filter(c => c.pts >= cible && (plafondHaut || c.pts <= niveau.max)) : [];
     if(choix.length === 0){
       const ecartMin = Math.min(...dispo.map(c => Math.abs(c.pts - cible)));
       choix = dispo.filter(c => Math.abs(c.pts - cible) === ecartMin);
@@ -83,7 +91,11 @@ function soireeTirer(niveau){
 
 function soireeStart(niveauId){
   const niveau = sNiveau(niveauId);
-  const cartes = soireeTirer(niveau);
+  // Enchaînement d'un niveau sur l'autre : on ne rejoue pas les cartes qui
+  // viennent tout juste de sortir.
+  const precedente = sGet();
+  const exclus = (precedente && precedente.cards) ? precedente.cards.map(c => c.id) : [];
+  const cartes = soireeTirer(niveau, exclus);
   if(cartes.length === 0){ alert("Aucune carte disponible pour ce niveau."); return; }
   sRef().set({ niveau:niveau.id, cards:cartes, index:0, done:{}, by:me.id, ts:Date.now() });
   notifyPartner('🌙 Soirée guidée',
@@ -225,6 +237,7 @@ function soireeVueParcours(d){
 
 function soireeVueFin(d){
   const cartes = d.cards || [];
+  const suite = sNiveau(d.niveau).suite ? sNiveau(sNiveau(d.niveau).suite) : null;
   const recap = cartes.map((c, i) => `
     <li><span class="soiree-recap-n">${i + 1}</span> ${escapeHtml(c.text)} <span class="soiree-recap-pts">+${soireePoints(c.pts)}</span></li>`).join('');
   return `
@@ -234,7 +247,10 @@ function soireeVueFin(d){
       <p class="soiree-fin-pts">+${d.total || 0} points pour chacun</p>
     </div>
     <ul class="soiree-recap">${recap}</ul>
-    <button class="btn-primary" id="soiree-encore">Relancer une soirée</button>
+    ${suite ? `<p class="soiree-suite-txt">La soirée ne fait que commencer ?</p>
+    <button class="btn-primary" id="soiree-suite" data-niveau="${suite.id}">${suite.emoji} Enchaîner en « ${suite.label} »</button>
+    <button class="btn-ghost" id="soiree-encore">Refaire une soirée « ${sNiveau(d.niveau).label} »</button>`
+    : `<button class="btn-primary" id="soiree-encore">Relancer une soirée</button>`}
     <button class="btn-ghost soiree-stop" id="soiree-stop">Retour à la pioche</button>`;
 }
 
@@ -252,4 +268,6 @@ function soireeBrancher(body){
   });
   const encore = body.querySelector('#soiree-encore');
   if(encore) encore.addEventListener('click', () => sRef().remove());
+  const suite = body.querySelector('#soiree-suite');
+  if(suite) suite.addEventListener('click', () => soireeStart(suite.dataset.niveau));
 }
