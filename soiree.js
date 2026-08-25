@@ -15,9 +15,9 @@ function soireePoints(pts){ return Math.round(pts / SOIREE_DIVISEUR); }
 // paliers : les points visés pour chacune des 10 cartes, de l'échauffement au
 // bouquet final. C'est ce qui donne sa forme à la soirée.
 const SOIREE_NIVEAUX = [
-  { id:'tendre', emoji:'🌸', label:'Tendre',      max:25,   suite:'chaud', paliers:[10, 10, 15, 15, 20, 20, 20, 25, 25, 25], desc:"Complicité, tendresse, rien qui brûle." },
-  { id:'chaud',  emoji:'🔥', label:'Chaud',       max:40,   suite:'libre', paliers:[10, 10, 15, 20, 20, 25, 25, 30, 30, 40], desc:"Ça monte franchement, sans aller au bout." },
-  { id:'libre',  emoji:'💥', label:'Sans limite', max:9999, suite:null,    paliers:[10, 15, 20, 20, 25, 25, 30, 40, 50, 50], desc:"Tout est permis, jusqu'aux cartes les plus fortes." },
+  { id:'tendre', emoji:'🌸', label:'Tendre',      max:25,   suite:'chaud', haut:1, paliers:[10, 10, 15, 15, 20, 20, 20, 25, 25, 25], desc:"Complicité, tendresse, rien qui brûle." },
+  { id:'chaud',  emoji:'🔥', label:'Chaud',       max:50,   suite:'libre', haut:2, paliers:[10, 15, 20, 20, 25, 25, 25, 30, 30, 40], desc:"Ça monte franchement, sans aller au bout." },
+  { id:'libre',  emoji:'💥', label:'Sans limite', max:9999, suite:null,    haut:1, paliers:[10, 15, 20, 20, 25, 25, 30, 40, 50, 50], desc:"Tout est permis, jusqu'aux cartes les plus fortes." },
 ];
 
 // Au-delà de 50 points, les cartes ne se hiérarchisent plus entre elles : une
@@ -71,12 +71,14 @@ function soireeTirer(niveau, exclus){
     if(dispo.length === 0) return;
 
     // Les cartes fortes sont rares : viser la valeur exacte ramènerait les
-    // mêmes en bouquet final à chaque soirée. Le dernier palier pioche donc
-    // dans tout le haut du panier — mais lui seul, sinon la soirée atteint son
-    // plafond dès la troisième carte.
-    const dernier = i === niveau.paliers.length - 1;
+    // mêmes en fin de soirée à chaque partie. Les « haut » derniers paliers
+    // piochent donc dans tout ce qui les dépasse — eux seuls, sinon la soirée
+    // atteint son plafond dès la troisième carte. « Chaud » en compte deux :
+    // il n'existe que trois cartes à 40 points, il faut bien qu'il puisse
+    // finir sur une ou deux cartes à 50.
+    const finale = i >= niveau.paliers.length - (niveau.haut || 1);
     const plafondHaut = cible >= SOIREE_PALIER_HAUT;
-    let choix = dernier ? dispo.filter(c => c.pts >= cible && (plafondHaut || c.pts <= niveau.max)) : [];
+    let choix = finale ? dispo.filter(c => c.pts >= cible && (plafondHaut || c.pts <= niveau.max)) : [];
     if(choix.length === 0){
       const ecartMin = Math.min(...dispo.map(c => Math.abs(c.pts - cible)));
       choix = dispo.filter(c => Math.abs(c.pts - cible) === ecartMin);
