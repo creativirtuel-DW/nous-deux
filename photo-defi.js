@@ -19,10 +19,11 @@ let pdLastSig = '';    // signature du dernier rendu : on ne reconstruit pas le 
 let pdBusy = false;    // garde-fou contre les doubles transitions
 let pdDraftUrl = null; // photo compressée en attente d'envoi
 
-// Mode de saisie du gage : null = pas encore choisi, 'libre' = écrit à la main,
-// 'hasard' = tiré au sort. Le tirage est DÉFINITIF : une fois qu'un gage
-// aléatoire est sorti, on ne peut ni le rejouer ni revenir à la saisie libre.
+// Mode de saisie du gage : null = pas encore choisi, 'edition' = le champ est
+// ouvert. Un gage tiré au sort n'est qu'une SUGGESTION : il remplit le champ,
+// reste modifiable, et on peut en tirer un autre autant de fois qu'on veut.
 let pdModeGage = null;
+let pdGageTexte = '';   // contenu courant du champ
 let pdDraftMois = null;  // date saisie, conservée si le formulaire est redessiné
 let pdDraftAnnee = null;
 let pdGageTire = null;   // { id, type, g } du gage tiré
@@ -42,7 +43,7 @@ function pdTirerGage(){
 
 function openPhoto(){
   photoActive = true;
-  pdModeGage = null; pdGageTire = null;
+  pdModeGage = null; pdGageTire = null; pdGageTexte = '';
   pdDraftMois = null; pdDraftAnnee = null;
   pdLastSig = '';     // le formulaire doit être reconstruit à chaque ouverture
   render();
@@ -234,7 +235,7 @@ function pdBlocGage(partnerName){
       + '<button type="button" class="pd-gage-btn" id="pd-gage-hasard">'
       +   '<span class="pd-gage-ic">🎲</span>'
       +   '<span class="pd-gage-t">Gage aléatoire</span>'
-      +   '<span class="pd-gage-s">Tiré au sort dans la liste. <strong>Définitif</strong> : pas de second tirage, pas de retour en arrière.</span>'
+      +   '<span class="pd-gage-s">Une suggestion tirée au sort, que tu peux garder, modifier ou relancer.</span>'
       + '</button>'
       + '<button type="button" class="pd-gage-btn" id="pd-gage-libre">'
       +   '<span class="pd-gage-ic">✍️</span>'
@@ -244,19 +245,18 @@ function pdBlocGage(partnerName){
       + '</div>';
   }
 
-  // 2. gage tiré au sort : affiché, verrouillé
-  if(pdModeGage === 'hasard'){
-    const type = pdGageTire && pdGageTire.type === 'verite' ? '💬 Vérité' : '🔥 Action';
-    return '<div class="pd-gage-tire">'
-      + '<div class="pd-gage-type">' + type + '</div>'
-      + '<div class="pd-gage-texte">' + escapeHtml(pdGageTire ? pdGageTire.g : '') + '</div>'
-      + '<div class="pd-gage-verrou">🔒 Tirage définitif — ce gage est celui que tu envoies.</div>'
-      + '</div>';
-  }
-
-  // 3. saisie libre
-  return '<textarea id="pd-gage" class="jds-gain-input" rows="2" maxlength="200" placeholder="Ex : tu me masses les épaules 10 minutes"></textarea>'
-    + '<button type="button" class="pd-gage-retour" id="pd-gage-annuler">← Revenir au choix</button>';
+  // 2. champ ouvert : le gage tiré n'est qu'une suggestion, librement modifiable
+  const etiquette = pdGageTire
+    ? (pdGageTire.type === 'verite' ? '💬 Suggestion — vérité' : '🔥 Suggestion — action')
+    : '';
+  return (etiquette ? '<div class="pd-gage-type">' + etiquette + '</div>' : '')
+    + '<textarea id="pd-gage" class="jds-gain-input" rows="3" maxlength="200" '
+    +   'placeholder="Ex : tu me masses les épaules 10 minutes">' + escapeHtml(pdGageTexte) + '</textarea>'
+    + '<div class="pd-gage-actions">'
+    +   '<button type="button" class="pd-gage-relance" id="pd-gage-relance">🎲 Tirer un autre</button>'
+    +   '<button type="button" class="pd-gage-retour" id="pd-gage-annuler">← Revenir au choix</button>'
+    + '</div>'
+    + '<p class="pd-note">Le gage tiré est une simple suggestion : modifie-le, complète-le, ou tire-en un autre.</p>';
 }
 
 // ---------- RENDU ----------
@@ -327,39 +327,45 @@ function renderPhotoDefi(){
         $('#pd-preview-img').src = url;
       });
     });
-    const btnHasard = $('#pd-gage-hasard');
-    if(btnHasard) btnHasard.addEventListener('click', () => {
-      const ok = confirm("Le tirage est DÉFINITIF.\n\nLe gage sorti sera celui que tu envoies : "
-        + "pas de second tirage, et impossible de revenir à la saisie libre.\n\nTirer le gage ?");
-      if(!ok) return;
+    function pdTirageSuggestion(){
       pdMemoriseDate();
       pdGageTire = pdTirerGage();
-      pdModeGage = 'hasard';
+      pdGageTexte = pdGageTire.g;
+      pdModeGage = 'edition';
       pdLastSig = '';     // force le redessin : l'état en base n'a pas bougé
       render();
-    });
+    }
+    const btnHasard = $('#pd-gage-hasard');
+    if(btnHasard) btnHasard.addEventListener('click', pdTirageSuggestion);
+    const btnRelance = $('#pd-gage-relance');
+    if(btnRelance) btnRelance.addEventListener('click', pdTirageSuggestion);
+
     const btnLibre = $('#pd-gage-libre');
-    if(btnLibre) btnLibre.addEventListener('click', () => { pdMemoriseDate(); pdModeGage = 'libre'; pdLastSig = ''; render(); });
+    if(btnLibre) btnLibre.addEventListener('click', () => {
+      pdMemoriseDate(); pdGageTire = null; pdGageTexte = ''; pdModeGage = 'edition'; pdLastSig = ''; render();
+    });
     const btnAnnuler = $('#pd-gage-annuler');
-    if(btnAnnuler) btnAnnuler.addEventListener('click', () => { pdMemoriseDate(); pdModeGage = null; pdLastSig = ''; render(); });
+    if(btnAnnuler) btnAnnuler.addEventListener('click', () => {
+      pdMemoriseDate(); pdGageTire = null; pdGageTexte = ''; pdModeGage = null; pdLastSig = ''; render();
+    });
+    // On mémorise la frappe sans redessiner : le champ perdrait le focus.
+    const champGage = $('#pd-gage');
+    if(champGage) champGage.addEventListener('input', () => { pdGageTexte = champGage.value; });
 
     $('#pd-send').addEventListener('click', () => {
       if(!pdDraftUrl){ $('#pd-error').textContent = 'Choisis d\'abord une photo.'; return; }
       if(pdModeGage === null){ $('#pd-error').textContent = 'Choisis un gage aléatoire, ou écris le tien.'; return; }
 
-      let gage, tire = null;
-      if(pdModeGage === 'hasard'){
-        if(!pdGageTire){ $('#pd-error').textContent = 'Le tirage a échoué, réessaie.'; return; }
-        gage = pdGageTire.g;
-        tire = pdGageTire;
-      }else{
-        gage = ($('#pd-gage') ? $('#pd-gage').value : '').trim();
-        if(!gage){ $('#pd-error').textContent = 'Écris le gage secret.'; return; }
-      }
+      const gage = ($('#pd-gage') ? $('#pd-gage').value : pdGageTexte).trim();
+      if(!gage){ $('#pd-error').textContent = 'Écris le gage secret, ou tires-en un au hasard.'; return; }
+      // Le gage tiré n'est marqué « déjà sorti » que s'il part tel quel :
+      // remanié, il reste disponible pour une prochaine inspiration.
+      const tire = (pdGageTire && gage === pdGageTire.g.trim()) ? pdGageTire : null;
       pdSend(pdDraftUrl, parseInt($('#pd-month').value, 10), parseInt($('#pd-year').value, 10), gage, tire);
       pdDraftUrl = null;
       pdModeGage = null;
       pdGageTire = null;
+      pdGageTexte = '';
       pdDraftMois = null;
       pdDraftAnnee = null;
     });

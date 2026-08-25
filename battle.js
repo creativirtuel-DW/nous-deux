@@ -38,6 +38,24 @@ function battleTextesConcordent(t1, t2){
   return false;
 }
 
+// « Moi » / « Toi » ne sont pas des réponses mais des désignations : il faut
+// les résoudre en personne avant de comparer. « Moi, sans hésiter » compte
+// comme « Moi », d'où la détection sur le premier mot seulement.
+function battleDesigne(libelle){
+  const t = battleNormalise(libelle);
+  if(t === 'moi' || t.indexOf('moi ') === 0) return 'moi';
+  if(t === 'toi' || t.indexOf('toi ') === 0) return 'toi';
+  return null;
+}
+
+// Qui la réponse désigne-t-elle réellement ?
+function battlePersonneVisee(libelle, idRepondant, idAutre){
+  const d = battleDesigne(libelle);
+  if(d === 'moi') return idRepondant;
+  if(d === 'toi') return idAutre;
+  return null;
+}
+
 // Libellé affiché à la révélation : la réponse libre remplace « Autre : ».
 function battleLibelle(q, choix, textes, i){
   if(choix === null || choix === undefined) return '—';
@@ -170,11 +188,20 @@ function battleNettoieTextes(questions, reponses, textes){
   return propre;
 }
 
-// Deux réponses correspondent si le même bouton a été choisi ; pour une
-// réponse libre, il faut en plus que les deux textes concordent.
-function battleReponsesConcordent(q, i, choixA, textesA, choixB, textesB){
+// Deux réponses correspondent si elles désignent la même chose.
+// Cas « Moi »/« Toi » : on compare les personnes visées, pas les boutons.
+// Sinon : même bouton, et pour une réponse libre, textes concordants.
+function battleReponsesConcordent(q, i, choixA, textesA, choixB, textesB, idA, idB){
+  const libA = q.a[choixA], libB = q.a[choixB];
+
+  if(idA && idB){
+    const viseA = battlePersonneVisee(libA, idA, idB);
+    const viseB = battlePersonneVisee(libB, idB, idA);
+    if(viseA && viseB) return viseA === viseB;
+  }
+
   if(choixA !== choixB) return false;
-  if(!battleEstLibre(q.a[choixA])) return true;
+  if(!battleEstLibre(libA)) return true;
   return battleTextesConcordent((textesA || {})[String(i)], (textesB || {})[String(i)]);
 }
 
@@ -188,7 +215,7 @@ function battleRepondre(reponses, mesTextes){
   const propres = battleNettoieTextes(b.questions, reponses, mesTextes);
   let communes = 0;
   reponses.forEach((r, i) => {
-    if(battleReponsesConcordent(b.questions[i], i, r, propres, siennes[i], sesTextes)) communes++;
+    if(battleReponsesConcordent(b.questions[i], i, r, propres, siennes[i], sesTextes, me.id, b.by)) communes++;
   });
   const delta = (communes * OSMOSE_PAR_REPONSE) - ((reponses.length - communes) * OSMOSE_PAR_REPONSE);
 
@@ -382,12 +409,14 @@ function renderBattle(){
       <div class="bt-delta">${b.delta >= 0 ? '+' : ''}${b.delta} d'Osmose</div>
     </div>
     ${b.questions.map((q, i) => {
-      const ok = battleReponsesConcordent(q, i, rA[i], tA, rB[i], tB);
+      const ok = battleReponsesConcordent(q, i, rA[i], tA, rB[i], tB, b.by, autreId);
+      const memePersonne = ok && rA[i] !== rB[i] && battleDesigne(q.a[rA[i]]);
       return `
         <div class="bt-detail ${ok ? 'ok' : 'ko'}">
           <div class="bt-detail-q">${ok ? '💗' : '💔'} ${escapeHtml(q.q)}</div>
           <div class="bt-detail-rep"><span>${escapeHtml(nomA)}</span> ${escapeHtml(battleLibelle(q, rA[i], tA, i))}</div>
           <div class="bt-detail-rep"><span>${escapeHtml(nomB)}</span> ${escapeHtml(battleLibelle(q, rB[i], tB, i))}</div>
+          ${memePersonne ? `<div class="bt-detail-note">Vous désignez la même personne.</div>` : ''}
         </div>
       `;
     }).join('')}
