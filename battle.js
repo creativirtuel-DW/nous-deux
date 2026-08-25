@@ -14,6 +14,7 @@ const OSMOSE_PAR_REPONSE = 10;
 
 let battleActive = false;
 let battleBrouillon = null;   // réponses en cours de saisie, avant envoi
+let battleAOublier = [];      // ids à libérer : catégorie épuisée, nouveau cycle
 
 function openBattle(){ battleActive = true; battleBrouillon = null; render(); }
 function closeBattle(){ battleActive = false; battleBrouillon = null; render(); }
@@ -42,22 +43,36 @@ function battlePool(){
   return BATTLE_QUESTIONS.concat(perso);
 }
 
-// Tirage : le quota par catégorie, complété au hasard si une catégorie est trop pauvre.
+// Tirage. Les questions déjà sorties (battleVues) sont écartées : on ne
+// repropose une question qu'une fois sa catégorie entièrement épuisée, et on
+// repart alors sur un cycle neuf. Deux Battles ne peuvent donc pas se recouper.
 function battleTirage(){
   const pool = battlePool();
+  const vues = (state && state.battleVues) || {};
   const choisies = [];
+  battleAOublier = [];
+
   Object.entries(BATTLE_TIRAGE).forEach(([cat, n]) => {
-    const dispo = battleMelange(pool.filter(q => q.cat === cat));
-    choisies.push(...dispo.slice(0, n));
+    const dansLaCat = pool.filter(q => q.cat === cat);
+    let dispo = dansLaCat.filter(q => !vues[q.id]);
+
+    if(dispo.length < n){
+      // Catégorie épuisée : on efface son historique et on recommence un cycle.
+      dansLaCat.forEach(q => { if(vues[q.id]) battleAOublier.push(q.id); });
+      dispo = dansLaCat;
+    }
+    choisies.push(...battleMelange(dispo).slice(0, n));
   });
+
   const manque = 5 - choisies.length;
   if(manque > 0){
-    const reste = battleMelange(pool.filter(q => !choisies.includes(q)));
+    const reste = battleMelange(pool.filter(q => choisies.indexOf(q) === -1));
     choisies.push(...reste.slice(0, manque));
   }
-  // On fige l'énoncé et les réponses : la série reste identique pour les deux,
-  // même si une question personnalisée est supprimée entre-temps.
-  return battleMelange(choisies).slice(0, 5).map(q => ({ q: q.q, a: q.a.slice(), cat: q.cat }));
+  // On fige énoncé et réponses : la série reste identique pour les deux, même
+  // si une question personnalisée est supprimée entre-temps.
+  return battleMelange(choisies).slice(0, 5)
+    .map(q => ({ id: q.id, q: q.q, a: q.a.slice(), cat: q.cat }));
 }
 
 function battleLancer(){
@@ -72,15 +87,23 @@ function battleLancer(){
 function battleEnvoyer(){
   if(!battleBrouillon) return;
   if(battleBrouillon.reponses.some(r => r === null)) return;
-  const donnees = {
+  const questions = battleBrouillon.questions;
+  const updates = {};
+  updates['battle'] = {
     by: me.id,
-    questions: battleBrouillon.questions,
+    questions: questions,
     reponses: { [me.id]: battleBrouillon.reponses },
     status: 'attente',
     ts: Date.now()
   };
+  // Mémoire anti-répétition : on libère les catégories épuisées,
+  // puis on marque les 5 questions de cette série comme sorties.
+  battleAOublier.forEach(id => { updates['battleVues/' + id] = null; });
+  questions.forEach(q => { if(q.id) updates['battleVues/' + q.id] = true; });
+  battleAOublier = [];
+
   battleBrouillon = null;
-  battleRef().set(donnees).then(() => {
+  roomRef.update(updates).then(() => {
     notifyPartner('⚔️ Battle !', me.name + ' te lance une Battle : 5 questions, à toi de deviner ses réponses.', 'battle');
   });
 }
