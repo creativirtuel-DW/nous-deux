@@ -572,3 +572,11 @@ main#views{ flex:1; min-height:0; position:relative; }
   border:1px solid var(--line-2); border-radius:12px; padding:11px 13px; margin-bottom:9px;
 }
 .bt-select:focus, .bt-rep:focus{ outline:none; border-color: var(--coral); }
+
+.bt-libre{
+  width:100%; margin-top:-2px; background: var(--bg-deep); color: var(--cream);
+  border:1px solid var(--coral); border-radius:11px; padding:10px 12px;
+  font-family:inherit; font-size:13.5px; animation: floatIn .2s ease;
+}
+.bt-libre::placeholder{ color: var(--muted-2); font-style:italic; }
+.bt-libre:focus{ outline:none; border-color: var(--peach); }
