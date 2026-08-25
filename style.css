@@ -429,3 +429,22 @@ main#views{ flex:1; min-height:0; position:relative; }
 .pd-stake + .pd-stake{ margin-top:9px; padding-top:9px; border-top:1px solid var(--line); }
 .pd-stake strong{ color: var(--cream); }
 .pd-stake-ic{ flex:0 0 auto; font-size:13px; }
+
+/* ---------- BANDEAU NOTIFICATIONS ---------- */
+.push-banner{
+  width:100%; max-width:430px; display:flex; align-items:center; gap:12px;
+  background: linear-gradient(135deg, rgba(255,107,107,0.16), var(--surface));
+  border:1px solid rgba(255,107,107,0.35); border-radius: var(--r-lg);
+  padding:13px 15px; margin-bottom:14px; box-shadow: var(--shadow-sm); animation: floatIn .3s ease;
+}
+.push-banner.muted{ background: var(--surface); border-color: var(--line-2); }
+.push-ic{ font-size:20px; flex:0 0 auto; }
+.push-txt{ flex:1; display:flex; flex-direction:column; gap:2px; min-width:0; }
+.push-txt strong{ font-size:14px; font-weight:700; letter-spacing:-0.01em; }
+.push-txt span{ font-size:11.5px; color: var(--muted); line-height:1.4; }
+.push-btn{
+  flex:0 0 auto; background: var(--grad); border:none; border-radius: var(--pill);
+  color:#fff; font-family:inherit; font-weight:700; font-size:13px; padding:9px 16px; cursor:pointer;
+  transition: transform .14s;
+}
+.push-btn:active{ transform: scale(0.95); }
