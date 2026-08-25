@@ -17,7 +17,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
-<link rel="stylesheet" href="style.css?v=24">
+<link rel="stylesheet" href="style.css?v=25">
 </head>
 <body>
 
@@ -63,7 +63,19 @@
           <span class="score-name" id="name-me">Moi</span>
           <span class="score-val" id="val-me">0</span>
         </div>
-        <span class="score-vs">+</span>
+        <div class="osmose" id="osmose-heart" title="Osmose">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <defs>
+              <linearGradient id="osmose-grad" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%" stop-color="#FB5A63"/>
+                <stop offset="100%" stop-color="#FFA07A"/>
+              </linearGradient>
+            </defs>
+            <path d="M12 20.3S3.6 15.6 3.6 9.9c0-2.7 2-4.6 4.4-4.6 1.6 0 3.1.9 4 2.3.9-1.4 2.4-2.3 4-2.3 2.4 0 4.4 1.9 4.4 4.6 0 5.7-8.4 10.4-8.4 10.4z"
+                  fill="none" stroke="url(#osmose-grad)" stroke-width="1.5" stroke-linejoin="round"/>
+          </svg>
+          <span class="osmose-val" id="osmose-val">0</span>
+        </div>
         <div class="score-pill" id="score-partner">
           <span class="score-name" id="name-partner">Partenaire</span>
           <span class="score-val" id="val-partner">0</span>
@@ -100,6 +112,10 @@
               <span class="cat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M11 3.2 12.7 8l4.8 1.7-4.8 1.7L11 16.2 9.3 11.4 4.5 9.7 9.3 8 11 3.2z"/><path d="M18 14.5l.9 2.3 2.3.9-2.3.9-.9 2.3-.9-2.3-2.3-.9 2.3-.9.9-2.3z"/></svg></span>
               <span>Surprise</span>
             </button>
+            <button class="cat-btn" data-cat="battle">
+              <span class="cat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5 17 14l1.6-1.6 2.4 2.4-4 4-2.4-2.4L16.2 15 5.7 4.5z"/><path d="M17.5 3.5 13 8"/><path d="M6.5 20.5 11 16"/><path d="M3 15.4l4 4"/></svg></span>
+              <span>Battle</span>
+            </button>
             <button class="cat-btn cat-btn-jds" data-cat="jds">
               <span class="cat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><circle cx="8.6" cy="8.6" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.4" cy="8.6" r="1.15" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="8.6" cy="15.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.4" cy="15.4" r="1.15" fill="currentColor" stroke="none"/></svg></span>
               <span>Jeu de société</span>
@@ -130,6 +146,14 @@
               <button class="jds-back" id="photo-back">← Retour à la pioche</button>
             </div>
             <div id="photo-body"></div>
+          </div>
+
+          <!-- PANNEAU BATTLE -->
+          <div class="jds-panel" id="battle-panel" style="display:none;">
+            <div class="jds-topbar">
+              <button class="jds-back" id="battle-back">← Retour à la pioche</button>
+            </div>
+            <div id="battle-body"></div>
           </div>
 
           <div class="pending-section" id="pending-to-validate-section" style="display:none;">
@@ -185,6 +209,26 @@
           <button type="submit" class="btn-primary">Ajouter la carte</button>
         </form>
 
+        <h3 class="pending-title" style="margin-top:26px;">⚔️ Questions Battle</h3>
+        <p class="hint" style="margin-top:-4px;">Ajoute tes propres questions à 4 réponses : elles rejoignent le tirage des Battles.</p>
+          <form id="form-add-battle" class="add-card-form">
+            <select id="bt-new-cat" class="bt-select">
+              <option value="quotidien">☕ Complicité du quotidien</option>
+              <option value="souvenir">📷 Souvenir ou projet</option>
+              <option value="coquin">🔥 Intimité du couple</option>
+            </select>
+            <textarea id="bt-new-q" placeholder="L'énoncé de la question…" maxlength="140" rows="2"></textarea>
+            <input type="text" id="bt-new-a1" class="bt-rep" placeholder="Réponse 1" maxlength="60">
+            <input type="text" id="bt-new-a2" class="bt-rep" placeholder="Réponse 2" maxlength="60">
+            <input type="text" id="bt-new-a3" class="bt-rep" placeholder="Réponse 3" maxlength="60">
+            <input type="text" id="bt-new-a4" class="bt-rep" placeholder="Réponse 4" maxlength="60">
+            <button type="submit" class="btn-primary">Ajouter à la banque Battle</button>
+          </form>
+
+          <div id="battle-cards-block" style="display:none;">
+            <div id="battle-cards-list"></div>
+          </div>
+
         <div class="custom-cards-toolbar" id="custom-cards-toolbar" style="display:none;">
           <button class="filter-chip" id="btn-filter-blanks">🔍 Afficher seulement les cartes à compléter</button>
         </div>
@@ -228,8 +272,10 @@
 </div>
 
 <script src="cards-data.js?v=13"></script>
-<script src="app.js?v=24"></script>
+<script src="battle-data.js?v=1"></script>
+<script src="app.js?v=25"></script>
 <script src="photo-defi.js?v=5"></script>
 <script src="push.js?v=2"></script>
+<script src="battle.js?v=2"></script>
 </body>
 </html>
