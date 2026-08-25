@@ -66,23 +66,30 @@ function pdSend(dataUrl, month, year, gage){
 function pdCancel(){
   const d = pdGet();
   if(!d || d.by !== me.id || d.status !== 'sent') return;
-  pdArchiveGage(d, 'annule');
+  pdArchiveGage(d, 'annule', null);
   pdRef().remove();
 }
 
 // Archive d'un gage qui n'a jamais été révélé, pour que son auteur puisse le
 // retrouver (et le resservir) depuis l'historique en dev mod.
-function pdArchiveGage(d, motif){
-  if(!d || !d.gage) return;
+// motif : 'trouve'  = le/la partenaire a trouvé la date, le gage n'a pas servi
+//          'points'  = il/elle a préféré perdre les points
+//          'annule'  = défi annulé avant d'être joué
+// Renvoie la clé de l'archive, pour que la ligne d'historique puisse la retrouver.
+function pdArchiveGage(d, motif, updates, reponse){
+  if(!d || !d.gage) return null;
   const k = db.ref('rooms/' + roomCode + '/photoGages').push().key;
-  roomRef.child('photoGages/' + k).set({
+  const entree = {
     gage: d.gage,
     author: d.by,
-    motif: motif,                       // 'points' = refusé au profit des points, 'annule' = défi annulé
+    motif: motif,
     month: d.month, year: d.year,
-    answer: d.answer ? pdLabel(d.answer.month, d.answer.year) : null,
+    answer: reponse || (d.answer ? pdLabel(d.answer.month, d.answer.year) : null),
     ts: Date.now()
-  });
+  };
+  if(updates) updates['photoGages/' + k] = entree;
+  else roomRef.child('photoGages/' + k).set(entree);
+  return k;
 }
 
 function pdStartViewing(){
@@ -107,11 +114,12 @@ function pdSubmit(month, year){
     const updates = {};
     updates['scores/' + me.id] = (state.scores[me.id] || 0) + PD_POINTS;
     updates['photoDefi'] = null;
+    const gk = pdArchiveGage(d, 'trouve', updates, pdLabel(month, year));
     const hk = db.ref('rooms/' + roomCode + '/history').push().key;
     updates['history/' + hk] = {
       who: me.name, cat: 'photo', text: 'Défi Photo — ' + pdLabel(d.month, d.year),
       answer: month === null ? 'Pas de réponse' : pdLabel(month, year),
-      pts: PD_POINTS, validated: true, ts: Date.now()
+      pts: PD_POINTS, validated: true, ts: Date.now(), gageKey: gk || null
     };
     roomRef.update(updates);
     notifyPartner('🎯 Défi Photo réussi', me.name + ' a trouvé la bonne date et te prend ' + PD_POINTS + ' points.', 'photo');
@@ -137,9 +145,9 @@ function pdChoosePoints(){
     who: me.name, cat: 'photo', text: 'Défi Photo — ' + pdLabel(d.month, d.year),
     answer: d.answer ? pdLabel(d.answer.month, d.answer.year) : 'Pas de réponse',
     comment: 'A choisi de perdre ' + PD_POINTS + ' points',
-    pts: -PD_POINTS, validated: false, ts: Date.now()
+    pts: -PD_POINTS, validated: false, ts: Date.now(),
+    gageKey: pdArchiveGage(d, 'points', updates) || null
   };
-  pdArchiveGage(d, 'points');
   roomRef.update(updates);
   notifyPartner('➖ Points plutôt que gage', me.name + ' préfère perdre ' + PD_POINTS + ' points. Ton gage reste secret.', 'photo');
 }

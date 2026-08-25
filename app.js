@@ -1016,7 +1016,7 @@ function renderHistory(){
   const wrap = $('#history-list');
   wrap.innerHTML = '';
 
-  const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Cap ou pas', distance:'📱 À distance' };
+  const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Cap ou pas', distance:'📱 À distance', photo:'📸 Défi Photo' };
   const entries = state.history ? Object.values(state.history).sort((a,b)=> b.ts-a.ts).slice(0,50) : [];
 
   if(entries.length === 0){
@@ -1030,13 +1030,29 @@ function renderHistory(){
     else if(h.validated === 'penalty'){ ptsLabel = h.pts; statusNote = ' (limite de passes — pénalité acceptée)'; }
     else if(h.validated){ ptsLabel = '+'+h.pts; }
     else { ptsLabel = '0'; statusNote = ' (refusée)'; }
+    // Défi Photo dont le gage n'a jamais été montré : on peut le dévoiler ici, en dev mod.
+    const gageCache = isAdminUnlocked() && h.gageKey && state.photoGages && state.photoGages[h.gageKey];
+
     row.innerHTML = `
       <div class="hist-left">
         <span class="hist-who">${escapeHtml(h.who)}</span> — ${labelMap[h.cat]||'Carte'}${statusNote}<br>
         <span style="color:var(--muted); font-size:12.5px;">${escapeHtml(h.text)}</span>
+        ${h.answer && h.cat === 'photo' ? `<br><span style="color:var(--muted-2); font-size:11.5px;">Réponse : ${escapeHtml(h.answer)}</span>` : ''}
+        ${gageCache ? `<button class="hist-gage-reveal">🔒 Voir le gage qui n'a pas servi</button>
+                       <div class="hist-gage-body" style="display:none;">🎯 ${escapeHtml(gageCache.gage)}</div>` : ''}
       </div>
       <div class="hist-pts">${ptsLabel}</div>
     `;
+
+    if(gageCache){
+      const btn = row.querySelector('.hist-gage-reveal');
+      const body = row.querySelector('.hist-gage-body');
+      btn.addEventListener('click', () => {
+        const ouvert = body.style.display !== 'none';
+        body.style.display = ouvert ? 'none' : 'block';
+        btn.textContent = ouvert ? "🔒 Voir le gage qui n'a pas servi" : "🔓 Masquer le gage";
+      });
+    }
     wrap.appendChild(row);
   });
 
@@ -1056,7 +1072,9 @@ function renderHistory(){
         const autreId = g.author === 'p1' ? 'p2' : 'p1';
         const motif = g.motif === 'annule'
           ? 'Défi annulé avant d' + String.fromCharCode(39) + 'être joué'
-          : `${escapeHtml(state.players[autreId]||'')} a préféré perdre 25 points`;
+          : g.motif === 'trouve'
+            ? `${escapeHtml(state.players[autreId]||'')} a trouvé la bonne date, le gage n'a pas servi`
+            : `${escapeHtml(state.players[autreId]||'')} a préféré perdre 25 points`;
         const signature = g.author === me.id
           ? 'Ton gage'
           : 'Gage de ' + escapeHtml(state.players[g.author] || '');
