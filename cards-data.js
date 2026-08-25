@@ -232,6 +232,12 @@ const DEFAULT_CARDS_RAW = [
   { id:'d271', cat:'defi', text:"Retire un vêtement à chaque fois que tu réponds « oui » à mes questions, pendant 5 questions.", pts:25 },
   { id:'d272', cat:'defi', text:"Assieds-toi sur moi tout habillé(e) et fais monter la température sans qu'un seul vêtement tombe.", pts:25 },
   { id:'d273', cat:'defi', text:"Mets-toi nu(e) et laisse-moi te regarder pendant 1 minute, sans rien faire d'autre.", pts:40 },
+
+  // Cartes fortes ajoutees depuis Cartes-fortes.xlsx
+  { id:'d274', cat:'gage', text:"Tu va tester devant lui / elle un plug anal : Lubrifiant et selon tes limites !", pts:70 },
+  { id:'d275', cat:'gage', text:"Sort un Sextoy et on l'utilise à 2 ! Lubrifiant recommandé", pts:50 },
+  { id:'d276', cat:'gage', text:"Massage intégrale pour l'un ou l'autre : a vous de choisir qui commence. Nudité obligatoire !", pts:100 },
+  { id:'d277', cat:'defi', text:"Tu as 24h pour faire une photo osée de toi et me l'envoyer. Je dois te répondre par une autre de meme catégorie.", pts:50 },
 ];
 const DEFAULT_CARDS = DEFAULT_CARDS_RAW.map((c, i) => ({ ...c, id: c.id || 'd' + i }));
 
