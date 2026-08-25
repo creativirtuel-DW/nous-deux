@@ -191,10 +191,12 @@ main#views{ flex:1; min-height:0; position:relative; }
 .card-points{ font-weight:800; font-size:17px; color: var(--coral); }
 
 /* Sélecteur de catégories */
-.cat-picker{ display:grid; grid-template-columns: repeat(3, 1fr); gap:11px; width:100%; }
+.cat-picker{ display:grid; grid-template-columns: repeat(2, 1fr); gap:11px; width:100%; }
+/* 2 colonnes : les 4 cartes forment deux lignes de deux, et les boutons pleine
+   largeur (Jeu de société, Défi Photo) mesurent exactement 2 colonnes + le gap. */
 .cat-btn{
   background: linear-gradient(180deg, var(--surface-2), var(--surface));
-  border:1px solid var(--line-2); border-radius:20px; padding:16px 8px 14px;
+  border:1px solid var(--line-2); border-radius:20px; padding:16px 10px 14px;
   color: var(--cream); cursor:pointer; box-shadow: var(--shadow-sm);
   display:flex; flex-direction:column; align-items:center; gap:10px;
   transition: transform .14s, border-color .18s, box-shadow .2s;
@@ -204,7 +206,7 @@ main#views{ flex:1; min-height:0; position:relative; }
   background: rgba(255,107,107,0.12); color: var(--coral);
 }
 .cat-ic svg{ width:23px; height:23px; }
-.cat-btn span{ font-size:12.5px; font-weight:600; text-align:center; letter-spacing:-0.01em; line-height:1.2; }
+.cat-btn span{ font-size:13.5px; font-weight:600; text-align:center; letter-spacing:-0.01em; line-height:1.2; }
 .cat-btn:hover{ border-color: rgba(255,107,107,0.4); }
 .cat-btn:active{ transform: scale(0.95); }
 .cat-btn.disabled{ opacity:0.34; pointer-events:none; }
