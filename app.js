@@ -780,7 +780,7 @@ function setupRewardsView(){
 
   $('#btn-reset-scores').addEventListener('click', () => {
     const ok = confirm(
-      "Ça va remettre les deux scores à 0, vider l'historique, vider les cartes en attente, réinitialiser les compteurs de passes et annuler un pari « Jeu de société » en cours.\n\nLes cartes/paliers personnalisés et l'historique secret des paris ne sont PAS touchés.\n\nConfirmer la réinitialisation ?"
+      "Ça va remettre les deux scores à 0, vider l'historique, vider les cartes en attente, réinitialiser les compteurs de passes et annuler un pari « Jeu de société » ainsi qu'un Défi Photo en cours.\n\nLes cartes/paliers personnalisés et l'historique secret des paris ne sont PAS touchés.\n\nConfirmer la réinitialisation ?"
     );
     if(!ok) return;
     roomRef.update({
@@ -789,7 +789,8 @@ function setupRewardsView(){
       'history': null,
       'pendingCards': null,
       'skipCounts': null,
-      'jds': null
+      'jds': null,
+      'photoDefi': null
     });
   });
 }
