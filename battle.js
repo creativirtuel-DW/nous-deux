@@ -275,12 +275,26 @@ function renderBattle(){
 }
 
 // ---------- LE CŒUR D'OSMOSE, DANS L'EN-TÊTE ----------
+// Le nombre est blanc jusqu'à 30, puis chauffe progressivement
+// jusqu'à l'écarlate à partir de 150.
+const OSMOSE_BLANC_JUSQUA = 30;
+const OSMOSE_ECARLATE_DES = 150;
+
+function osmoseCouleur(o){
+  if(o < 0) return '';   // en négatif, c'est la règle CSS « .negatif » qui décide
+  const t = Math.max(0, Math.min(1, (o - OSMOSE_BLANC_JUSQUA) / (OSMOSE_ECARLATE_DES - OSMOSE_BLANC_JUSQUA)));
+  const vert = Math.round(255 + (36 - 255) * t);
+  const bleu = Math.round(255 + (0  - 255) * t);
+  return 'rgb(255, ' + vert + ', ' + bleu + ')';
+}
+
 function renderOsmose(){
   const val = $('#osmose-val');
   const coeur = $('#osmose-heart');
   if(!val || !coeur) return;
   const o = osmoseGet();
   val.textContent = o;
+  val.style.color = osmoseCouleur(o);
   coeur.classList.toggle('negatif', o < 0);
   coeur.title = "Osmose : " + o + " point" + (Math.abs(o) > 1 ? 's' : '');
 }
