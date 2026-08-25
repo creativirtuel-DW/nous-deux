@@ -66,7 +66,23 @@ function pdSend(dataUrl, month, year, gage){
 function pdCancel(){
   const d = pdGet();
   if(!d || d.by !== me.id || d.status !== 'sent') return;
+  pdArchiveGage(d, 'annule');
   pdRef().remove();
+}
+
+// Archive d'un gage qui n'a jamais été révélé, pour que son auteur puisse le
+// retrouver (et le resservir) depuis l'historique en dev mod.
+function pdArchiveGage(d, motif){
+  if(!d || !d.gage) return;
+  const k = db.ref('rooms/' + roomCode + '/photoGages').push().key;
+  roomRef.child('photoGages/' + k).set({
+    gage: d.gage,
+    author: d.by,
+    motif: motif,                       // 'points' = refusé au profit des points, 'annule' = défi annulé
+    month: d.month, year: d.year,
+    answer: d.answer ? pdLabel(d.answer.month, d.answer.year) : null,
+    ts: Date.now()
+  });
 }
 
 function pdStartViewing(){
@@ -123,6 +139,7 @@ function pdChoosePoints(){
     comment: 'A choisi de perdre ' + PD_POINTS + ' points',
     pts: -PD_POINTS, validated: false, ts: Date.now()
   };
+  pdArchiveGage(d, 'points');
   roomRef.update(updates);
   notifyPartner('➖ Points plutôt que gage', me.name + ' préfère perdre ' + PD_POINTS + ' points. Ton gage reste secret.', 'photo');
 }

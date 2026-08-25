@@ -1040,6 +1040,44 @@ function renderHistory(){
     wrap.appendChild(row);
   });
 
+  // ---- Gages de Défi Photo jamais révélés (admin, et seulement les miens) ----
+  if(isAdminUnlocked() && state.photoGages){
+    const miens = Object.entries(state.photoGages)
+      .map(([k, g]) => ({...g, key: k}))
+      .filter(g => g.author === me.id)
+      .sort((a, b) => b.ts - a.ts);
+
+    if(miens.length){
+      const sec = document.createElement('div');
+      sec.className = 'jds-hist-section';
+      sec.innerHTML = `<h3 class="jds-hist-title">🔒 Mes gages de Défi Photo jamais révélés (${miens.length})</h3>`;
+      miens.forEach(g => {
+        const d = new Date(g.ts);
+        const dateStr = d.toLocaleDateString('fr-FR') + ' · ' + d.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+        const motif = g.motif === 'annule'
+          ? 'Défi annulé avant d' + String.fromCharCode(39) + 'être joué'
+          : `${escapeHtml(state.players[partnerId]||'')} a préféré perdre 25 points`;
+        const contexte = g.answer
+          ? `Photo de ${PD_MONTHS[g.month]} ${g.year} — réponse donnée : ${escapeHtml(g.answer)}`
+          : `Photo de ${PD_MONTHS[g.month]} ${g.year}`;
+        const row = document.createElement('div');
+        row.className = 'jds-hist-row';
+        row.innerHTML = `
+          <div>🎯 <span class="jds-hist-gain">${escapeHtml(g.gage)}</span></div>
+          <div class="jds-hist-lose">${motif}</div>
+          <div class="jds-hist-lose">${contexte}</div>
+          <div class="jds-hist-date">${dateStr}</div>
+          <button class="hist-gage-del" data-key="${g.key}">Oublier ce gage</button>
+        `;
+        row.querySelector('.hist-gage-del').addEventListener('click', () => {
+          if(confirm('Supprimer définitivement ce gage de la liste ?')) roomRef.child('photoGages/' + g.key).remove();
+        });
+        sec.appendChild(row);
+      });
+      wrap.appendChild(sec);
+    }
+  }
+
   // ---- Historique secret des paris "Jeu de société" (admin uniquement) ----
   if(isAdminUnlocked() && state.jdsHistory){
     const jdsEntries = Object.values(state.jdsHistory).sort((a,b)=> b.ts - a.ts);
