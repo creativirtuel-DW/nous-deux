@@ -234,7 +234,7 @@ function renderPendingCard(){
     ? `🚫 File pleine (${MAX_PENDING}/${MAX_PENDING}) — attends une validation`
     : `✦ Pioche une carte (${allPending.length}/${MAX_PENDING} en attente)`;
 
-  const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Cap ou pas', distance:'📱 À distance' };
+  const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Cap ou pas' };
 
   // Cartes que JE dois valider (jouées et déjà répondues/réalisées par mon/ma partenaire)
   const toValSection = $('#pending-to-validate-section');
@@ -332,7 +332,7 @@ function renderPendingCard(){
         });
 
       } else {
-        // défi / gage / distance : pas de texte de réponse, juste fait ou non
+        // défi / gage : pas de texte de réponse, juste fait ou non
         // (le défi a en plus un commentaire optionnel visible par le/la partenaire)
         const skipOrPenaltyBtn = p.pdGage
           ? ''
@@ -440,6 +440,12 @@ let jdsActive = false;
 function openJDS(){ jdsActive = true; render(); }
 function closeJDS(){ jdsActive = false; render(); }
 
+// « À distance » a fusionné avec « Défi », et « Surprise » n'existe plus :
+// les cartes perso déjà enregistrées dans Firebase sont ramenées vers Défi.
+function normCat(cat){
+  return (cat === 'distance' || cat === 'surprise') ? 'defi' : cat;
+}
+
 function getActiveDefaultCards(){
   const disabled = (state && state.disabledDefaults) || {};
   return DEFAULT_CARDS.filter(c => !disabled[c.id]);
@@ -450,17 +456,10 @@ function getAllCardsForCategory(cat){
   const customForCat = [];
   if(state && state.customCards){
     Object.entries(state.customCards).forEach(([key, c]) => {
-      if(c.cat === cat) customForCat.push({...c, id:key, custom:true});
+      if(normCat(c.cat) === cat) customForCat.push({...c, id:key, cat, custom:true});
     });
   }
   const defaults = activeDefaults.filter(c => c.cat === cat);
-  if(cat === 'surprise'){
-    const allCustom = [];
-    if(state && state.customCards){
-      Object.entries(state.customCards).forEach(([key,c]) => allCustom.push({...c, id:key, custom:true}));
-    }
-    return activeDefaults.concat(allCustom);
-  }
   return defaults.concat(customForCat);
 }
 
@@ -485,7 +484,7 @@ function drawCard(cat){
   const pool = getAllCardsForCategory(cat);
   if(pool.length === 0) return;
   const card = pool[Math.floor(Math.random()*pool.length)];
-  const realCat = cat === 'surprise' ? card.cat : cat;
+  const realCat = cat;
 
   const key = db.ref('rooms/'+roomCode+'/pendingCards').push().key;
   roomRef.child('pendingCards/'+key).set({
@@ -901,7 +900,7 @@ function renderCustomCards(){
   }
   toolbar.style.display = 'block';
 
-  const iconMap = { question:'💬', defi:'🔥', gage:'😈', surprise:'🎲', distance:'📱' };
+  const iconMap = { question:'💬', defi:'🔥', gage:'😈' };
   const disabled = (state && state.disabledDefaults) || {};
 
   const defaults = DEFAULT_CARDS
@@ -910,7 +909,7 @@ function renderCustomCards(){
 
   const customs = [];
   if(state && state.customCards){
-    Object.entries(state.customCards).forEach(([key,c]) => customs.push({...c, id:key, custom:true}));
+    Object.entries(state.customCards).forEach(([key,c]) => customs.push({...c, id:key, cat:normCat(c.cat), custom:true}));
   }
   customs.sort((a,b)=> (b.ts||0)-(a.ts||0));
 
@@ -1027,7 +1026,7 @@ function renderHistory(){
   const wrap = $('#history-list');
   wrap.innerHTML = '';
 
-  const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Cap ou pas', distance:'📱 À distance', photo:'📸 Défi Photo', battle:'⚔️ Battle' };
+  const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Cap ou pas', distance:'🔥 Défi', photo:'📸 Défi Photo', battle:'⚔️ Battle' };
   const entries = state.history ? Object.values(state.history).sort((a,b)=> b.ts-a.ts).slice(0,50) : [];
 
   if(entries.length === 0){
