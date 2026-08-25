@@ -195,6 +195,7 @@ function render(){
 
   renderPendingCard();
   renderJDS();
+  renderSoiree();
   renderPhotoDefi();
   pdCheckGageDeadline();
   renderPushBanner();
@@ -212,7 +213,7 @@ function renderPendingCard(){
   const turnBanner = $('#turn-banner');
 
   // Quand le panneau "Jeu de société" est ouvert, on masque la pioche normale.
-  if(jdsActive || photoActive || battleActive){
+  if(jdsActive || photoActive || battleActive || soireeActive){
     catPicker.style.display = 'none';
     turnBanner.style.display = 'none';
     $('#pending-to-validate-section').style.display = 'none';
@@ -229,7 +230,7 @@ function renderPendingCard(){
   catPicker.style.display = 'grid';
   turnBanner.style.display = '';
   // le bouton "Jeu de société" n'est jamais bloqué par la file d'attente
-  $$('.cat-btn').forEach(b => { if(['jds','photo','battle'].indexOf(b.dataset.cat) === -1) b.classList.toggle('disabled', full); });
+  $$('.cat-btn').forEach(b => { if(['jds','photo','battle','soiree'].indexOf(b.dataset.cat) === -1) b.classList.toggle('disabled', full); });
   turnBanner.textContent = full
     ? `🚫 File pleine (${MAX_PENDING}/${MAX_PENDING}) — attends une validation`
     : `✦ Pioche une carte (${allPending.length}/${MAX_PENDING} en attente)`;
@@ -422,6 +423,7 @@ function setupPlayView(){
       if(btn.dataset.cat === 'jds'){ openJDS(); return; }
       if(btn.dataset.cat === 'photo'){ openPhoto(); return; }
       if(btn.dataset.cat === 'battle'){ openBattle(); return; }
+      if(btn.dataset.cat === 'soiree'){ openSoiree(); return; }
       drawCard(btn.dataset.cat);
     });
   });
@@ -431,6 +433,8 @@ function setupPlayView(){
   if(pback) pback.addEventListener('click', closePhoto);
   const bback = $('#battle-back');
   if(bback) bback.addEventListener('click', closeBattle);
+  const sback = $('#soiree-back');
+  if(sback) sback.addEventListener('click', closeSoiree);
   // Les actions des boutons sont ré-attribuées dynamiquement à chaque rendu (cf. renderPendingCard)
 }
 
@@ -1026,7 +1030,7 @@ function renderHistory(){
   const wrap = $('#history-list');
   wrap.innerHTML = '';
 
-  const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Cap ou pas', distance:'🔥 Défi', photo:'📸 Défi Photo', battle:'⚔️ Battle' };
+  const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Cap ou pas', distance:'🔥 Défi', photo:'📸 Défi Photo', battle:'⚔️ Battle', soiree:'🌙 Soirée guidée' };
   const entries = state.history ? Object.values(state.history).sort((a,b)=> b.ts-a.ts).slice(0,50) : [];
 
   if(entries.length === 0){
