@@ -455,3 +455,4 @@ main#views{ flex:1; min-height:0; position:relative; }
   transition: color .18s, border-color .18s;
 }
 .hist-gage-del:hover{ color: var(--coral); border-color: rgba(255,107,107,0.45); }
+.hist-gage-owner{ font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em; color: var(--peach); font-weight:700; margin-bottom:5px; }
