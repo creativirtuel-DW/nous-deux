@@ -811,7 +811,8 @@ function setupRewardsView(){
       'photoDefi': null,
       'battle': null,
       'battleVues': null,
-      'osmose': 0
+      'osmose': 0,
+      'gagesVus': null
     });
   });
 }
