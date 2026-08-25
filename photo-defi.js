@@ -19,7 +19,34 @@ let pdLastSig = '';    // signature du dernier rendu : on ne reconstruit pas le 
 let pdBusy = false;    // garde-fou contre les doubles transitions
 let pdDraftUrl = null; // photo compressée en attente d'envoi
 
-function openPhoto(){ photoActive = true; render(); }
+// Mode de saisie du gage : null = pas encore choisi, 'libre' = écrit à la main,
+// 'hasard' = tiré au sort. Le tirage est DÉFINITIF : une fois qu'un gage
+// aléatoire est sorti, on ne peut ni le rejouer ni revenir à la saisie libre.
+let pdModeGage = null;
+let pdDraftMois = null;  // date saisie, conservée si le formulaire est redessiné
+let pdDraftAnnee = null;
+let pdGageTire = null;   // { id, type, g } du gage tiré
+let pdGageOublier = [];  // ids à libérer quand la liste est épuisée
+
+// Tirage sans répétition : les gages déjà sortis sont retenus dans gagesVus.
+function pdTirerGage(){
+  const vus = (state && state.gagesVus) || {};
+  let dispo = GAGES_ALEATOIRES.filter(g => !vus[g.id]);
+  pdGageOublier = [];
+  if(dispo.length === 0){
+    GAGES_ALEATOIRES.forEach(g => { if(vus[g.id]) pdGageOublier.push(g.id); });
+    dispo = GAGES_ALEATOIRES.slice();
+  }
+  return dispo[Math.floor(Math.random() * dispo.length)];
+}
+
+function openPhoto(){
+  photoActive = true;
+  pdModeGage = null; pdGageTire = null;
+  pdDraftMois = null; pdDraftAnnee = null;
+  pdLastSig = '';     // le formulaire doit être reconstruit à chaque ouverture
+  render();
+}
 function closePhoto(){ photoActive = false; stopPdTicker(); render(); }
 
 function pdRef(){ return roomRef.child('photoDefi'); }
@@ -55,11 +82,19 @@ function pdEcartMois(a, b){
   return Math.abs((a.year * 12 + a.month) - (b.year * 12 + b.month));
 }
 
-function pdSend(dataUrl, month, year, gage){
-  pdRef().set({
+function pdSend(dataUrl, month, year, gage, tire){
+  const updates = {};
+  updates['photoDefi'] = {
     by: me.id, photo: dataUrl, month: month, year: year,
-    gage: gage, status: 'sent', ts: Date.now()
-  });
+    gage: gage, gageId: tire ? tire.id : null, status: 'sent', ts: Date.now()
+  };
+  // Gage tiré au sort : on le marque comme sorti pour ne pas le revoir tout de suite.
+  if(tire){
+    pdGageOublier.forEach(id => { updates['gagesVus/' + id] = null; });
+    updates['gagesVus/' + tire.id] = true;
+    pdGageOublier = [];
+  }
+  roomRef.update(updates);
   notifyPartner('📸 Défi Photo', me.name + ' t' + String.fromCharCode(39) + 'envoie une photo à dater. 10 secondes pour la mémoriser !', 'photo');
 }
 
@@ -184,6 +219,46 @@ function pdSelects(prefix, defM, defY){
        + '<select id="' + prefix + '-year">' + yo + '</select></div>';
 }
 
+// Mémorise la date saisie avant un redessin du formulaire.
+function pdMemoriseDate(){
+  const m = $('#pd-month'), y = $('#pd-year');
+  if(m) pdDraftMois = parseInt(m.value, 10);
+  if(y) pdDraftAnnee = parseInt(y.value, 10);
+}
+
+// Bloc « gage » du formulaire, dans ses trois états possibles.
+function pdBlocGage(partnerName){
+  // 1. rien de choisi : les deux portes
+  if(pdModeGage === null){
+    return '<div class="pd-gage-choix">'
+      + '<button type="button" class="pd-gage-btn" id="pd-gage-hasard">'
+      +   '<span class="pd-gage-ic">🎲</span>'
+      +   '<span class="pd-gage-t">Gage aléatoire</span>'
+      +   '<span class="pd-gage-s">Tiré au sort dans la liste. <strong>Définitif</strong> : pas de second tirage, pas de retour en arrière.</span>'
+      + '</button>'
+      + '<button type="button" class="pd-gage-btn" id="pd-gage-libre">'
+      +   '<span class="pd-gage-ic">✍️</span>'
+      +   '<span class="pd-gage-t">Je choisis</span>'
+      +   '<span class="pd-gage-s">Tu écris toi-même le gage de ton choix.</span>'
+      + '</button>'
+      + '</div>';
+  }
+
+  // 2. gage tiré au sort : affiché, verrouillé
+  if(pdModeGage === 'hasard'){
+    const type = pdGageTire && pdGageTire.type === 'verite' ? '💬 Vérité' : '🔥 Action';
+    return '<div class="pd-gage-tire">'
+      + '<div class="pd-gage-type">' + type + '</div>'
+      + '<div class="pd-gage-texte">' + escapeHtml(pdGageTire ? pdGageTire.g : '') + '</div>'
+      + '<div class="pd-gage-verrou">🔒 Tirage définitif — ce gage est celui que tu envoies.</div>'
+      + '</div>';
+  }
+
+  // 3. saisie libre
+  return '<textarea id="pd-gage" class="jds-gain-input" rows="2" maxlength="200" placeholder="Ex : tu me masses les épaules 10 minutes"></textarea>'
+    + '<button type="button" class="pd-gage-retour" id="pd-gage-annuler">← Revenir au choix</button>';
+}
+
 // ---------- RENDU ----------
 function renderPhotoDefi(){
   const panel = $('#photo-panel');
@@ -218,7 +293,7 @@ function renderPhotoDefi(){
       +   '<button class="jds-masked" id="pd-pick"><span class="jds-masked-dots">＋</span><span class="jds-masked-hint" id="pd-pick-label">Choisir une photo</span></button>'
       +   '<div id="pd-preview" class="pd-preview" style="display:none;"><img id="pd-preview-img" alt=""></div>'
       +   '<span class="jds-label" style="margin-top:18px;">2 · La vraie date</span>'
-      +   pdSelects('pd', now.getMonth(), now.getFullYear())
+      +   pdSelects('pd', pdDraftMois !== null ? pdDraftMois : now.getMonth(), pdDraftAnnee !== null ? pdDraftAnnee : now.getFullYear())
       +   '<p class="pd-note">Une erreur de ' + PD_TOLERANCE + ' mois sera acceptée.</p>'
       +   '<div class="pd-stakes">'
       +     '<span class="jds-label" style="margin-bottom:10px;">Les enjeux</span>'
@@ -226,13 +301,19 @@ function renderPhotoDefi(){
       +     '<div class="pd-stake"><span class="pd-stake-ic">❌</span><span>' + escapeHtml(partnerName) + ' <strong>se trompe</strong> : soit je lui prends <strong>' + PD_POINTS + ' points</strong>, soit je gagne <strong>mon gage</strong> ci-dessous — c\'est lui/elle qui choisit.</span></div>'
       +   '</div>'
       +   '<span class="jds-label" style="margin-top:18px;">3 · Le gage secret</span>'
-      +   '<textarea id="pd-gage" class="jds-gain-input" rows="2" maxlength="200" placeholder="Ex : tu me masses les épaules 10 minutes"></textarea>'
+      +   pdBlocGage(partnerName)
       +   '<p class="pd-note">🔒 Ce gage restera <strong>totalement invisible</strong> pour ' + escapeHtml(partnerName) + '. Il ne sera révélé que s\'il/elle perd <em>et</em> choisit le gage plutôt que les points.</p>'
       +   '<p class="pd-note">⏳ Si tu gagnes un gage, tu auras <strong>24 h</strong> pour le valider comme réalisé. Passé ce délai il s\'annule et tu récupères les ' + PD_POINTS + ' points à la place.</p>'
       + '</div>'
       + '<button class="btn-primary" id="pd-send">Envoyer le défi</button>'
       + '<p class="error" id="pd-error"></p>';
 
+    // Une photo déjà compressée survit au redessin : on rétablit son aperçu.
+    if(pdDraftUrl){
+      $('#pd-pick-label').textContent = 'Changer de photo';
+      $('#pd-preview').style.display = 'block';
+      $('#pd-preview-img').src = pdDraftUrl;
+    }
     $('#pd-pick').addEventListener('click', () => $('#pd-file').click());
     $('#pd-file').addEventListener('change', e => {
       const f = e.target.files && e.target.files[0];
@@ -246,12 +327,41 @@ function renderPhotoDefi(){
         $('#pd-preview-img').src = url;
       });
     });
+    const btnHasard = $('#pd-gage-hasard');
+    if(btnHasard) btnHasard.addEventListener('click', () => {
+      const ok = confirm("Le tirage est DÉFINITIF.\n\nLe gage sorti sera celui que tu envoies : "
+        + "pas de second tirage, et impossible de revenir à la saisie libre.\n\nTirer le gage ?");
+      if(!ok) return;
+      pdMemoriseDate();
+      pdGageTire = pdTirerGage();
+      pdModeGage = 'hasard';
+      pdLastSig = '';     // force le redessin : l'état en base n'a pas bougé
+      render();
+    });
+    const btnLibre = $('#pd-gage-libre');
+    if(btnLibre) btnLibre.addEventListener('click', () => { pdMemoriseDate(); pdModeGage = 'libre'; pdLastSig = ''; render(); });
+    const btnAnnuler = $('#pd-gage-annuler');
+    if(btnAnnuler) btnAnnuler.addEventListener('click', () => { pdMemoriseDate(); pdModeGage = null; pdLastSig = ''; render(); });
+
     $('#pd-send').addEventListener('click', () => {
-      const gage = $('#pd-gage').value.trim();
       if(!pdDraftUrl){ $('#pd-error').textContent = 'Choisis d\'abord une photo.'; return; }
-      if(!gage){ $('#pd-error').textContent = 'Écris le gage secret.'; return; }
-      pdSend(pdDraftUrl, parseInt($('#pd-month').value, 10), parseInt($('#pd-year').value, 10), gage);
+      if(pdModeGage === null){ $('#pd-error').textContent = 'Choisis un gage aléatoire, ou écris le tien.'; return; }
+
+      let gage, tire = null;
+      if(pdModeGage === 'hasard'){
+        if(!pdGageTire){ $('#pd-error').textContent = 'Le tirage a échoué, réessaie.'; return; }
+        gage = pdGageTire.g;
+        tire = pdGageTire;
+      }else{
+        gage = ($('#pd-gage') ? $('#pd-gage').value : '').trim();
+        if(!gage){ $('#pd-error').textContent = 'Écris le gage secret.'; return; }
+      }
+      pdSend(pdDraftUrl, parseInt($('#pd-month').value, 10), parseInt($('#pd-year').value, 10), gage, tire);
       pdDraftUrl = null;
+      pdModeGage = null;
+      pdGageTire = null;
+      pdDraftMois = null;
+      pdDraftAnnee = null;
     });
     return;
   }

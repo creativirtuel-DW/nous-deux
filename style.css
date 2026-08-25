@@ -580,3 +580,31 @@ main#views{ flex:1; min-height:0; position:relative; }
 }
 .bt-libre::placeholder{ color: var(--muted-2); font-style:italic; }
 .bt-libre:focus{ outline:none; border-color: var(--peach); }
+
+/* ---------- CHOIX DU GAGE (Défi Photo) ---------- */
+.pd-gage-choix{ display:flex; flex-direction:column; gap:10px; }
+.pd-gage-btn{
+  display:flex; flex-direction:column; align-items:flex-start; gap:3px; text-align:left;
+  background: var(--elev); border:1px solid var(--line-2); border-radius:14px; padding:13px 15px;
+  color: var(--cream); font-family:inherit; cursor:pointer; transition: border-color .18s, transform .14s;
+}
+.pd-gage-btn:hover{ border-color: rgba(255,107,107,0.45); }
+.pd-gage-btn:active{ transform: scale(0.985); }
+.pd-gage-ic{ font-size:17px; }
+.pd-gage-t{ font-weight:700; font-size:15px; letter-spacing:-0.01em; }
+.pd-gage-s{ font-size:11.5px; color: var(--muted); line-height:1.45; }
+.pd-gage-s strong{ color: var(--peach); }
+
+.pd-gage-tire{
+  background: linear-gradient(160deg, rgba(255,107,107,0.14), var(--surface) 80%);
+  border:1px solid rgba(255,107,107,0.45); border-radius:14px; padding:14px 15px;
+  animation: floatIn .3s ease;
+}
+.pd-gage-type{ font-size:10.5px; text-transform:uppercase; letter-spacing:0.07em; color: var(--peach); font-weight:700; }
+.pd-gage-texte{ font-weight:700; font-size:15px; line-height:1.4; margin:7px 0 10px; }
+.pd-gage-verrou{ font-size:11px; color: var(--muted); border-top:1px solid var(--line); padding-top:8px; }
+.pd-gage-retour{
+  background:none; border:none; color: var(--muted); font-family:inherit; font-size:12px;
+  cursor:pointer; padding:4px 0; margin-top:-4px;
+}
+.pd-gage-retour:hover{ color: var(--cream); }
