@@ -466,3 +466,59 @@ main#views{ flex:1; min-height:0; position:relative; }
   margin-top:9px; background: rgba(0,0,0,0.26); border-left:3px solid var(--coral); border-radius:10px;
   padding:10px 12px; font-size:13px; line-height:1.45; color: var(--cream); animation: floatIn .22s ease;
 }
+
+/* ---------- CŒUR D'OSMOSE (en-tête) ---------- */
+.osmose{ position:relative; width:52px; height:46px; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+.osmose svg{ position:absolute; inset:0; width:100%; height:100%; filter: drop-shadow(0 0 8px rgba(255,107,107,0.35)); transition: filter .3s, opacity .3s; }
+.osmose-val{ position:relative; font-weight:800; font-size:14px; letter-spacing:-0.02em; color: var(--coral); font-variant-numeric: tabular-nums; margin-top:-2px; }
+.osmose.negatif svg{ filter:none; opacity:0.45; }
+.osmose.negatif .osmose-val{ color: var(--muted); }
+
+/* ---------- BATTLE ---------- */
+.bt-regle{ display:flex; gap:11px; align-items:flex-start; font-size:13px; line-height:1.5; color: var(--muted); margin-bottom:9px; }
+.bt-regle span:first-child{
+  flex:0 0 20px; height:20px; border-radius:50%; background: rgba(255,107,107,0.16); color: var(--coral);
+  font-weight:800; font-size:11px; display:flex; align-items:center; justify-content:center;
+}
+.bt-regle strong{ color: var(--cream); }
+
+.bt-q{
+  background: linear-gradient(160deg, var(--surface-2), var(--surface) 78%);
+  border:1px solid var(--line-2); border-radius: var(--r-lg); padding:15px 16px; box-shadow: var(--shadow-sm);
+}
+.bt-q-num{ font-size:10.5px; text-transform:uppercase; letter-spacing:0.07em; color: var(--peach); font-weight:700; }
+.bt-q-text{ font-weight:700; font-size:16px; line-height:1.35; letter-spacing:-0.01em; margin:7px 0 13px; }
+.bt-choix{ display:flex; flex-direction:column; gap:8px; }
+.bt-choix-btn{
+  text-align:left; background: var(--elev); border:1px solid var(--line-2); border-radius:13px;
+  padding:11px 13px; color: var(--cream); font-family:inherit; font-size:13.5px; cursor:pointer;
+  transition: border-color .16s, background .16s, transform .12s;
+}
+.bt-choix-btn:active{ transform: scale(0.985); }
+.bt-choix-btn.choisi{ border-color: var(--coral); background: rgba(255,107,107,0.16); color: var(--coral); font-weight:700; }
+.bt-choix-btn:disabled{ opacity:0.55; cursor:default; }
+
+.bt-resultat{
+  text-align:center; border-radius: var(--r-lg); padding:24px 20px; box-shadow: var(--shadow-lg);
+  background: linear-gradient(135deg, rgba(255,107,107,0.2), var(--surface)); border:1px solid rgba(255,107,107,0.45);
+  animation: jdsReveal .5s cubic-bezier(.2,.8,.2,1);
+}
+.bt-resultat.mauvais{ background: linear-gradient(135deg, rgba(120,120,140,0.18), var(--surface)); border-color: var(--line-2); }
+.bt-score{ font-weight:800; font-size:46px; line-height:1; letter-spacing:-0.03em; color: var(--coral); }
+.bt-resultat.mauvais .bt-score{ color: var(--muted); }
+.bt-score span{ font-size:22px; color: var(--muted); }
+.bt-score-label{ font-size:13px; color: var(--muted); margin-top:4px; }
+.bt-delta{ margin-top:12px; font-weight:800; font-size:17px; color: var(--peach); }
+
+.bt-detail{ background: var(--surface); border:1px solid var(--line); border-left-width:3px; border-radius:14px; padding:12px 14px; }
+.bt-detail.ok{ border-left-color: var(--coral); }
+.bt-detail.ko{ border-left-color: var(--muted-2); }
+.bt-detail-q{ font-weight:700; font-size:13.5px; line-height:1.4; margin-bottom:8px; }
+.bt-detail-rep{ font-size:12.5px; color: var(--cream); line-height:1.6; }
+.bt-detail-rep span{ display:inline-block; min-width:78px; color: var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:0.04em; }
+
+.bt-select, .bt-rep{
+  width:100%; background: var(--elev); color: var(--cream); font-family:inherit; font-size:14px;
+  border:1px solid var(--line-2); border-radius:12px; padding:11px 13px; margin-bottom:9px;
+}
+.bt-select:focus, .bt-rep:focus{ outline:none; border-color: var(--coral); }
