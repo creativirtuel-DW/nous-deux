@@ -1,108 +1,113 @@
 // =========================================================
 //  SOIRÉE GUIDÉE
-//  Un parcours de 5 cartes qui monte en intensité, au lieu du tirage
-//  au hasard. On choisit le niveau au départ (Tendre / Chaud / Sans
-//  limite), et chaque carte s'applique aux DEUX : la suivante ne se
-//  découvre que lorsque tous les deux ont validé la précédente.
+//  Un seul parcours, en trois paliers : 3 cartes SOFT, puis 3 cartes
+//  CHAUD, puis 2 cartes HOT. Chaque carte s'applique aux DEUX, et la
+//  suivante ne se découvre que lorsque tous les deux l'ont validée.
+//  Le passage d'un palier au suivant est annoncé en grand.
 //  Les points de chaque carte sont gagnés par les deux joueurs.
 // =========================================================
+
 // Les points d'une carte valent moitié moins en soirée guidée : le parcours
-// en distribue dix d'affilée, il ne doit pas faire exploser les scores d'un
+// en distribue huit d'affilée, il ne doit pas faire exploser les scores d'un
 // coup ni vider les paliers de récompenses en une seule veillée.
 const SOIREE_DIVISEUR = 2;
 function soireePoints(pts){ return Math.round(pts / SOIREE_DIVISEUR); }
 
-// paliers : les points visés pour chacune des 10 cartes, de l'échauffement au
-// bouquet final. C'est ce qui donne sa forme à la soirée.
-const SOIREE_NIVEAUX = [
-  { id:'tendre', emoji:'🌸', label:'Tendre',      max:25,   suite:'chaud', haut:1, paliers:[10, 10, 15, 15, 20, 20, 20, 25, 25, 25], desc:"Complicité, tendresse, rien qui brûle." },
-  { id:'chaud',  emoji:'🔥', label:'Chaud',       max:50,   suite:'libre', haut:2, paliers:[10, 15, 20, 20, 25, 25, 25, 30, 30, 40], desc:"Ça monte franchement, sans aller au bout." },
-  { id:'libre',  emoji:'💥', label:'Sans limite', max:9999, suite:null,    haut:1, paliers:[10, 15, 20, 20, 25, 25, 30, 40, 50, 50], desc:"Tout est permis, jusqu'aux cartes les plus fortes." },
+// paliers : les points visés par chaque carte du palier, et le plafond du
+// vivier dans lequel il pioche. C'est ce qui donne sa forme à la soirée.
+// L'annonce s'affiche juste avant la première carte du palier.
+const SOIREE_ETAPES = [
+  { id:'soft',  emoji:'🌸', label:'SOFT',  max:25,   paliers:[10, 15, 20],
+    desc:"Complicité et tendresse" },
+  { id:'chaud', emoji:'🔥', label:'CHAUD', max:40,   paliers:[25, 25, 30],
+    desc:"Ça monte franchement",
+    annonce:{ titre:'Félicitations !', texte:'On passe au niveau CHAUD' } },
+  { id:'hot',   emoji:'💥', label:'HOT',   max:9999, paliers:[40, 50], haut:2,
+    desc:"Plus aucune limite",
+    annonce:{ titre:'Bravo !', texte:"On arrive au niveau HOT" } },
 ];
 
-// Au-delà de 50 points, les cartes ne se hiérarchisent plus entre elles : une
-// carte à 50, à 70 ou à 100 demande le même engagement. Le bouquet final les
-// tire donc à égalité, plutôt que d'exiger la valeur la plus haute — sans quoi
-// « Sans limite » finirait toujours sur les deux ou trois mêmes cartes.
-const SOIREE_PALIER_HAUT = 50;
-
 let soireeActive = false;
-let soireeBusy = false;   // garde-fou : la transition ne doit être jouée qu'une fois
+let soireeBusy = false;      // garde-fou : la transition ne doit être jouée qu'une fois
+let soireeAnnonceVue = {};    // annonces déjà lues SUR CE TÉLÉPHONE (rien à partager)
 
 function openSoiree(){ soireeActive = true; render(); }
 function closeSoiree(){ soireeActive = false; render(); }
 
 function sRef(){ return roomRef.child('soiree'); }
 function sGet(){ return (state && state.soiree) || null; }
-function sNiveau(id){ return SOIREE_NIVEAUX.find(n => n.id === id) || SOIREE_NIVEAUX[0]; }
+function sEtape(id){ return SOIREE_ETAPES.find(e => e.id === id) || SOIREE_ETAPES[0]; }
+function soireeTotalCartes(){ return SOIREE_ETAPES.reduce((n, e) => n + e.paliers.length, 0); }
 
 // Toutes les cartes jouables, catégories mélangées : une soirée qui enchaîne
 // une question, un défi puis un gage vaut mieux qu'un bloc monocorde.
-function soireePool(niveau){
+function soireePool(plafond){
   const cartes = getActiveDefaultCards().slice();
   if(state && state.customCards){
     Object.entries(state.customCards).forEach(([key, c]) => cartes.push({ ...c, id:key, cat:normCat(c.cat) }));
   }
   const vus = new Set();
   return cartes.filter(c => {
-    if(!c.text || c.pts > niveau.max) return false;
+    if(!c.text || c.pts > plafond) return false;
     if(vus.has(c.text)) return false;   // les doublons volontaires ne sortent qu'une fois par soirée
     vus.add(c.text);
     return true;
   });
 }
 
-// La montée en intensité est garantie par construction : chaque palier du
-// niveau cherche une carte valant ces points-là (ou la plus proche encore
-// disponible), sans jamais redescendre sous la carte précédente. Découper le
-// vivier en cinq quantiles ne suffisait pas : les cartes à 10-30 points sont
-// si nombreuses qu'une soirée « Sans limite » pouvait finir sur du 25.
-function soireeTirer(niveau, exclus){
+// La montée en intensité est garantie par construction : chaque palier cherche
+// une carte valant ces points-là (ou la plus proche encore disponible), sans
+// jamais redescendre sous la carte précédente. Découper le vivier en quantiles
+// ne suffisait pas : les cartes à 10-30 points sont si nombreuses que la
+// soirée pouvait finir sur du 25.
+function soireeTirer(exclus){
   const dejaVues = exclus || [];
-  const pool = soireePool(niveau).filter(c => dejaVues.indexOf(c.id) === -1);
-  if(pool.length === 0) return [];
   const cartes = [];
-  const pris = new Set();
+  const pris = new Set(dejaVues);
   let plancher = 0;
 
-  niveau.paliers.forEach((cible, i) => {
-    let dispo = pool.filter(c => !pris.has(c.id) && c.pts >= plancher);
-    if(dispo.length === 0) dispo = pool.filter(c => !pris.has(c.id));
-    if(dispo.length === 0) return;
+  SOIREE_ETAPES.forEach(etape => {
+    const pool = soireePool(etape.max);
+    etape.paliers.forEach((cible, i) => {
+      let dispo = pool.filter(c => !pris.has(c.id) && c.pts >= plancher);
+      if(dispo.length === 0) dispo = pool.filter(c => !pris.has(c.id));
+      if(dispo.length === 0) return;
 
-    // Les cartes fortes sont rares : viser la valeur exacte ramènerait les
-    // mêmes en fin de soirée à chaque partie. Les « haut » derniers paliers
-    // piochent donc dans tout ce qui les dépasse — eux seuls, sinon la soirée
-    // atteint son plafond dès la troisième carte. « Chaud » en compte deux :
-    // il n'existe que trois cartes à 40 points, il faut bien qu'il puisse
-    // finir sur une ou deux cartes à 50.
-    const finale = i >= niveau.paliers.length - (niveau.haut || 1);
-    const plafondHaut = cible >= SOIREE_PALIER_HAUT;
-    let choix = finale ? dispo.filter(c => c.pts >= cible && (plafondHaut || c.pts <= niveau.max)) : [];
-    if(choix.length === 0){
-      const ecartMin = Math.min(...dispo.map(c => Math.abs(c.pts - cible)));
-      choix = dispo.filter(c => Math.abs(c.pts - cible) === ecartMin);
-    }
-    const c = choix[Math.floor(Math.random() * choix.length)];
-    pris.add(c.id);
-    plancher = c.pts;
-    cartes.push({ id:c.id, cat:c.cat, text:c.text, pts:c.pts });
+      // Les cartes fortes sont rares : viser la valeur exacte ramènerait les
+      // mêmes en fin de soirée à chaque partie. Les « haut » dernières cartes
+      // d'un palier piochent donc dans tout ce qui les dépasse — elles seules,
+      // sinon la soirée atteint son plafond dès la troisième carte.
+      const finale = i >= etape.paliers.length - (etape.haut || 0);
+      // Seule la toute dernière carte de la soirée pioche sans plafond : sans
+      // cette borne, l'avant-dernière raflait déjà une carte à 100 points et la
+      // soirée montait d'un coup au lieu de monter par marches.
+      const bouquet = etape === SOIREE_ETAPES[SOIREE_ETAPES.length - 1] && i === etape.paliers.length - 1;
+      const plafond = bouquet ? Infinity : Math.round(cible * 1.5);
+      let choix = finale ? dispo.filter(c => c.pts >= cible && c.pts <= plafond) : [];
+      if(choix.length === 0){
+        const ecartMin = Math.min(...dispo.map(c => Math.abs(c.pts - cible)));
+        choix = dispo.filter(c => Math.abs(c.pts - cible) === ecartMin);
+      }
+      const c = choix[Math.floor(Math.random() * choix.length)];
+      pris.add(c.id);
+      plancher = c.pts;
+      cartes.push({ id:c.id, cat:c.cat, text:c.text, pts:c.pts, etape:etape.id });
+    });
   });
   return cartes;
 }
 
-function soireeStart(niveauId){
-  const niveau = sNiveau(niveauId);
-  // Enchaînement d'un niveau sur l'autre : on ne rejoue pas les cartes qui
-  // viennent tout juste de sortir.
+function soireeStart(){
+  // Relance juste après une soirée : on ne rejoue pas les cartes qui viennent
+  // tout juste de sortir.
   const precedente = sGet();
   const exclus = (precedente && precedente.cards) ? precedente.cards.map(c => c.id) : [];
-  const cartes = soireeTirer(niveau, exclus);
-  if(cartes.length === 0){ alert("Aucune carte disponible pour ce niveau."); return; }
-  sRef().set({ niveau:niveau.id, cards:cartes, index:0, done:{}, by:me.id, ts:Date.now() });
+  const cartes = soireeTirer(exclus);
+  if(cartes.length === 0){ alert("Aucune carte disponible pour la soirée."); return; }
+  soireeAnnonceVue = {};
+  sRef().set({ cards:cartes, index:0, done:{}, by:me.id, ts:Date.now() });
   notifyPartner('🌙 Soirée guidée',
-    me.name + ' a lancé une soirée « ' + niveau.label + ' » : ' + cartes.length + ' cartes pour vous deux.',
-    'soiree');
+    me.name + ' a lancé une soirée : ' + cartes.length + ' cartes pour vous deux.', 'soiree');
 }
 
 function soireeStop(){
@@ -143,7 +148,7 @@ function soireeFait(){
     const histKey = db.ref('rooms/' + roomCode + '/history').push().key;
     updates['history/' + histKey] = {
       who: 'Vous deux', cat: 'soiree',
-      text: 'Soirée guidée « ' + sNiveau(d.niveau).label + ' » — ' + d.cards.length + ' cartes enchaînées',
+      text: 'Soirée guidée — ' + d.cards.length + ' cartes enchaînées, jusqu\'au niveau HOT',
       answer: '', comment: '', pts: total, validated: true, ts: Date.now()
     };
   } else {
@@ -168,29 +173,47 @@ function renderSoiree(){
   const body = $('#soiree-body');
   const d = sGet();
 
-  if(!d){ body.innerHTML = soireeVueNiveaux(); soireeBrancher(body); return; }
+  if(!d){ body.innerHTML = soireeVueDepart(); soireeBrancher(body); return; }
   if(d.fini){ body.innerHTML = soireeVueFin(d); soireeBrancher(body); return; }
+
+  // Passage de palier : l'annonce s'intercale avant la première carte du
+  // palier. Elle est locale à chaque téléphone, chacun la ferme à son rythme.
+  const carte = d.cards[d.index || 0];
+  const etape = sEtape(carte.etape);
+  const premiere = (d.index || 0) === d.cards.findIndex(c => c.etape === carte.etape);
+  if(etape.annonce && premiere && !soireeAnnonceVue[etape.id]){
+    body.innerHTML = soireeVueAnnonce(etape, d);
+    soireeBrancher(body);
+    return;
+  }
+
   body.innerHTML = soireeVueParcours(d);
   soireeBrancher(body);
 }
 
-function soireeVueNiveaux(){
-  const choix = SOIREE_NIVEAUX.map(n => {
-    const dispo = soireePool(n).length;
-    return `
-      <button class="soiree-niveau" data-niveau="${n.id}" ${dispo ? '' : 'disabled'}>
-        <span class="soiree-niveau-ic">${n.emoji}</span>
-        <span class="soiree-niveau-txt">
-          <strong>${n.label}</strong>
-          <span>${escapeHtml(n.desc)}</span>
-          <span class="soiree-niveau-dispo">${dispo} cartes possibles</span>
-        </span>
-      </button>`;
-  }).join('');
+function soireeVueDepart(){
+  const etapes = SOIREE_ETAPES.map(e => `
+    <li class="soiree-etape-item">
+      <span class="soiree-etape-ic">${e.emoji}</span>
+      <span><strong>${e.paliers.length} cartes ${e.label}</strong><br><span class="soiree-etape-desc">${escapeHtml(e.desc)}</span></span>
+    </li>`).join('');
   return `
-    <h3 class="soiree-title">Une soirée à deux, en ${SOIREE_NIVEAUX[0].paliers.length} cartes</h3>
-    <p class="soiree-intro">Chaque carte est pour vous deux, et la suivante n'apparaît que quand vous l'avez faite tous les deux. Ça commence doux et ça monte jusqu'à la dernière. Les cartes valent moitié moins de points qu'à la pioche : le parcours est long.</p>
-    <div class="soiree-niveaux">${choix}</div>`;
+    <h3 class="soiree-title">Une soirée à deux, en ${soireeTotalCartes()} cartes</h3>
+    <p class="soiree-intro">Chaque carte est pour vous deux, et la suivante n'apparaît que quand vous l'avez faite tous les deux. Ça commence doux et ça monte, palier par palier.</p>
+    <ul class="soiree-etapes">${etapes}</ul>
+    <button class="btn-primary" id="soiree-go">🌙 Lancer la soirée</button>`;
+}
+
+function soireeVueAnnonce(etape, d){
+  const restantes = d.cards.filter(c => c.etape === etape.id).length;
+  return `
+    <div class="soiree-annonce soiree-annonce-${etape.id}">
+      <div class="soiree-annonce-ic">${etape.emoji}</div>
+      <div class="soiree-annonce-titre">${escapeHtml(etape.annonce.titre)}</div>
+      <div class="soiree-annonce-txt">${escapeHtml(etape.annonce.texte)}</div>
+      <div class="soiree-annonce-sous">${restantes} cartes à ce niveau — ${escapeHtml(etape.desc.toLowerCase())}</div>
+    </div>
+    <button class="btn-primary" id="soiree-annonce-ok">On continue</button>`;
 }
 
 function soireeVueParcours(d){
@@ -198,13 +221,13 @@ function soireeVueParcours(d){
   const cartes = d.cards || [];
   const carte = cartes[idx];
   const done = (d.done && d.done[idx]) || {};
-  const niveau = sNiveau(d.niveau);
+  const etape = sEtape(carte.etape);
   const icone = { question:'💬', defi:'🔥', gage:'😈' }[carte.cat] || '✦';
   const label = { question:'Question', defi:'Défi', gage:'Cap ou pas' }[carte.cat] || 'Carte';
 
   const points = cartes.map((c, i) => {
     const cls = i < idx ? 'faite' : (i === idx ? 'courante' : '');
-    return `<span class="soiree-point ${cls}"></span>`;
+    return `<span class="soiree-point soiree-point-${c.etape} ${cls}"></span>`;
   }).join('');
 
   const moiFait = !!done[me.id];
@@ -217,7 +240,7 @@ function soireeVueParcours(d){
 
   return `
     <div class="soiree-entete">
-      <span class="soiree-niveau-tag">${niveau.emoji} ${niveau.label}</span>
+      <span class="soiree-niveau-tag soiree-tag-${etape.id}">${etape.emoji} ${etape.label}</span>
       <span class="soiree-compteur">Carte ${idx + 1} / ${cartes.length}</span>
     </div>
     <div class="soiree-jauge">${points}</div>
@@ -239,9 +262,8 @@ function soireeVueParcours(d){
 
 function soireeVueFin(d){
   const cartes = d.cards || [];
-  const suite = sNiveau(d.niveau).suite ? sNiveau(sNiveau(d.niveau).suite) : null;
   const recap = cartes.map((c, i) => `
-    <li><span class="soiree-recap-n">${i + 1}</span> ${escapeHtml(c.text)} <span class="soiree-recap-pts">+${soireePoints(c.pts)}</span></li>`).join('');
+    <li><span class="soiree-recap-n soiree-point-${c.etape}">${i + 1}</span> ${escapeHtml(c.text)} <span class="soiree-recap-pts">+${soireePoints(c.pts)}</span></li>`).join('');
   return `
     <div class="soiree-fin">
       <div class="soiree-fin-ic">🌙</div>
@@ -249,16 +271,18 @@ function soireeVueFin(d){
       <p class="soiree-fin-pts">+${d.total || 0} points pour chacun</p>
     </div>
     <ul class="soiree-recap">${recap}</ul>
-    ${suite ? `<p class="soiree-suite-txt">La soirée ne fait que commencer ?</p>
-    <button class="btn-primary" id="soiree-suite" data-niveau="${suite.id}">${suite.emoji} Enchaîner en « ${suite.label} »</button>
-    <button class="btn-ghost" id="soiree-encore">Refaire une soirée « ${sNiveau(d.niveau).label} »</button>`
-    : `<button class="btn-primary" id="soiree-encore">Relancer une soirée</button>`}
+    <button class="btn-primary" id="soiree-encore">Relancer une soirée</button>
     <button class="btn-ghost soiree-stop" id="soiree-stop">Retour à la pioche</button>`;
 }
 
 function soireeBrancher(body){
-  body.querySelectorAll('.soiree-niveau').forEach(b => {
-    b.addEventListener('click', () => soireeStart(b.dataset.niveau));
+  const go = body.querySelector('#soiree-go');
+  if(go) go.addEventListener('click', () => soireeStart());
+  const ok = body.querySelector('#soiree-annonce-ok');
+  if(ok) ok.addEventListener('click', () => {
+    const d = sGet();
+    if(d) soireeAnnonceVue[sEtape(d.cards[d.index || 0].etape).id] = true;
+    render();
   });
   const fait = body.querySelector('#soiree-fait');
   if(fait) fait.addEventListener('click', soireeFait);
@@ -269,7 +293,5 @@ function soireeBrancher(body){
     soireeStop();
   });
   const encore = body.querySelector('#soiree-encore');
-  if(encore) encore.addEventListener('click', () => sRef().remove());
-  const suite = body.querySelector('#soiree-suite');
-  if(suite) suite.addEventListener('click', () => soireeStart(suite.dataset.niveau));
+  if(encore) encore.addEventListener('click', () => { soireeAnnonceVue = {}; soireeStart(); });
 }

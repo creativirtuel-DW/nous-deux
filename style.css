@@ -691,4 +691,37 @@ main#views{ flex:1; min-height:0; position:relative; }
   color:#C4B5FD; font-size:11.5px; font-weight:700; display:flex; align-items:center; justify-content:center;
 }
 .soiree-recap-pts{ margin-left:auto; color: var(--coral); font-weight:700; flex:0 0 auto; }
-.soiree-suite-txt{ text-align:center; color: var(--muted); font-size:13px; margin:2px 0 -6px; }
+
+/* Soirée guidée : paliers SOFT / CHAUD / HOT */
+.soiree-etapes{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:9px; }
+.soiree-etape-item{
+  display:flex; align-items:center; gap:13px; font-size:14px; line-height:1.35;
+  background: rgba(255,255,255,0.03); border:1px solid var(--line); border-radius:14px; padding:12px 14px;
+}
+.soiree-etape-ic{ font-size:22px; flex:0 0 auto; }
+.soiree-etape-desc{ font-size:12.5px; color: var(--muted); }
+
+.soiree-tag-soft{  background: rgba(167,139,250,0.16); color:#C4B5FD; }
+.soiree-tag-chaud{ background: rgba(255,160,122,0.18); color: var(--peach); }
+.soiree-tag-hot{   background: rgba(255,107,107,0.2);  color: var(--coral); }
+
+.soiree-point-soft.faite{  background: linear-gradient(90deg, #A78BFA, #C4B5FD); }
+.soiree-point-chaud.faite{ background: linear-gradient(90deg, #FFA07A, #FFC49B); }
+.soiree-point-hot.faite{   background: linear-gradient(90deg, #FB5A63, #FF6B6B); }
+
+.soiree-annonce{
+  text-align:center; padding:34px 20px; border-radius: var(--r-lg);
+  border:1px solid var(--line-2); box-shadow: var(--shadow-md);
+  animation: soireePalier .45s cubic-bezier(.2,.9,.3,1.3);
+}
+.soiree-annonce-chaud{ background: linear-gradient(160deg, rgba(255,160,122,0.22), rgba(255,107,107,0.06)); border-color: rgba(255,160,122,0.45); }
+.soiree-annonce-hot{   background: linear-gradient(160deg, rgba(255,107,107,0.26), rgba(255,160,122,0.06)); border-color: rgba(255,107,107,0.5); }
+.soiree-annonce-ic{ font-size:46px; filter: drop-shadow(0 0 18px rgba(255,140,110,0.55)); }
+.soiree-annonce-titre{ font-weight:800; font-size:19px; margin-top:10px; letter-spacing:-0.01em; }
+.soiree-annonce-txt{ font-weight:800; font-size:27px; margin-top:4px; letter-spacing:-0.02em; line-height:1.15; }
+.soiree-annonce-sous{ color: var(--muted); font-size:13px; margin-top:10px; }
+
+@keyframes soireePalier{
+  from{ opacity:0; transform: scale(0.88); }
+  to{ opacity:1; transform: scale(1); }
+}
