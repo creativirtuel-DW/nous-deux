@@ -17,21 +17,23 @@ firebase.initializeApp(firebaseConfig);
 // suffisait à lire la base depuis n'importe où.
 //
 // Clé publique par nature : elle vit dans la page, comme la clé Firebase.
-// C'est la clé SECRÈTE, gardée dans la console, qui prouve la paire.
+// C'est le domaine autorisé sur la clé (creativirtuel-dw.github.io) qui fait
+// la protection, pas son secret.
 //
-// Reste à faire côté console (dans cet ordre, sinon l'appli casse) :
-//   1. App Check > Applications > Notre app DW > Enregistrer > reCAPTCHA,
-//      y coller la clé secrète de la même paire.
-//   2. Ouvrir l'appli sur les deux téléphones.
-//   3. Vérifier dans App Check que les requêtes « vérifiées » montent.
-//   4. Seulement là, passer la Realtime Database en « Appliqué ».
-// Tant que l'app n'est pas enregistrée côté Firebase, les jetons envoyés ici
-// sont simplement ignorés : rien ne casse.
+// Fournisseur : reCAPTCHA **Enterprise**. Google a fermé la saisie du vieux
+// reCAPTCHA v3 dans la console App Check ; et la clé créée par le formulaire
+// « classique » est de toute façon une clé Enterprise, les deux produits
+// ayant fusionné. Se tromper de fournisseur ici passe inaperçu — la console
+// accepte n'importe quelle chaîne — jusqu'au jour où l'on active
+// l'application des règles et où plus rien ne passe.
 const APPCHECK_SITE_KEY = '6LdDFZotAAAAALTTFYRkGDUQJ8YFQddjgqrKeQmt';
 
 if(APPCHECK_SITE_KEY && firebase.appCheck){
   try{
-    firebase.appCheck().activate(APPCHECK_SITE_KEY, true);  // true = renouvellement auto du jeton
+    firebase.appCheck().activate(
+      new firebase.appCheck.ReCaptchaEnterpriseProvider(APPCHECK_SITE_KEY),
+      true   // renouvellement automatique du jeton
+    );
   }catch(err){
     console.error('App Check non activé :', err);
   }
