@@ -98,7 +98,7 @@ function soireeTirer(exclus){
         if(libres.length === 0) break;
         const c = libres[Math.floor(Math.random() * libres.length)];
         pris.add(c.id);
-        tirees.push({ id:c.id, cat:c.cat, text:c.text, pts:c.pts });
+        tirees.push({ id:c.id, cat:c.cat, text:c.text, pts:c.pts, photo:c.photo ? true : null });
       }
       if(tirees.length < 2) return;
       plancher = Math.min(tirees[0].pts, tirees[1].pts);
@@ -150,6 +150,49 @@ function sStatut(d, idx, joueur){
 function sReponse(d, idx, joueur){
   const rep = (d.reponses && d.reponses[idx]) || {};
   return rep[joueur] || '';
+}
+
+// Une carte photo du parcours : l'image attend d'être ouverte par l'autre.
+function sPhoto(d, idx, joueur){
+  const ph = (d.photos && d.photos[idx]) || {};
+  return ph[joueur] || '';
+}
+
+// Ma carte demande une photo : je ne peux pas valider sans l'avoir prise.
+function soireePhotoEnvoyer(){
+  const d = sGet();
+  if(!d || d.fini) return;
+  const idx = d.index || 0;
+  const carte = sMaCarte((d.cards || [])[idx]);
+  if(!carte || !carte.photo) return;
+
+  pcChoisirPhoto(dataUrl => {
+    if(!dataUrl) return;
+    pcProteger(dataUrl, protegee => {
+      sRef().child('photos/' + idx + '/' + me.id).set(protegee);
+      notifyPartner('📸 Soirée guidée',
+        me.name + ' a envoyé sa photo — tu ne la verras que ' + Math.round(PC_VUE_MS/1000) + ' secondes !', 'soiree');
+    });
+  });
+}
+
+// Ouverture de la photo reçue : affichage minuté, puis elle part à l'archive.
+function soireePhotoOuvrir(){
+  const d = sGet();
+  if(!d) return;
+  const idx = d.index || 0;
+  const valeur = sPhoto(d, idx, partnerId);
+  const zone = document.getElementById('soiree-photo-zone');
+  if(!valeur || !zone) return;
+
+  const carte = sSaCarte((d.cards || [])[idx]);
+  pcMontrer(zone, valeur, () => {
+    const updates = {};
+    updates['soiree/photos/' + idx + '/' + partnerId] = null;
+    updates['soiree/photosVues/' + idx + '/' + partnerId] = Date.now();
+    pcArchiver(updates, 'soiree-' + (d.ts || 0) + '-' + idx + '-' + partnerId, valeur, partnerId, carte ? carte.text : '');
+    roomRef.update(updates);
+  });
 }
 
 // Validation ou refus : chacun n'écrit QUE sa propre réponse. Faire avancer la
@@ -290,7 +333,8 @@ function renderSoiree(){
   // on ne le refait que si quelque chose a réellement changé pour ce tour.
   const idx = d.index || 0;
   const signature = ['parcours', idx, sStatut(d, idx, me.id), sStatut(d, idx, partnerId),
-                     sReponse(d, idx, me.id), sReponse(d, idx, partnerId)].join('|');
+                     sReponse(d, idx, me.id), sReponse(d, idx, partnerId),
+                     sPhoto(d, idx, me.id) ? 'ph' : '', sPhoto(d, idx, partnerId) ? 'pha' : ''].join('|');
   if(signature === soireeSignature && body.querySelector('.soiree-carte')) return;
   soireeSignature = signature;
 
@@ -353,10 +397,24 @@ function soireeVueParcours(d){
     : `<textarea class="soiree-input" id="soiree-reponse" rows="2" maxlength="${SOIREE_REPONSE_MAX}"
          placeholder="Écris ta réponse à ${escapeHtml(partenaire)} (facultatif)…">${escapeHtml(soireeBrouillon)}</textarea>`;
 
+  // Carte photo : on ne valide qu'une fois la photo prise.
+  const maPhoto = sPhoto(d, idx, me.id);
+  const photoAttendue = carte.photo && !maPhoto && !moi;
   const actions = moi
     ? `<button class="btn-primary" disabled>${marque(moi)} ${moi === 'refus' ? 'Refusée' : 'Fait'} — en attente de ${escapeHtml(partenaire)}…</button>`
-    : `<button class="btn-primary" id="soiree-fait">✅ C'est fait !</button>
+    : `${photoAttendue
+        ? `<button class="btn-primary" id="soiree-photo">📸 Prendre la photo</button>`
+        : `<button class="btn-primary" id="soiree-fait">✅ C'est fait !</button>`}
        <button class="btn-ghost soiree-refus" id="soiree-refuse">❌ Je refuse (−${soireePoints(carte.pts)} points)</button>`;
+
+  // La photo qu'elle/il m'a envoyée, à ouvrir une seule fois.
+  const saPhoto = sPhoto(d, idx, partnerId);
+  const photoRecue = saPhoto
+    ? `<div class="pc-ouvrir-zone" id="soiree-photo-zone">
+         <button class="btn-primary" id="soiree-photo-ouvrir">📸 Ouvrir sa photo (${Math.round(PC_VUE_MS/1000)} s)</button>
+         <p class="pc-note">Une seule fois : elle disparaît ensuite.</p>
+       </div>`
+    : (sienne.photo ? `<p class="pc-note">📸 ${escapeHtml(partenaire)} doit envoyer une photo.</p>` : '');
 
   return `
     <div class="soiree-entete">
@@ -366,12 +424,13 @@ function soireeVueParcours(d){
     <div class="soiree-jauge">${points}</div>
 
     <div class="soiree-carte">
-      <div class="soiree-carte-cat">${icone} ${label} · pour toi</div>
+      <div class="soiree-carte-cat">${carte.photo ? '📸 ' : ''}${icone} ${label} · pour toi</div>
       <p class="soiree-carte-text">${escapeHtml(carte.text)}</p>
       <div class="soiree-carte-pts">+${soireePoints(carte.pts)} points</div>
     </div>
 
     ${saisie}
+    ${photoRecue}
 
     <div class="soiree-sienne">
       <span class="soiree-sienne-titre">La carte de ${escapeHtml(partenaire)} ${marque(lui)}</span>
@@ -441,6 +500,10 @@ function soireeBrancher(body){
   }
   const fait = body.querySelector('#soiree-fait');
   if(fait) fait.addEventListener('click', soireeFait);
+  const photo = body.querySelector('#soiree-photo');
+  if(photo) photo.addEventListener('click', soireePhotoEnvoyer);
+  const ouvrirPh = body.querySelector('#soiree-photo-ouvrir');
+  if(ouvrirPh) ouvrirPh.addEventListener('click', soireePhotoOuvrir);
   const refus = body.querySelector('#soiree-refuse');
   if(refus) refus.addEventListener('click', soireeRefuse);
   const stop = body.querySelector('#soiree-stop');

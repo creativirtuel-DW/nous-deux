@@ -16,15 +16,18 @@ firebase.initializeApp(firebaseConfig);
 // ne prouve rien à elle seule. Sans App Check, connaître le code du couple
 // suffisait à lire la base depuis n'importe où.
 //
-// Mise en service (dans cet ordre, sinon l'appli casse) :
-//   1. Firebase Console > App Check > enregistrer l'app web en reCAPTCHA v3,
-//      et coller ici la clé de site obtenue.
-//   2. Publier cette version et l'ouvrir sur les deux téléphones.
+// Clé publique par nature : elle vit dans la page, comme la clé Firebase.
+// C'est la clé SECRÈTE, gardée dans la console, qui prouve la paire.
+//
+// Reste à faire côté console (dans cet ordre, sinon l'appli casse) :
+//   1. App Check > Applications > Notre app DW > Enregistrer > reCAPTCHA,
+//      y coller la clé secrète de la même paire.
+//   2. Ouvrir l'appli sur les deux téléphones.
 //   3. Vérifier dans App Check que les requêtes « vérifiées » montent.
 //   4. Seulement là, passer la Realtime Database en « Appliqué ».
-// Tant que la clé n'est pas renseignée, l'appli fonctionne exactement comme
-// avant : rien ne se casse à la publication.
-const APPCHECK_SITE_KEY = '';   // clé de site reCAPTCHA v3
+// Tant que l'app n'est pas enregistrée côté Firebase, les jetons envoyés ici
+// sont simplement ignorés : rien ne casse.
+const APPCHECK_SITE_KEY = '6LdDFZotAAAAALTTFYRkGDUQJ8YFQddjgqrKeQmt';
 
 if(APPCHECK_SITE_KEY && firebase.appCheck){
   try{
@@ -199,9 +202,11 @@ function startApp(){
   // Coffre déjà ouvert sur cet appareil ? On reprend la phrase sans rien demander.
   coffreReprendre().then(() => render());
 
+  let premiereFois = true;
   roomRef.on('value', snap => {
     state = snap.val();
     if(!state) return;
+    if(premiereFois){ premiereFois = false; pcPurgerArchives(); }
     render();
   });
 }
@@ -233,6 +238,7 @@ function render(){
   renderHistory();
   renderCustomCards();
   renderCoffre();
+  renderPhotosArchive();
   renderAdminLockButtons();
 }
 
@@ -279,15 +285,26 @@ function renderPendingCard(){
     const commentBlock = p.comment
       ? `<div class="pending-answer"><span class="pending-answer-label">Son commentaire :</span> ${escapeHtml(p.comment)}</div>`
       : '';
+    // Carte photo : tant qu'elle n'est pas ouverte, on ne peut pas valider —
+    // sinon on validerait sans avoir rien vu.
+    const photoBlock = p.photo
+      ? (p.photoData
+          ? `<div class="pc-ouvrir-zone" id="pc-zone-${key}">
+               <button class="btn-primary pc-ouvrir">📸 Ouvrir la photo (${Math.round(PC_VUE_MS/1000)} s)</button>
+               <p class="pc-note">Une seule fois : elle disparaît ensuite.</p>
+             </div>`
+          : `<div class="pc-note">📸 Photo déjà ouverte — elle reste 12 h dans le dev mod en cas de contestation.</div>`)
+      : '';
     row.innerHTML = `
       <div class="pending-card-top">
         <span class="pending-cat">${labelMap[p.cat]||'Carte'}</span>
         <span class="pending-who">${escapeHtml(state.players[p.by]||'')}</span>
       </div>
       <p class="pending-text">${escapeHtml(p.text)}</p>
+      ${photoBlock}
       ${answerBlock}
       ${commentBlock}
-      <div class="pending-actions">
+      <div class="pending-actions" ${p.photo && p.photoData ? 'style="display:none;"' : ''}>
         ${p.pdGage
           ? `<button class="btn-ghost pending-refuse">Pas réalisé (+${PD_POINTS} pour moi)</button>
              <button class="btn-primary pending-validate">Gage réalisé ✓</button>`
@@ -298,6 +315,8 @@ function renderPendingCard(){
     `;
     row.querySelector('.pending-refuse').addEventListener('click', () => validatePending(key, false));
     row.querySelector('.pending-validate').addEventListener('click', () => validatePending(key, true));
+    const ouvrir = row.querySelector('.pc-ouvrir');
+    if(ouvrir) ouvrir.addEventListener('click', () => ouvrirPhotoCarte(key, p));
     toValList.appendChild(row);
   });
 
@@ -359,6 +378,32 @@ function renderPendingCard(){
           if(!text) return;
           submitAnswer(key, text);
         });
+
+      } else if(p.photo){
+        // Carte photo : la réponse EST la photo. Pas de champ texte, pas de
+        // « c'est fait » possible tant qu'elle n'est pas prise.
+        const skipOrPenaltyBtn = limitReached
+          ? `<button class="btn-ghost pending-penalty">Accepter de perdre ${SKIP_PENALTY} points</button>`
+          : `<button class="btn-ghost pending-nope">Non, je passe</button>`;
+        row.innerHTML = `
+          <div class="pending-card-top">
+            <span class="pending-cat">📸 ${labelMap[p.cat]||'Carte'}</span>
+            <span class="pending-who">+${p.pts} si validé</span>
+          </div>
+          <p class="pending-text">${escapeHtml(p.text)}</p>
+          ${skipNote}
+          <p class="pc-note">Ta photo ne s'affichera que ${Math.round(PC_VUE_MS/1000)} secondes chez ${escapeHtml(state.players[partnerId]||'ton/ta partenaire')}, puis elle disparaîtra. Elle restera 12 h consultables en dev mod, puis sera effacée.</p>
+          <div class="pending-actions">
+            ${skipOrPenaltyBtn}
+            <button class="btn-primary pending-photo">📸 Prendre la photo</button>
+          </div>
+        `;
+        if(limitReached){
+          row.querySelector('.pending-penalty').addEventListener('click', () => payPenalty(key));
+        } else {
+          row.querySelector('.pending-nope').addEventListener('click', () => skipCard(key));
+        }
+        row.querySelector('.pending-photo').addEventListener('click', () => envoyerPhotoCarte(key, row));
 
       } else {
         // défi / gage : pas de texte de réponse, juste fait ou non
@@ -565,9 +610,47 @@ function drawCard(cat){
     cat: realCat,
     text: card.text,
     pts: card.pts,
+    photo: card.photo ? true : null,
     status: 'drafting', // en cours de réponse/réalisation par celui/celle qui a pioché
     answer: '',
     ts: Date.now()
+  });
+}
+
+// La photo prise remplace la réponse écrite : la carte part en validation
+// avec son image, que le/la partenaire devra ouvrir.
+function envoyerPhotoCarte(key, row){
+  const pending = state.pendingCards && state.pendingCards[key];
+  if(!pending || pending.by !== me.id) return;
+  const bouton = row.querySelector('.pending-photo');
+
+  pcChoisirPhoto(dataUrl => {
+    if(!dataUrl){ if(bouton) bouton.textContent = '📸 Prendre la photo'; return; }
+    if(bouton){ bouton.textContent = 'Envoi…'; bouton.disabled = true; }
+    pcProteger(dataUrl, protegee => {
+      roomRef.update({
+        ['pendingCards/'+key+'/status']: 'review',
+        ['pendingCards/'+key+'/photoData']: protegee,
+        ['skipCounts/'+me.id+'/'+pending.cat]: 0
+      });
+      notifyPartner('📸 Une photo t' + String.fromCharCode(39) + 'attend',
+        me.name + ' a répondu en photo. Tu ne la verras que ' + Math.round(PC_VUE_MS/1000) + ' secondes !', 'valider');
+    });
+  });
+}
+
+// Ouverture par le/la destinataire : PC_VUE_MS d'affichage, puis la photo
+// quitte la carte pour l'archive — et les boutons de validation apparaissent.
+function ouvrirPhotoCarte(key, pending){
+  const zone = document.getElementById('pc-zone-' + key);
+  if(!zone || !pending.photoData) return;
+
+  pcMontrer(zone, pending.photoData, () => {
+    const updates = {};
+    updates['pendingCards/' + key + '/photoData'] = null;
+    updates['pendingCards/' + key + '/photoVue'] = Date.now();
+    pcArchiver(updates, key, pending.photoData, pending.by, pending.text);
+    roomRef.update(updates);
   });
 }
 
