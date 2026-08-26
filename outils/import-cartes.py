@@ -17,7 +17,7 @@ XL = os.path.join(RACINE, "Cartes.xlsx")
 ONGLETS = [("gage", "Cap ou pas"), ("question", "Question"), ("defi", "Defi")]
 
 ancien = io.open(JS, encoding="utf-8").read()
-LIGNE = re.compile(r"^(\s*)\{ id:'([^']+)', cat:'([^']+)', text:\"(.*)\", pts:(\d+) \},(\s*)$")
+LIGNE = re.compile(r"^(\s*)\{ id:'([^']+)', cat:'([^']+)', text:\"(.*)\", pts:(\d+)(, photo:true)? \},\s*$")
 
 # plus grand numero deja utilise, pour ne jamais recycler un id
 maxnum = max([int(n) for n in re.findall(r"id:'d(\d+)'", ancien)] or [0])
@@ -32,7 +32,8 @@ for cat, nom in ONGLETS:
         cid = ws.cell(row=r, column=1).value
         texte = ws.cell(row=r, column=3).value
         pts = ws.cell(row=r, column=4).value
-        action = (ws.cell(row=r, column=5).value or "")
+        photo = str(ws.cell(row=r, column=5).value or "").strip().upper() == "OUI"
+        action = (ws.cell(row=r, column=6).value or "")
         if not texte or not str(texte).strip():
             continue
         texte = re.sub(r"\s+", " ", str(texte)).strip().replace('"', "'")
@@ -47,7 +48,7 @@ for cat, nom in ONGLETS:
             maxnum += 1
             cid = "d%d" % maxnum
             ajouts.append(cid)
-        nouveau[cid] = (cat, texte, int(pts or 10))
+        nouveau[cid] = (cat, texte, int(pts or 10), photo)
 
 # --- reecriture : on garde l'ordre du fichier, on ajoute les neuves a la fin ---
 vus = set()
@@ -57,20 +58,22 @@ for ligne in ancien.split("\n"):
     if not m:
         sorties.append(ligne)
         continue
-    ind, cid, _cat, _txt, _pts = m.group(1), m.group(2), m.group(3), m.group(4), m.group(5)
+    ind, cid = m.group(1), m.group(2)
     if cid not in nouveau:
         continue                       # supprimee dans le classeur
     vus.add(cid)
-    cat, texte, pts = nouveau[cid]
-    sorties.append("%s{ id:'%s', cat:'%s', text:\"%s\", pts:%d }," % (ind, cid, cat, texte, pts))
+    cat, texte, pts, photo = nouveau[cid]
+    sorties.append("%s{ id:'%s', cat:'%s', text:\"%s\", pts:%d%s }," % (
+        ind, cid, cat, texte, pts, ", photo:true" if photo else ""))
 
 restants = [c for c in nouveau if c not in vus]
 if restants:
     fin = sorties.index("];")
     bloc = ["", "  // Cartes ajoutees depuis Cartes.xlsx"]
     for cid in restants:
-        cat, texte, pts = nouveau[cid]
-        bloc.append("  { id:'%s', cat:'%s', text:\"%s\", pts:%d }," % (cid, cat, texte, pts))
+        cat, texte, pts, photo = nouveau[cid]
+        bloc.append("  { id:'%s', cat:'%s', text:\"%s\", pts:%d%s }," % (
+            cid, cat, texte, pts, ", photo:true" if photo else ""))
     sorties[fin:fin] = bloc
 
 io.open(JS, "w", encoding="utf-8").write("\n".join(sorties))

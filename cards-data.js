@@ -238,6 +238,17 @@ const DEFAULT_CARDS_RAW = [
   { id:'d275', cat:'gage', text:"Sort un Sextoy et on l'utilise à 2 ! Lubrifiant recommandé", pts:50 },
   { id:'d276', cat:'gage', text:"Massage intégrale pour l'un ou l'autre : a vous de choisir qui commence. Nudité obligatoire !", pts:100 },
   { id:'d277', cat:'defi', text:"Tu as 24h pour faire une photo osée de toi et me l'envoyer. Je dois te répondre par une autre de meme catégorie.", pts:50 },
+
+  // CARTES PHOTO : la réponse est une photo, affichée 3 s chez l'autre
+  // puis archivée 12 h (dev mod). Marqueur : photo:true.
+  { id:'d278', cat:'defi', text:"Prends une photo de ce que tu es en train de faire, là, tout de suite.", pts:15, photo:true },
+  { id:'d279', cat:'defi', text:"Prends un selfie qui montre exactement ton humeur du moment, sans tricher.", pts:20, photo:true },
+  { id:'d280', cat:'defi', text:"Prends une photo de toi en sous-vêtements, sans montrer ton visage.", pts:25, photo:true },
+  { id:'d281', cat:'defi', text:"Prends une photo de toi seins nus.", pts:30, photo:true },
+  { id:'d282', cat:'defi', text:"Prends une photo de la partie de ton corps que tu préfères chez toi.", pts:30, photo:true },
+  { id:'d283', cat:'gage', text:"Photo de toi entièrement nu(e), dans le miroir.", pts:40, photo:true },
+  { id:'d284', cat:'defi', text:"Prends une photo de toi en train de te caresser, sans montrer ton visage.", pts:50, photo:true },
+  { id:'d285', cat:'defi', text:"Photo de toi dans la position que tu voudrais qu'on essaie ce soir.", pts:50, photo:true },
 ];
 const DEFAULT_CARDS = DEFAULT_CARDS_RAW.map((c, i) => ({ ...c, id: c.id || 'd' + i }));
 

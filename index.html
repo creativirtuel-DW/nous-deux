@@ -18,7 +18,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
-<link rel="stylesheet" href="style.css?v=39">
+<link rel="stylesheet" href="style.css?v=41">
 </head>
 <body>
 
@@ -260,6 +260,11 @@
         </div>
         <div id="custom-cards-list" class="custom-cards-list"></div>
 
+        <div class="pending-section" id="photos-archive-section" style="display:none;">
+          <h3 class="pending-title">📸 Photos des 12 dernières heures</h3>
+          <div id="photos-archive-list"></div>
+        </div>
+
         <div class="coffre-bloc" id="coffre-bloc"></div>
 
         <button class="admin-lock-discreet" id="btn-admin-lock-content">🔒 dev. mod</button>
@@ -300,11 +305,12 @@
 </div>
 
 <script src="coffre.js?v=1"></script>
-<script src="cards-data.js?v=15"></script>
+<script src="cards-data.js?v=16"></script>
 <script src="battle-data.js?v=4"></script>
 <script src="gages-data.js?v=1"></script>
-<script src="app.js?v=30"></script>
-<script src="soiree.js?v=8"></script>
+<script src="app.js?v=32"></script>
+<script src="soiree.js?v=9"></script>
+<script src="photo-carte.js?v=1"></script>
 <script src="photo-defi.js?v=8"></script>
 <script src="push.js?v=2"></script>
 <script src="battle.js?v=6"></script>
