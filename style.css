@@ -749,3 +749,25 @@ main#views{ flex:1; min-height:0; position:relative; }
 .soiree-recap-titre{ font-size:12.5px; font-weight:700; color: var(--muted); margin:2px 0 -4px; }
 .soiree-recap-refus{ opacity:0.72; }
 .soiree-recap-refus .soiree-recap-pts{ color: var(--muted); }
+
+/* Soirée guidée : la réponse écrite, pour jouer même à distance */
+.soiree-input{
+  width:100%; background: rgba(0,0,0,0.28); color: var(--cream); font-family:inherit;
+  font-size:14px; line-height:1.45; border:1px solid var(--line-2); border-radius:14px;
+  padding:12px 14px; resize:vertical; transition: border-color .18s, box-shadow .2s;
+}
+.soiree-input::placeholder{ color: var(--muted-2); }
+.soiree-input:focus{
+  outline:none; border-color: var(--coral); background: rgba(0,0,0,0.34);
+  box-shadow: 0 0 0 4px rgba(255,107,107,0.16);
+}
+.soiree-reponse{
+  margin-top:9px; padding:9px 11px; border-radius:11px; font-size:13px; line-height:1.5;
+  background: rgba(167,139,250,0.1); border:1px solid rgba(167,139,250,0.28); color: var(--cream);
+}
+.soiree-reponse.mienne{ background: rgba(255,255,255,0.04); border-color: var(--line-2); margin-top:0; }
+.soiree-reponse-qui{
+  display:block; font-size:11px; font-weight:700; text-transform:uppercase;
+  letter-spacing:0.04em; color: var(--muted-2); margin-bottom:2px;
+}
+.soiree-recap-rep{ display:block; font-size:11.5px; color:#C4B5FD; margin-top:3px; line-height:1.4; }

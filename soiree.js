@@ -30,6 +30,8 @@ const SOIREE_ETAPES = [
 let soireeActive = false;
 let soireeBusy = false;      // garde-fou : la transition ne doit être jouée qu'une fois
 let soireeAnnonceVue = {};    // annonces déjà lues SUR CE TÉLÉPHONE (rien à partager)
+let soireeBrouillon = '';     // ce que je suis en train d'écrire, gardé entre deux rendus
+let soireeSignature = '';     // empreinte du dernier rendu : on ne reconstruit pas pour rien
 
 function openSoiree(){ soireeActive = true; render(); }
 function closeSoiree(){ soireeActive = false; render(); }
@@ -117,6 +119,8 @@ function soireeStart(){
   const cartes = soireeTirer(exclus);
   if(cartes.length === 0){ alert("Aucune carte disponible pour la soirée."); return; }
   soireeAnnonceVue = {};
+  soireeBrouillon = '';
+  soireeSignature = '';
   sRef().set({ cards:cartes, index:0, done:{}, by:me.id, ts:Date.now() });
   notifyPartner('🌙 Soirée guidée',
     me.name + ' a lancé une soirée : ' + cartes.length + ' cartes pour vous deux.', 'soiree');
@@ -128,6 +132,8 @@ function soireeStop(){
 }
 
 // Chacun sa carte : ma carte du tour, celle de mon/ma partenaire.
+const SOIREE_REPONSE_MAX = 400;
+
 function sMaCarte(tour){ return tour ? tour[me.id] : null; }
 function sSaCarte(tour){ return tour ? tour[partnerId] : null; }
 
@@ -137,6 +143,13 @@ function sStatut(d, idx, joueur){
   const done = (d.done && d.done[idx]) || {};
   const v = done[joueur];
   return v === true ? 'fait' : (v || '');
+}
+
+// Ce qu'un joueur a écrit sur le tour : la soirée se joue aussi à distance,
+// chacun doit pouvoir répondre par écrit et pas seulement cocher « c'est fait ».
+function sReponse(d, idx, joueur){
+  const rep = (d.reponses && d.reponses[idx]) || {};
+  return rep[joueur] || '';
 }
 
 // Validation ou refus : chacun n'écrit QUE sa propre réponse. Faire avancer la
@@ -156,12 +169,18 @@ function soireeRepondre(statut){
 
   if(statut === 'refus' && !confirm("Refuser cette carte ? Tu perds " + soireePoints(carte.pts) + " points.")) return;
 
-  sRef().child('done/' + idx + '/' + me.id).set(statut);
+  const texte = (soireeBrouillon || '').trim().slice(0, SOIREE_REPONSE_MAX);
+  const updates = {};
+  updates['soiree/done/' + idx + '/' + me.id] = statut;
+  if(texte) updates['soiree/reponses/' + idx + '/' + me.id] = texte;
+  roomRef.update(updates);
+  soireeBrouillon = '';
+
+  const entete = statut === 'refus'
+    ? me.name + ' a refusé sa carte ' + (idx + 1) + '/' + d.cards.length + '.'
+    : me.name + ' a fait sa carte ' + (idx + 1) + '/' + d.cards.length + ' — à toi !';
   notifyPartner('🌙 Soirée guidée',
-    statut === 'refus'
-      ? me.name + ' a refusé sa carte ' + (idx + 1) + '/' + d.cards.length + '.'
-      : me.name + ' a fait sa carte ' + (idx + 1) + '/' + d.cards.length + ' — à toi !',
-    'soiree');
+    texte ? entete + ' « ' + texte.slice(0, 90) + ' »' : entete, 'soiree');
 }
 
 function soireeFait(){ soireeRepondre('fait'); }
@@ -237,13 +256,13 @@ function renderSoiree(){
   const body = $('#soiree-body');
   const d = sGet();
 
-  if(!d){ body.innerHTML = soireeVueDepart(); soireeBrancher(body); return; }
+  if(!d){ soireeSignature = ''; body.innerHTML = soireeVueDepart(); soireeBrancher(body); return; }
 
   // Soirée lancée avant que chacun ait sa propre carte : elle n'a plus de sens
   // ici, on repart de l'écran de départ.
   const premierTour = (d.cards || [])[0];
   if(!premierTour || !premierTour.p1 || !premierTour.p2){
-    body.innerHTML = soireeVueDepart(true);
+    soireeSignature = ''; body.innerHTML = soireeVueDepart(true);
     soireeBrancher(body);
     return;
   }
@@ -253,7 +272,7 @@ function renderSoiree(){
   // Entre la dernière carte validée et l'écriture du « fini », l'index dépasse
   // le paquet : on montre déjà l'écran de fin plutôt qu'une carte vide.
   const cartes = d.cards || [];
-  if(d.fini || (d.index || 0) >= cartes.length){ body.innerHTML = soireeVueFin(d); soireeBrancher(body); return; }
+  if(d.fini || (d.index || 0) >= cartes.length){ soireeSignature = ''; body.innerHTML = soireeVueFin(d); soireeBrancher(body); return; }
 
   // Passage de palier : l'annonce s'intercale avant la première carte du
   // palier. Elle est locale à chaque téléphone, chacun la ferme à son rythme.
@@ -261,10 +280,19 @@ function renderSoiree(){
   const etape = sEtape(carte.etape);
   const premiere = (d.index || 0) === d.cards.findIndex(c => c.etape === carte.etape);
   if(etape.annonce && premiere && !soireeAnnonceVue[etape.id]){
-    body.innerHTML = soireeVueAnnonce(etape, d);
+    soireeSignature = ''; body.innerHTML = soireeVueAnnonce(etape, d);
     soireeBrancher(body);
     return;
   }
+
+  // Le rendu global est rejoué à chaque notification Firebase. Reconstruire le
+  // panneau à ce moment-là viderait le champ de réponse en cours de frappe :
+  // on ne le refait que si quelque chose a réellement changé pour ce tour.
+  const idx = d.index || 0;
+  const signature = ['parcours', idx, sStatut(d, idx, me.id), sStatut(d, idx, partnerId),
+                     sReponse(d, idx, me.id), sReponse(d, idx, partnerId)].join('|');
+  if(signature === soireeSignature && body.querySelector('.soiree-carte')) return;
+  soireeSignature = signature;
 
   body.innerHTML = soireeVueParcours(d);
   soireeBrancher(body);
@@ -316,6 +344,15 @@ function soireeVueParcours(d){
   const partenaire = (state.players && state.players[partnerId]) || 'ton/ta partenaire';
   const marque = st => st === 'refus' ? '❌' : (st === 'fait' ? '✅' : '⏳');
 
+  const maReponse = sReponse(d, idx, me.id);
+  const saReponse = sReponse(d, idx, partnerId);
+
+  // Tant que je n'ai pas répondu, j'ai le champ ; ensuite ma réponse s'affiche.
+  const saisie = moi
+    ? (maReponse ? `<div class="soiree-reponse mienne"><span class="soiree-reponse-qui">Ta réponse</span>${escapeHtml(maReponse)}</div>` : '')
+    : `<textarea class="soiree-input" id="soiree-reponse" rows="2" maxlength="${SOIREE_REPONSE_MAX}"
+         placeholder="Écris ta réponse à ${escapeHtml(partenaire)} (facultatif)…">${escapeHtml(soireeBrouillon)}</textarea>`;
+
   const actions = moi
     ? `<button class="btn-primary" disabled>${marque(moi)} ${moi === 'refus' ? 'Refusée' : 'Fait'} — en attente de ${escapeHtml(partenaire)}…</button>`
     : `<button class="btn-primary" id="soiree-fait">✅ C'est fait !</button>
@@ -334,9 +371,12 @@ function soireeVueParcours(d){
       <div class="soiree-carte-pts">+${soireePoints(carte.pts)} points</div>
     </div>
 
+    ${saisie}
+
     <div class="soiree-sienne">
       <span class="soiree-sienne-titre">La carte de ${escapeHtml(partenaire)} ${marque(lui)}</span>
       ${escapeHtml(sienne.text)} <span class="soiree-sienne-pts">+${soireePoints(sienne.pts)}</span>
+      ${saReponse ? `<div class="soiree-reponse"><span class="soiree-reponse-qui">Sa réponse</span>${escapeHtml(saReponse)}</div>` : ''}
     </div>
 
     <div class="soiree-qui">
@@ -359,10 +399,13 @@ function soireeVueFin(d){
     if(!carte) return '';
     const statut = sStatut(d, i, me.id);
     const pts = soireePoints(carte.pts) * (statut === 'refus' ? -1 : 1);
+    const sienne = sReponse(d, i, partnerId);
     return `
     <li class="${statut === 'refus' ? 'soiree-recap-refus' : ''}">
       <span class="soiree-recap-n soiree-point-${t.etape}">${i + 1}</span>
-      ${escapeHtml(carte.text)}
+      <span>${escapeHtml(carte.text)}
+        ${sienne ? `<span class="soiree-recap-rep">${escapeHtml(partenaire)} : ${escapeHtml(sienne)}</span>` : ''}
+      </span>
       <span class="soiree-recap-pts">${signe(pts)}</span>
     </li>`;
   }).join('');
@@ -391,6 +434,11 @@ function soireeBrancher(body){
     if(d) soireeAnnonceVue[sEtape(d.cards[d.index || 0].etape).id] = true;
     render();
   });
+  const champ = body.querySelector('#soiree-reponse');
+  if(champ){
+    champ.addEventListener('input', () => { soireeBrouillon = champ.value; });
+    if(soireeBrouillon){ champ.value = soireeBrouillon; }
+  }
   const fait = body.querySelector('#soiree-fait');
   if(fait) fait.addEventListener('click', soireeFait);
   const refus = body.querySelector('#soiree-refuse');
