@@ -88,10 +88,19 @@ function soireeTirer(exclus){
         const ecartMin = Math.min(...dispo.map(c => Math.abs(c.pts - cible)));
         choix = dispo.filter(c => Math.abs(c.pts - cible) === ecartMin);
       }
-      const c = choix[Math.floor(Math.random() * choix.length)];
-      pris.add(c.id);
-      plancher = c.pts;
-      cartes.push({ id:c.id, cat:c.cat, text:c.text, pts:c.pts, etape:etape.id });
+      // Une carte pour chacun, jamais la même : le tour ne s'ouvre que quand
+      // les deux ont trouvé leur carte à ce palier.
+      const tirees = [];
+      for(let j = 0; j < 2 && choix.length; j++){
+        const libres = choix.filter(c => !pris.has(c.id));
+        if(libres.length === 0) break;
+        const c = libres[Math.floor(Math.random() * libres.length)];
+        pris.add(c.id);
+        tirees.push({ id:c.id, cat:c.cat, text:c.text, pts:c.pts });
+      }
+      if(tirees.length < 2) return;
+      plancher = Math.min(tirees[0].pts, tirees[1].pts);
+      cartes.push({ etape:etape.id, p1:tirees[0], p2:tirees[1] });
     });
   });
   return cartes;
@@ -101,7 +110,10 @@ function soireeStart(){
   // Relance juste après une soirée : on ne rejoue pas les cartes qui viennent
   // tout juste de sortir.
   const precedente = sGet();
-  const exclus = (precedente && precedente.cards) ? precedente.cards.map(c => c.id) : [];
+  const exclus = [];
+  if(precedente && precedente.cards){
+    precedente.cards.forEach(t => { if(t.p1) exclus.push(t.p1.id); if(t.p2) exclus.push(t.p2.id); });
+  }
   const cartes = soireeTirer(exclus);
   if(cartes.length === 0){ alert("Aucune carte disponible pour la soirée."); return; }
   soireeAnnonceVue = {};
@@ -115,75 +127,103 @@ function soireeStop(){
   sRef().remove();
 }
 
-// Validation de la carte courante : chacun n'écrit QUE sa propre validation.
-// Faire avancer la carte depuis ici était un piège — si les deux appuyaient
-// dans la même seconde, aucun des deux ne voyait encore la validation de
-// l'autre, chacun n'écrivait que la sienne et la soirée restait bloquée sur
-// « en attente de… » des deux côtés, sans recours. C'est soireeAvancer(), qui
-// tourne à chaque rafraîchissement, qui décide de passer à la suite.
-function soireeFait(){
+// Chacun sa carte : ma carte du tour, celle de mon/ma partenaire.
+function sMaCarte(tour){ return tour ? tour[me.id] : null; }
+function sSaCarte(tour){ return tour ? tour[partnerId] : null; }
+
+// Statut d'un joueur sur le tour courant : 'fait', 'refus', ou rien.
+// (l'ancien format écrivait `true`, qui vaut « fait »)
+function sStatut(d, idx, joueur){
+  const done = (d.done && d.done[idx]) || {};
+  const v = done[joueur];
+  return v === true ? 'fait' : (v || '');
+}
+
+// Validation ou refus : chacun n'écrit QUE sa propre réponse. Faire avancer la
+// carte depuis ici était un piège — si les deux appuyaient dans la même
+// seconde, aucun des deux ne voyait encore la réponse de l'autre, chacun
+// n'écrivait que la sienne et la soirée restait bloquée sur « en attente de… »
+// des deux côtés. C'est soireeAvancer(), qui tourne à chaque rafraîchissement,
+// qui décide de passer à la suite.
+function soireeRepondre(statut){
   const d = sGet();
   if(!d || d.fini) return;
   const idx = d.index || 0;
-  const carte = (d.cards || [])[idx];
+  const tour = (d.cards || [])[idx];
+  const carte = sMaCarte(tour);
   if(!carte) return;
-  const done = (d.done && d.done[idx]) || {};
-  if(done[me.id]) return;
+  if(sStatut(d, idx, me.id)) return;
 
-  sRef().child('done/' + idx + '/' + me.id).set(true);
+  if(statut === 'refus' && !confirm("Refuser cette carte ? Tu perds " + soireePoints(carte.pts) + " points.")) return;
+
+  sRef().child('done/' + idx + '/' + me.id).set(statut);
   notifyPartner('🌙 Soirée guidée',
-    me.name + ' a fait la carte ' + (idx + 1) + '/' + d.cards.length + ' — à toi !', 'soiree');
+    statut === 'refus'
+      ? me.name + ' a refusé sa carte ' + (idx + 1) + '/' + d.cards.length + '.'
+      : me.name + ' a fait sa carte ' + (idx + 1) + '/' + d.cards.length + ' — à toi !',
+    'soiree');
 }
 
-// Les deux ont validé la carte courante : on avance. Les deux téléphones le
-// tentent, mais la transaction sur l'index n'en laisse passer qu'un — et seul
-// celui qui l'emporte crédite les points, qui ne peuvent donc pas être comptés
-// deux fois. Une soirée déjà bloquée se débloque toute seule au prochain
-// affichage.
+function soireeFait(){ soireeRepondre('fait'); }
+function soireeRefuse(){ soireeRepondre('refus'); }
+
+// Les deux ont répondu : on avance. Les deux téléphones le tentent, mais la
+// transaction sur l'index n'en laisse passer qu'un — et seul celui qui
+// l'emporte touche aux scores, qui ne peuvent donc pas bouger deux fois. Une
+// soirée déjà bloquée se débloque toute seule au prochain affichage.
 function soireeAvancer(d){
   if(!d || d.fini || soireeBusy) return;
   const idx = d.index || 0;
-  const cartes = d.cards || [];
-  const carte = cartes[idx];
-  if(!carte) return;
-  const done = (d.done && d.done[idx]) || {};
-  if(!done.p1 || !done.p2) return;
+  const tours = d.cards || [];
+  const tour = tours[idx];
+  if(!tour) return;
+  const s1 = sStatut(d, idx, 'p1');
+  const s2 = sStatut(d, idx, 'p2');
+  if(!s1 || !s2) return;
 
   soireeBusy = true;
-  const dernier = idx + 1 >= cartes.length;
+  const dernier = idx + 1 >= tours.length;
   sRef().child('index').transaction(
     v => ((v || 0) === idx ? idx + 1 : undefined)
   ).then(res => {
     soireeBusy = false;
     if(!res || !res.committed) return;   // l'autre téléphone a déjà avancé
 
-    const gain = soireePoints(carte.pts);
-    roomRef.child('scores/p1').transaction(v => (v || 0) + gain);
-    roomRef.child('scores/p2').transaction(v => (v || 0) + gain);
+    // Une carte refusée coûte ses points au lieu de les rapporter.
+    const g1 = soireePoints(tour.p1.pts) * (s1 === 'refus' ? -1 : 1);
+    const g2 = soireePoints(tour.p2.pts) * (s2 === 'refus' ? -1 : 1);
+    roomRef.child('scores/p1').transaction(v => (v || 0) + g1);
+    roomRef.child('scores/p2').transaction(v => (v || 0) + g2);
 
-    if(dernier) soireeTerminer(cartes);
-    notifyPartner(dernier ? '🌙 Soirée terminée' : '🌙 Carte suivante',
-      dernier ? 'Vous avez fini la soirée : +' + soireeTotalPoints(cartes) + ' points chacun !'
-              : 'La carte ' + (idx + 2) + ' est là.',
+    if(dernier) soireeTerminer(d);
+    notifyPartner(dernier ? '🌙 Soirée terminée' : '🌙 Cartes suivantes',
+      dernier ? 'Vous avez fini la soirée !' : 'Vos cartes ' + (idx + 2) + ' sont là.',
       'soiree');
   }, () => { soireeBusy = false; });
 }
 
-function soireeTotalPoints(cartes){
-  return cartes.reduce((s, c) => s + soireePoints(c.pts), 0);
+// Total d'un joueur sur la soirée : ce qu'il a gagné, moins ce qu'il a refusé.
+function soireeTotal(d, joueur){
+  return (d.cards || []).reduce((somme, tour, i) => {
+    const statut = sStatut(d, i, joueur);
+    if(!statut || !tour[joueur]) return somme;
+    return somme + soireePoints(tour[joueur].pts) * (statut === 'refus' ? -1 : 1);
+  }, 0);
 }
 
-function soireeTerminer(cartes){
-  const total = soireeTotalPoints(cartes);
+function soireeTerminer(d){
+  const cartes = d.cards || [];
   const updates = {};
   updates['soiree/fini'] = true;
-  updates['soiree/total'] = total;
-  const histKey = db.ref('rooms/' + roomCode + '/history').push().key;
-  updates['history/' + histKey] = {
-    who: 'Vous deux', cat: 'soiree',
-    text: "Soirée guidée — " + cartes.length + " cartes enchaînées, jusqu'au niveau HOT",
-    answer: '', comment: '', pts: total, validated: true, ts: Date.now()
-  };
+  updates['soiree/totaux'] = { p1: soireeTotal(d, 'p1'), p2: soireeTotal(d, 'p2') };
+  ['p1', 'p2'].forEach(j => {
+    const histKey = db.ref('rooms/' + roomCode + '/history').push().key;
+    updates['history/' + histKey] = {
+      who: (state.players && state.players[j]) || j, cat: 'soiree',
+      text: "Soirée guidée — " + cartes.length + " cartes enchaînées, jusqu'au niveau HOT",
+      answer: '', comment: '', pts: soireeTotal(d, j), validated: true, ts: Date.now()
+    };
+  });
   roomRef.update(updates);
 }
 
@@ -198,6 +238,15 @@ function renderSoiree(){
   const d = sGet();
 
   if(!d){ body.innerHTML = soireeVueDepart(); soireeBrancher(body); return; }
+
+  // Soirée lancée avant que chacun ait sa propre carte : elle n'a plus de sens
+  // ici, on repart de l'écran de départ.
+  const premierTour = (d.cards || [])[0];
+  if(!premierTour || !premierTour.p1 || !premierTour.p2){
+    body.innerHTML = soireeVueDepart(true);
+    soireeBrancher(body);
+    return;
+  }
 
   soireeAvancer(d);
 
@@ -221,15 +270,16 @@ function renderSoiree(){
   soireeBrancher(body);
 }
 
-function soireeVueDepart(){
+function soireeVueDepart(perimee){
   const etapes = SOIREE_ETAPES.map(e => `
     <li class="soiree-etape-item">
       <span class="soiree-etape-ic">${e.emoji}</span>
-      <span><strong>${e.paliers.length} cartes ${e.label}</strong><br><span class="soiree-etape-desc">${escapeHtml(e.desc)}</span></span>
+      <span><strong>${e.paliers.length} tours ${e.label}</strong><br><span class="soiree-etape-desc">${escapeHtml(e.desc)}</span></span>
     </li>`).join('');
   return `
-    <h3 class="soiree-title">Une soirée à deux, en ${soireeTotalCartes()} cartes</h3>
-    <p class="soiree-intro">Chaque carte est pour vous deux, et la suivante n'apparaît que quand vous l'avez faite tous les deux. Ça commence doux et ça monte, palier par palier.</p>
+    ${perimee ? `<p class="soiree-perimee">La soirée en cours date d'une version précédente, où vous partagiez la même carte. Relance-la pour que chacun ait la sienne.</p>` : ''}
+    <h3 class="soiree-title">Une soirée à deux, en ${soireeTotalCartes()} tours</h3>
+    <p class="soiree-intro">À chaque tour, <strong>chacun reçoit sa propre carte</strong> — jamais la même. Le tour suivant n'apparaît que quand vous avez répondu tous les deux. Ça commence doux et ça monte, palier par palier. Une carte qu'on refuse coûte ses points au lieu de les rapporter.</p>
     <ul class="soiree-etapes">${etapes}</ul>
     <button class="btn-primary" id="soiree-go">🌙 Lancer la soirée</button>`;
 }
@@ -248,58 +298,85 @@ function soireeVueAnnonce(etape, d){
 
 function soireeVueParcours(d){
   const idx = d.index || 0;
-  const cartes = d.cards || [];
-  const carte = cartes[idx];
-  const done = (d.done && d.done[idx]) || {};
-  const etape = sEtape(carte.etape);
+  const tours = d.cards || [];
+  const tour = tours[idx];
+  const carte = sMaCarte(tour);
+  const sienne = sSaCarte(tour);
+  const etape = sEtape(tour.etape);
   const icone = { question:'💬', defi:'🔥', gage:'😈' }[carte.cat] || '✦';
   const label = { question:'Question', defi:'Défi', gage:'Cap ou pas' }[carte.cat] || 'Carte';
 
-  const points = cartes.map((c, i) => {
+  const points = tours.map((t, i) => {
     const cls = i < idx ? 'faite' : (i === idx ? 'courante' : '');
-    return `<span class="soiree-point soiree-point-${c.etape} ${cls}"></span>`;
+    return `<span class="soiree-point soiree-point-${t.etape} ${cls}"></span>`;
   }).join('');
 
-  const moiFait = !!done[me.id];
-  const luiFait = !!done[partnerId];
+  const moi = sStatut(d, idx, me.id);
+  const lui = sStatut(d, idx, partnerId);
   const partenaire = (state.players && state.players[partnerId]) || 'ton/ta partenaire';
+  const marque = st => st === 'refus' ? '❌' : (st === 'fait' ? '✅' : '⏳');
 
-  const bouton = moiFait
-    ? `<button class="btn-primary" disabled>✅ Fait — en attente de ${escapeHtml(partenaire)}…</button>`
-    : `<button class="btn-primary" id="soiree-fait">${luiFait ? '✅ À moi aussi, c\'est fait !' : "✅ C'est fait !"}</button>`;
+  const actions = moi
+    ? `<button class="btn-primary" disabled>${marque(moi)} ${moi === 'refus' ? 'Refusée' : 'Fait'} — en attente de ${escapeHtml(partenaire)}…</button>`
+    : `<button class="btn-primary" id="soiree-fait">✅ C'est fait !</button>
+       <button class="btn-ghost soiree-refus" id="soiree-refuse">❌ Je refuse (−${soireePoints(carte.pts)} points)</button>`;
 
   return `
     <div class="soiree-entete">
       <span class="soiree-niveau-tag soiree-tag-${etape.id}">${etape.emoji} ${etape.label}</span>
-      <span class="soiree-compteur">Carte ${idx + 1} / ${cartes.length}</span>
+      <span class="soiree-compteur">Tour ${idx + 1} / ${tours.length}</span>
     </div>
     <div class="soiree-jauge">${points}</div>
 
     <div class="soiree-carte">
-      <div class="soiree-carte-cat">${icone} ${label}</div>
+      <div class="soiree-carte-cat">${icone} ${label} · pour toi</div>
       <p class="soiree-carte-text">${escapeHtml(carte.text)}</p>
-      <div class="soiree-carte-pts">+${soireePoints(carte.pts)} points chacun</div>
+      <div class="soiree-carte-pts">+${soireePoints(carte.pts)} points</div>
+    </div>
+
+    <div class="soiree-sienne">
+      <span class="soiree-sienne-titre">La carte de ${escapeHtml(partenaire)} ${marque(lui)}</span>
+      ${escapeHtml(sienne.text)} <span class="soiree-sienne-pts">+${soireePoints(sienne.pts)}</span>
     </div>
 
     <div class="soiree-qui">
-      <span class="soiree-qui-badge ${moiFait ? 'ok' : ''}">${moiFait ? '✅' : '⏳'} ${escapeHtml(me.name)}</span>
-      <span class="soiree-qui-badge ${luiFait ? 'ok' : ''}">${luiFait ? '✅' : '⏳'} ${escapeHtml(partenaire)}</span>
+      <span class="soiree-qui-badge ${moi ? 'ok' : ''} ${moi === 'refus' ? 'refus' : ''}">${marque(moi)} ${escapeHtml(me.name)}</span>
+      <span class="soiree-qui-badge ${lui ? 'ok' : ''} ${lui === 'refus' ? 'refus' : ''}">${marque(lui)} ${escapeHtml(partenaire)}</span>
     </div>
 
-    ${bouton}
+    ${actions}
     <button class="btn-ghost soiree-stop" id="soiree-stop">Arrêter la soirée</button>`;
 }
 
 function soireeVueFin(d){
-  const cartes = d.cards || [];
-  const recap = cartes.map((c, i) => `
-    <li><span class="soiree-recap-n soiree-point-${c.etape}">${i + 1}</span> ${escapeHtml(c.text)} <span class="soiree-recap-pts">+${soireePoints(c.pts)}</span></li>`).join('');
+  const tours = d.cards || [];
+  const partenaire = (state.players && state.players[partnerId]) || 'ton/ta partenaire';
+  const totaux = d.totaux || { p1: soireeTotal(d, 'p1'), p2: soireeTotal(d, 'p2') };
+  const signe = n => (n < 0 ? '' : '+') + n;
+
+  const recap = tours.map((t, i) => {
+    const carte = t[me.id];
+    if(!carte) return '';
+    const statut = sStatut(d, i, me.id);
+    const pts = soireePoints(carte.pts) * (statut === 'refus' ? -1 : 1);
+    return `
+    <li class="${statut === 'refus' ? 'soiree-recap-refus' : ''}">
+      <span class="soiree-recap-n soiree-point-${t.etape}">${i + 1}</span>
+      ${escapeHtml(carte.text)}
+      <span class="soiree-recap-pts">${signe(pts)}</span>
+    </li>`;
+  }).join('');
+
   return `
     <div class="soiree-fin">
       <div class="soiree-fin-ic">🌙</div>
       <h3 class="soiree-title">Soirée terminée</h3>
-      <p class="soiree-fin-pts">+${d.total || soireeTotalPoints(cartes)} points pour chacun</p>
+      <div class="soiree-fin-scores">
+        <span><strong>${escapeHtml(me.name)}</strong><br>${signe(totaux[me.id] || 0)} points</span>
+        <span><strong>${escapeHtml(partenaire)}</strong><br>${signe(totaux[partnerId] || 0)} points</span>
+      </div>
     </div>
+    <p class="soiree-recap-titre">Tes cartes de la soirée</p>
     <ul class="soiree-recap">${recap}</ul>
     <button class="btn-primary" id="soiree-encore">Relancer une soirée</button>
     <button class="btn-ghost soiree-stop" id="soiree-stop">Retour à la pioche</button>`;
@@ -316,6 +393,8 @@ function soireeBrancher(body){
   });
   const fait = body.querySelector('#soiree-fait');
   if(fait) fait.addEventListener('click', soireeFait);
+  const refus = body.querySelector('#soiree-refuse');
+  if(refus) refus.addEventListener('click', soireeRefuse);
   const stop = body.querySelector('#soiree-stop');
   if(stop) stop.addEventListener('click', () => {
     const d = sGet();
