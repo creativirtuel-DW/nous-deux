@@ -50,6 +50,23 @@ function openPhoto(){
 }
 function closePhoto(){ photoActive = false; stopPdTicker(); render(); }
 
+// La photo arrive chiffrée : on la déchiffre dans le téléphone, au dernier
+// moment, pour la poser dans la balise <img>. Si le coffre de cet appareil
+// n'est pas ouvert, on le dit au lieu d'afficher un cadre vide.
+function pdAfficherPhoto(valeur){
+  const img = document.getElementById('pd-photo-img');
+  if(!img) return;
+  if(!valeur) return;
+  if(!coffreEstChiffre(valeur)){ img.src = valeur; return; }
+  coffreDechiffrer(valeur).then(
+    clair => { const el = document.getElementById('pd-photo-img'); if(el) el.src = clair; },
+    () => {
+      const wrap = document.querySelector('.pd-photo-wrap');
+      if(wrap) wrap.innerHTML = '<p class="pd-verrou">🔒 Photo chiffrée — ouvre le coffre avec votre phrase secrète pour la voir.</p>';
+    }
+  );
+}
+
 function pdRef(){ return roomRef.child('photoDefi'); }
 function pdGet(){ return (state && state.photoDefi) || null; }
 function pdLabel(m, y){ return PD_MONTHS[m] + ' ' + y; }
@@ -84,6 +101,19 @@ function pdEcartMois(a, b){
 }
 
 function pdSend(dataUrl, month, year, gage, tire){
+  // Le coffre est ouvert : la photo part chiffrée, illisible dans la base.
+  // Fermé, on garde le comportement d'avant plutôt que de bloquer l'envoi.
+  if(coffrePret()){
+    coffreChiffrer(dataUrl).then(
+      chiffre => pdEnvoiBrut(chiffre, month, year, gage, tire),
+      () => pdEnvoiBrut(dataUrl, month, year, gage, tire)
+    );
+    return;
+  }
+  pdEnvoiBrut(dataUrl, month, year, gage, tire);
+}
+
+function pdEnvoiBrut(dataUrl, month, year, gage, tire){
   const updates = {};
   updates['photoDefi'] = {
     by: me.id, photo: dataUrl, month: month, year: year,
@@ -411,9 +441,10 @@ function renderPhotoDefi(){
       body.innerHTML = ''
         + '<div class="pd-stage">'
         +   '<div class="pd-chrono pd-chrono-view"><span id="pd-count">10</span><small>s</small></div>'
-        +   '<div class="pd-photo-wrap"><img class="pd-photo" src="' + (d.photo || '') + '" alt=""></div>'
+        +   '<div class="pd-photo-wrap"><img class="pd-photo" id="pd-photo-img" alt=""></div>'
         + '</div>'
         + '<p class="jds-status">Mémorise bien… <strong>quel mois, quelle année ?</strong></p>';
+      pdAfficherPhoto(d.photo);
     }
     return;
   }

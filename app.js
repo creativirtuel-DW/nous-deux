@@ -9,6 +9,31 @@ const firebaseConfig = {
   appId: "1:46961778673:web:5353b74fcfeffb251e2e50",
 };
 firebase.initializeApp(firebaseConfig);
+
+// ====== APP CHECK ======
+// Atteste que la requête vient bien de cette appli, et pas d'un script ou d'une
+// copie du site : la clé Firebase est publique (elle est dans ce fichier), elle
+// ne prouve rien à elle seule. Sans App Check, connaître le code du couple
+// suffisait à lire la base depuis n'importe où.
+//
+// Mise en service (dans cet ordre, sinon l'appli casse) :
+//   1. Firebase Console > App Check > enregistrer l'app web en reCAPTCHA v3,
+//      et coller ici la clé de site obtenue.
+//   2. Publier cette version et l'ouvrir sur les deux téléphones.
+//   3. Vérifier dans App Check que les requêtes « vérifiées » montent.
+//   4. Seulement là, passer la Realtime Database en « Appliqué ».
+// Tant que la clé n'est pas renseignée, l'appli fonctionne exactement comme
+// avant : rien ne se casse à la publication.
+const APPCHECK_SITE_KEY = '';   // clé de site reCAPTCHA v3
+
+if(APPCHECK_SITE_KEY && firebase.appCheck){
+  try{
+    firebase.appCheck().activate(APPCHECK_SITE_KEY, true);  // true = renouvellement auto du jeton
+  }catch(err){
+    console.error('App Check non activé :', err);
+  }
+}
+
 const db = firebase.database();
 const auth = firebase.auth();
 
@@ -171,6 +196,8 @@ function startApp(){
   $('#room-label').textContent = roomCode;
 
   syncPushSubscription();
+  // Coffre déjà ouvert sur cet appareil ? On reprend la phrase sans rien demander.
+  coffreReprendre().then(() => render());
 
   roomRef.on('value', snap => {
     state = snap.val();
@@ -205,6 +232,7 @@ function render(){
   renderRewards();
   renderHistory();
   renderCustomCards();
+  renderCoffre();
   renderAdminLockButtons();
 }
 
@@ -374,6 +402,47 @@ function renderPendingCard(){
 
     mineList.appendChild(row);
   });
+}
+
+// ====== COFFRE (phrase secrète des photos) ======
+function renderCoffre(){
+  const bloc = $('#coffre-bloc');
+  if(!bloc) return;
+
+  if(!coffreDisponible()){
+    bloc.innerHTML = '<p class="coffre-txt">Ce navigateur ne sait pas chiffrer : les photos partiraient en clair.</p>';
+    return;
+  }
+
+  if(coffrePret()){
+    bloc.innerHTML = `
+      <p class="coffre-titre">🔐 Coffre ouvert sur cet appareil</p>
+      <p class="coffre-txt">Les photos sont chiffrées avant de partir : personne d'autre que vous deux ne peut les ouvrir, pas même depuis la base.</p>
+      <button class="btn-ghost" id="coffre-oublier">Oublier la phrase sur ce téléphone</button>`;
+    $('#coffre-oublier').addEventListener('click', () => {
+      if(!confirm("Oublier la phrase sur ce téléphone ? Les photos déjà envoyées resteront illisibles ici tant que tu ne l'auras pas ressaisie.")) return;
+      coffreOublier();
+      render();
+    });
+    return;
+  }
+
+  bloc.innerHTML = `
+    <p class="coffre-titre">🔒 Coffre fermé</p>
+    <p class="coffre-txt">Choisissez une phrase secrète, la même sur vos deux téléphones. Elle ne quitte jamais l'appareil : elle n'est écrite nulle part dans la base, et sans elle les photos restent illisibles — y compris pour nous si vous l'oubliez.</p>
+    <input type="password" id="coffre-phrase" class="coffre-input" placeholder="Votre phrase secrète" autocomplete="off">
+    <button class="btn-primary" id="coffre-ouvrir">Ouvrir le coffre</button>
+    <p class="coffre-erreur" id="coffre-erreur"></p>`;
+
+  const valider = () => {
+    const p = $('#coffre-phrase').value;
+    coffreOuvrir(p, true).then(
+      () => render(),
+      () => { $('#coffre-erreur').textContent = 'Il faut au moins 4 caractères.'; }
+    );
+  };
+  $('#coffre-ouvrir').addEventListener('click', valider);
+  $('#coffre-phrase').addEventListener('keydown', e => { if(e.key === 'Enter') valider(); });
 }
 
 function renderAdminLockButtons(){
