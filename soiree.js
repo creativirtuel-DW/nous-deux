@@ -115,52 +115,76 @@ function soireeStop(){
   sRef().remove();
 }
 
-// Validation de la carte courante. Celui qui valide en SECOND est le seul à
-// écrire la transition : les points ne peuvent donc pas être crédités deux fois.
+// Validation de la carte courante : chacun n'écrit QUE sa propre validation.
+// Faire avancer la carte depuis ici était un piège — si les deux appuyaient
+// dans la même seconde, aucun des deux ne voyait encore la validation de
+// l'autre, chacun n'écrivait que la sienne et la soirée restait bloquée sur
+// « en attente de… » des deux côtés, sans recours. C'est soireeAvancer(), qui
+// tourne à chaque rafraîchissement, qui décide de passer à la suite.
 function soireeFait(){
   const d = sGet();
-  if(!d || d.fini || soireeBusy) return;
+  if(!d || d.fini) return;
   const idx = d.index || 0;
   const carte = (d.cards || [])[idx];
   if(!carte) return;
   const done = (d.done && d.done[idx]) || {};
   if(done[me.id]) return;
 
-  if(!done[partnerId]){
-    sRef().child('done/' + idx + '/' + me.id).set(true);
-    notifyPartner('🌙 Soirée guidée',
-      me.name + ' a fait la carte ' + (idx + 1) + '/' + d.cards.length + ' — à toi !', 'soiree');
-    return;
-  }
+  sRef().child('done/' + idx + '/' + me.id).set(true);
+  notifyPartner('🌙 Soirée guidée',
+    me.name + ' a fait la carte ' + (idx + 1) + '/' + d.cards.length + ' — à toi !', 'soiree');
+}
+
+// Les deux ont validé la carte courante : on avance. Les deux téléphones le
+// tentent, mais la transaction sur l'index n'en laisse passer qu'un — et seul
+// celui qui l'emporte crédite les points, qui ne peuvent donc pas être comptés
+// deux fois. Une soirée déjà bloquée se débloque toute seule au prochain
+// affichage.
+function soireeAvancer(d){
+  if(!d || d.fini || soireeBusy) return;
+  const idx = d.index || 0;
+  const cartes = d.cards || [];
+  const carte = cartes[idx];
+  if(!carte) return;
+  const done = (d.done && d.done[idx]) || {};
+  if(!done.p1 || !done.p2) return;
 
   soireeBusy = true;
-  const dernier = idx + 1 >= d.cards.length;
+  const dernier = idx + 1 >= cartes.length;
+  sRef().child('index').transaction(
+    v => ((v || 0) === idx ? idx + 1 : undefined)
+  ).then(res => {
+    soireeBusy = false;
+    if(!res || !res.committed) return;   // l'autre téléphone a déjà avancé
+
+    const gain = soireePoints(carte.pts);
+    roomRef.child('scores/p1').transaction(v => (v || 0) + gain);
+    roomRef.child('scores/p2').transaction(v => (v || 0) + gain);
+
+    if(dernier) soireeTerminer(cartes);
+    notifyPartner(dernier ? '🌙 Soirée terminée' : '🌙 Carte suivante',
+      dernier ? 'Vous avez fini la soirée : +' + soireeTotalPoints(cartes) + ' points chacun !'
+              : 'La carte ' + (idx + 2) + ' est là.',
+      'soiree');
+  }, () => { soireeBusy = false; });
+}
+
+function soireeTotalPoints(cartes){
+  return cartes.reduce((s, c) => s + soireePoints(c.pts), 0);
+}
+
+function soireeTerminer(cartes){
+  const total = soireeTotalPoints(cartes);
   const updates = {};
-  updates['soiree/done/' + idx + '/' + me.id] = true;
-  const gain = soireePoints(carte.pts);
-  updates['scores/p1'] = ((state.scores && state.scores.p1) || 0) + gain;
-  updates['scores/p2'] = ((state.scores && state.scores.p2) || 0) + gain;
-
-  if(dernier){
-    const total = d.cards.reduce((s, c) => s + soireePoints(c.pts), 0);
-    updates['soiree/fini'] = true;
-    updates['soiree/total'] = total;
-    const histKey = db.ref('rooms/' + roomCode + '/history').push().key;
-    updates['history/' + histKey] = {
-      who: 'Vous deux', cat: 'soiree',
-      text: 'Soirée guidée — ' + d.cards.length + ' cartes enchaînées, jusqu\'au niveau HOT',
-      answer: '', comment: '', pts: total, validated: true, ts: Date.now()
-    };
-  } else {
-    updates['soiree/index'] = idx + 1;
-  }
-
-  roomRef.update(updates).then(() => { soireeBusy = false; }, () => { soireeBusy = false; });
-
-  notifyPartner(dernier ? '🌙 Soirée terminée' : '🌙 Carte suivante',
-    dernier ? 'Vous avez fini la soirée : +' + d.cards.reduce((s,c)=>s+soireePoints(c.pts),0) + ' points chacun !'
-            : me.name + ' a validé — la carte ' + (idx + 2) + ' est là.',
-    'soiree');
+  updates['soiree/fini'] = true;
+  updates['soiree/total'] = total;
+  const histKey = db.ref('rooms/' + roomCode + '/history').push().key;
+  updates['history/' + histKey] = {
+    who: 'Vous deux', cat: 'soiree',
+    text: "Soirée guidée — " + cartes.length + " cartes enchaînées, jusqu'au niveau HOT",
+    answer: '', comment: '', pts: total, validated: true, ts: Date.now()
+  };
+  roomRef.update(updates);
 }
 
 // ====== RENDU ======
@@ -174,7 +198,13 @@ function renderSoiree(){
   const d = sGet();
 
   if(!d){ body.innerHTML = soireeVueDepart(); soireeBrancher(body); return; }
-  if(d.fini){ body.innerHTML = soireeVueFin(d); soireeBrancher(body); return; }
+
+  soireeAvancer(d);
+
+  // Entre la dernière carte validée et l'écriture du « fini », l'index dépasse
+  // le paquet : on montre déjà l'écran de fin plutôt qu'une carte vide.
+  const cartes = d.cards || [];
+  if(d.fini || (d.index || 0) >= cartes.length){ body.innerHTML = soireeVueFin(d); soireeBrancher(body); return; }
 
   // Passage de palier : l'annonce s'intercale avant la première carte du
   // palier. Elle est locale à chaque téléphone, chacun la ferme à son rythme.
@@ -268,7 +298,7 @@ function soireeVueFin(d){
     <div class="soiree-fin">
       <div class="soiree-fin-ic">🌙</div>
       <h3 class="soiree-title">Soirée terminée</h3>
-      <p class="soiree-fin-pts">+${d.total || 0} points pour chacun</p>
+      <p class="soiree-fin-pts">+${d.total || soireeTotalPoints(cartes)} points pour chacun</p>
     </div>
     <ul class="soiree-recap">${recap}</ul>
     <button class="btn-primary" id="soiree-encore">Relancer une soirée</button>
