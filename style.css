@@ -47,7 +47,11 @@ body{
     linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
 }
 
-#app{ height:100vh; height:100dvh; width:100vw; position:relative; }
+/* 100svh = la hauteur de l'écran barres d'iOS COMPRISES. Avec 100dvh, les
+   iPhone récents donnaient à l'appli une hauteur supérieure à la zone
+   réellement visible : le bas du contenu passait sous les barres du
+   navigateur, hors d'atteinte, et le geste de défilement semblait sans effet. */
+#app{ height:100vh; height:100svh; width:100vw; position:relative; }
 .screen{ position:absolute; inset:0; display:none; flex-direction:column; }
 .screen.active{ display:flex; }
 
@@ -56,8 +60,15 @@ body{
 @keyframes glowPulse{ 0%,100%{ opacity:.6; transform: scale(1); } 50%{ opacity:1; transform: scale(1.1); } }
 
 /* ---------- LOGIN ---------- */
-#screen-login{ align-items:center; justify-content:center; padding:24px; }
-.login-wrap{ width:100%; max-width:420px; animation: floatIn .5s ease; }
+/* L'écran de connexion doit défiler lui aussi : clavier ouvert sur un petit
+   écran, le bouton du bas devenait inaccessible. `margin:auto` garde le bloc
+   centré tant qu'il tient, sans rendre le haut inatteignable comme le ferait
+   un justify-content:center sur un conteneur qui déborde. */
+#screen-login{
+  align-items:center; justify-content:flex-start; padding:24px;
+  overflow-y:auto; -webkit-overflow-scrolling:touch; touch-action: pan-y;
+}
+.login-wrap{ width:100%; max-width:420px; margin:auto; animation: floatIn .5s ease; }
 .brand{ text-align:center; margin-bottom:30px; }
 .brand-mark{
   display:inline-block; font-size:30px; color: var(--coral); margin-bottom:2px;
