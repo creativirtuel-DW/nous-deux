@@ -725,3 +725,27 @@ main#views{ flex:1; min-height:0; position:relative; }
   from{ opacity:0; transform: scale(0.88); }
   to{ opacity:1; transform: scale(1); }
 }
+
+/* Soirée guidée : la carte du partenaire, le refus, le récapitulatif */
+.soiree-perimee{
+  background: rgba(255,160,122,0.12); border:1px solid rgba(255,160,122,0.35);
+  border-radius:12px; padding:11px 13px; font-size:12.5px; color: var(--peach);
+  line-height:1.5; margin:0 0 4px;
+}
+.soiree-sienne{
+  background: rgba(255,255,255,0.03); border:1px solid var(--line); border-radius:14px;
+  padding:11px 13px; font-size:13px; line-height:1.45; color: var(--muted);
+}
+.soiree-sienne-titre{ display:block; font-size:11.5px; font-weight:700; color: var(--muted-2); text-transform:uppercase; letter-spacing:0.04em; margin-bottom:3px; }
+.soiree-sienne-pts{ color: var(--coral); font-weight:700; }
+.soiree-qui-badge.refus{ color: var(--coral); border-color: rgba(255,107,107,0.4); background: rgba(255,107,107,0.1); }
+.soiree-refus{ margin-top:-4px; color: var(--muted); }
+.soiree-fin-scores{ display:flex; gap:10px; margin-top:12px; }
+.soiree-fin-scores span{
+  flex:1; background: rgba(255,255,255,0.04); border:1px solid var(--line); border-radius:14px;
+  padding:11px 8px; font-size:14px; line-height:1.5; color: var(--coral); font-weight:700;
+}
+.soiree-fin-scores strong{ color: var(--cream); font-size:13px; font-weight:600; }
+.soiree-recap-titre{ font-size:12.5px; font-weight:700; color: var(--muted); margin:2px 0 -4px; }
+.soiree-recap-refus{ opacity:0.72; }
+.soiree-recap-refus .soiree-recap-pts{ color: var(--muted); }
