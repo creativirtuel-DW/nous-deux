@@ -78,3 +78,30 @@ Dans un navigateur, ouvre simplement l'adresse du Worker : il doit répondre
 
 Les erreurs éventuelles se lisent dans l'onglet **Logs** du Worker
 (bouton *Begin log stream*).
+
+---
+
+## 6. Question du jour (ajout du 09/11/2026)
+
+Le Worker envoie la question du jour à **10 h** et relance à **20 h** celui ou
+celle qui n'a pas répondu (heure de Paris). Il lui faut une petite mémoire
+(Cloudflare **KV**) et un réveil (**Cron Trigger**). Tout reste gratuit.
+
+1. **Créer la mémoire** : menu de gauche **Storage & Databases → KV** →
+   **Create** → nom `nous-deux-qdj` → **Create**.
+2. **La relier au Worker** : page du Worker `shy-scene-49bc` → **Bindings** →
+   **Add binding** → **KV namespace** → nom de variable **`QDJ`** (en
+   majuscules, exactement) → choisir `nous-deux-qdj` → **Add binding**.
+3. **Le réveil** : page du Worker → **Settings** → **Trigger Events** →
+   **Add** → **Cron Triggers** → expression **`0 8,9,18,19 * * *`** → **Add**.
+   (Heures UTC : le Worker est réveillé aux deux heures possibles selon l'heure
+   d'été ou d'hiver, et n'agit qu'à 10 h et 20 h de Paris.)
+4. **Le code** : **Edit code** → tout remplacer par le nouveau
+   `push-worker.js` → **Deploy**.
+5. ⚠️ **Deployments → Version History → `…` → Promote version** sur la
+   dernière version, sinon la liaison KV n'est pas appliquée.
+
+Vérification : dans l'appli, en **dev mod**, le bloc « Question du jour »
+affiche deux liens « tester la notification : 10 h · 20 h ». Chaque téléphone
+doit d'abord avoir ouvert l'appli une fois avec les notifications activées
+(c'est à ce moment qu'il s'inscrit auprès du Worker).

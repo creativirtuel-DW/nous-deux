@@ -70,6 +70,8 @@ function subscribeToPush(silencieux){
     .then(sub => {
       if(!sub) return false;
       if(roomRef && me.id) roomRef.child('pushSubs/' + me.id).set(JSON.parse(JSON.stringify(sub)));
+      // Le Worker garde aussi l'abonnement, pour la question du jour de 10 h.
+      if(typeof qdjInscrire === 'function') qdjInscrire(JSON.parse(JSON.stringify(sub)));
       return true;
     })
     .catch(err => {
