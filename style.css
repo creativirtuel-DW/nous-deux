@@ -872,11 +872,12 @@ main#views{ flex:1; min-height:0; position:relative; }
 
 /* ====== MODE COUPLE (verrou des contenus adultes) ====== */
 .cat-btn{ position:relative; }
-.cat-btn.locked{ filter: grayscale(1); opacity:.42; }
+.cat-btn.locked{ background: rgba(255,255,255,0.025); }
+.cat-btn.locked > *:not(.cat-lock){ filter: grayscale(1); opacity:.42; }
 .cat-btn.locked .cat-ic{ background: rgba(255,255,255,0.08) !important; box-shadow:none !important; }
 .cat-lock{
   position:absolute; top:7px; right:8px; font-size:10px; font-weight:800; letter-spacing:.02em;
-  padding:2px 7px; border-radius: var(--pill); background: rgba(0,0,0,0.45); color: var(--cream);
+  padding:2px 7px; border-radius: var(--pill); background: rgba(255,107,107,0.16); border:1px solid rgba(255,107,107,0.35); color: var(--peach);
 }
 .mc-bandeau{
   width:100%; max-width:430px; margin:0 auto 14px; padding:13px 15px; box-sizing:border-box;

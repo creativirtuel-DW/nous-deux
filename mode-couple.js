@@ -1,5 +1,5 @@
 /**
- * Nous Deux — le « mode couple » (contenus réservés aux adultes)
+ * Nous Deux — le « mode HOT » (contenus réservés aux adultes)
  * ==============================================================
  * Verrouillé par défaut. Il se déverrouille quand le couple a cumulé
  * MC_SEUIL points à deux (score de l'un + score de l'autre), et reste
@@ -7,7 +7,7 @@
  * même si les scores redescendent.
  *
  * Tant qu'il est verrouillé :
- *   · les tuiles Soirée guidée et Défi Photo sont grisées (cadenas) ;
+ *   · les tuiles Cap ou pas, Soirée guidée et Défi Photo sont grisées (pastille 🔥) ;
  *   · la pioche ne sort que les cartes sans « adulte:true » (cards-data.js) ;
  *   · la Battle ne tire aucune question « coquin » ;
  *   · la question du jour saute la catégorie « coquin ».
@@ -17,7 +17,7 @@
  */
 
 const MC_SEUIL = 300;
-const MC_TUILES = ['soiree', 'photo'];   // tuiles entièrement réservées au mode couple
+const MC_TUILES = ['gage', 'soiree', 'photo'];   // tuiles entièrement réservées au mode HOT (Cap ou pas, Soirée guidée, Défi Photo)
 
 let mcEcritureEnCours = false;
 
@@ -45,7 +45,7 @@ function mcEnregistrerSiAtteint(){
   roomRef.child('modeCouple/debloque').transaction(v => v ? undefined : Date.now())
     .then(res => {
       mcEcritureEnCours = false;
-      if(res && res.committed) notifyPartner('🔓 Mode couple déverrouillé',
+      if(res && res.committed) notifyPartner('🔥 Mode HOT débloqué',
         'Vous avez atteint ' + MC_SEUIL + ' points à deux : les contenus coquins sont ouverts !', 'mode-couple');
     }, () => { mcEcritureEnCours = false; });
 }
@@ -87,7 +87,7 @@ function renderModeCouple(){
         pastille.className = 'cat-lock';
         btn.appendChild(pastille);
       }
-      pastille.textContent = '🔒 ' + MC_SEUIL + ' pts';
+      pastille.textContent = '🔥 ' + MC_SEUIL + ' pts';
     }else if(pastille){
       pastille.remove();
     }
@@ -114,9 +114,9 @@ function renderModeCouple(){
     b.style.display = '';
     b.className = 'mc-bandeau ouvert';
     b.innerHTML = mcAnnonceVue()
-      ? '<div class="mc-ligne"><span class="mc-ic">🔓</span><div class="mc-txt"><strong>Mode couple déverrouillé</strong></div></div>' + outilsAdmin
-      : '<div class="mc-ligne"><span class="mc-ic">🔓</span><div class="mc-txt"><strong>Mode couple déverrouillé !</strong>'
-        + '<span>Soirée guidée, Défi Photo, cartes et questions coquines sont maintenant ouvertes.</span></div>'
+      ? '<div class="mc-ligne"><span class="mc-ic">🔥</span><div class="mc-txt"><strong>Mode HOT débloqué</strong></div></div>' + outilsAdmin
+      : '<div class="mc-ligne"><span class="mc-ic">🔥</span><div class="mc-txt"><strong>Mode HOT débloqué !</strong>'
+        + '<span>Cap ou pas, Soirée guidée, Défi Photo, cartes et questions coquines sont maintenant ouverts.</span></div>'
         + '<button class="push-btn" id="mc-ok">Génial</button></div>' + outilsAdmin;
   }else{
     const total = mcTotal();
@@ -124,9 +124,9 @@ function renderModeCouple(){
     const pct = Math.min(100, Math.round(total / MC_SEUIL * 100));
     b.style.display = '';
     b.className = 'mc-bandeau';
-    b.innerHTML = '<div class="mc-ligne"><span class="mc-ic">🔒</span><div class="mc-txt">'
-      + '<strong>Mode couple verrouillé</strong>'
-      + '<span>Déverrouillez-le en atteignant au minimum <b>' + MC_SEUIL + ' points</b> à deux. '
+    b.innerHTML = '<div class="mc-ligne"><span class="mc-ic">🔥</span><div class="mc-txt">'
+      + '<strong>Mode HOT à débloquer</strong>'
+      + '<span>Débloquez-le en atteignant au minimum <b>' + MC_SEUIL + ' points</b> à deux. '
       + 'Encore ' + reste + ' point' + (reste > 1 ? 's' : '') + '.</span></div></div>'
       + '<div class="mc-jauge"><div class="mc-jauge-plein" style="width:' + pct + '%"></div></div>'
       + '<div class="mc-jauge-legende">' + total + ' / ' + MC_SEUIL + ' points</div>'
