@@ -235,6 +235,7 @@ function render(){
   renderPushBanner();
   renderBattle();
   renderOsmose();
+  renderModeCouple();
   renderQDJ();
   renderBattleCards();
   renderRewards();
@@ -536,6 +537,7 @@ function setupTabs(){
 function setupPlayView(){
   $$('.cat-btn').forEach(btn => {
     btn.addEventListener('click', () => {
+      if(btn.classList.contains('locked')){ mcSignalerVerrou(); return; }
       if(btn.classList.contains('disabled')) return;
       if(btn.dataset.cat === 'jds'){ openJDS(); return; }
       if(btn.dataset.cat === 'photo'){ openPhoto(); return; }
@@ -569,7 +571,7 @@ function normCat(cat){
 
 function getActiveDefaultCards(){
   const disabled = (state && state.disabledDefaults) || {};
-  return DEFAULT_CARDS.filter(c => !disabled[c.id]);
+  return DEFAULT_CARDS.filter(c => !disabled[c.id] && mcCarteAutorisee(c));
 }
 
 function getAllCardsForCategory(cat){

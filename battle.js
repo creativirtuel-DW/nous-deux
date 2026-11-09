@@ -10,6 +10,8 @@
  */
 
 const BATTLE_TIRAGE = { quotidien: 2, souvenir: 1, coquin: 2 };
+// Mode couple verrouillé : aucune question coquine, on complète avec du quotidien et du souvenir.
+const BATTLE_TIRAGE_SAGE = { quotidien: 3, souvenir: 2 };
 const OSMOSE_PAR_REPONSE = 10;
 
 // Une réponse dont le libellé commence par « Autre » ouvre un champ de saisie.
@@ -113,12 +115,12 @@ function battlePool(){
 // repropose une question qu'une fois sa catégorie entièrement épuisée, et on
 // repart alors sur un cycle neuf. Deux Battles ne peuvent donc pas se recouper.
 function battleTirage(){
-  const pool = battlePool();
+  const pool = battlePool().filter(q => mcDebloque() || q.cat !== 'coquin');
   const vues = (state && state.battleVues) || {};
   const choisies = [];
   battleAOublier = [];
 
-  Object.entries(BATTLE_TIRAGE).forEach(([cat, n]) => {
+  Object.entries(mcDebloque() ? BATTLE_TIRAGE : BATTLE_TIRAGE_SAGE).forEach(([cat, n]) => {
     const dansLaCat = pool.filter(q => q.cat === cat);
     let dispo = dansLaCat.filter(q => !vues[q.id]);
 

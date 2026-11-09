@@ -17,7 +17,7 @@ XL = os.path.join(RACINE, "Cartes.xlsx")
 ONGLETS = [("gage", "Cap ou pas"), ("question", "Question"), ("defi", "Defi")]
 
 ancien = io.open(JS, encoding="utf-8").read()
-LIGNE = re.compile(r"^(\s*)\{ id:'([^']+)', cat:'([^']+)', text:\"(.*)\", pts:(\d+)(, photo:true)? \},\s*$")
+LIGNE = re.compile(r"^(\s*)\{ id:'([^']+)', cat:'([^']+)', text:\"(.*)\", pts:(\d+)(, photo:true)?(, adulte:true)? \},\s*$")
 
 # plus grand numero deja utilise, pour ne jamais recycler un id
 maxnum = max([int(n) for n in re.findall(r"id:'d(\d+)'", ancien)] or [0])
@@ -28,12 +28,19 @@ ajouts = []
 supprimes = []
 for cat, nom in ONGLETS:
     ws = wb[nom]
+    # nouveau format : colonne 6 = Adulte, 7 = Action ; ancien : 6 = Action
+    avec_adulte = str(ws.cell(row=4, column=6).value or "").strip().lower() == "adulte"
     for r in range(5, ws.max_row + 1):
         cid = ws.cell(row=r, column=1).value
         texte = ws.cell(row=r, column=3).value
         pts = ws.cell(row=r, column=4).value
         photo = str(ws.cell(row=r, column=5).value or "").strip().upper() == "OUI"
-        action = (ws.cell(row=r, column=6).value or "")
+        if avec_adulte:
+            adulte = str(ws.cell(row=r, column=6).value or "").strip().upper() == "OUI"
+            action = (ws.cell(row=r, column=7).value or "")
+        else:
+            adulte = None                  # inconnu : on gardera la valeur actuelle
+            action = (ws.cell(row=r, column=6).value or "")
         if not texte or not str(texte).strip():
             continue
         texte = re.sub(r"\s+", " ", str(texte)).strip().replace('"', "'")
@@ -48,7 +55,7 @@ for cat, nom in ONGLETS:
             maxnum += 1
             cid = "d%d" % maxnum
             ajouts.append(cid)
-        nouveau[cid] = (cat, texte, int(pts or 10), photo)
+        nouveau[cid] = (cat, texte, int(pts or 10), photo, adulte)
 
 # --- reecriture : on garde l'ordre du fichier, on ajoute les neuves a la fin ---
 vus = set()
@@ -59,21 +66,24 @@ for ligne in ancien.split("\n"):
         sorties.append(ligne)
         continue
     ind, cid = m.group(1), m.group(2)
+    adulte_avant = bool(m.group(7))
     if cid not in nouveau:
         continue                       # supprimee dans le classeur
     vus.add(cid)
-    cat, texte, pts, photo = nouveau[cid]
-    sorties.append("%s{ id:'%s', cat:'%s', text:\"%s\", pts:%d%s }," % (
-        ind, cid, cat, texte, pts, ", photo:true" if photo else ""))
+    cat, texte, pts, photo, adulte = nouveau[cid]
+    if adulte is None:
+        adulte = adulte_avant
+    sorties.append("%s{ id:'%s', cat:'%s', text:\"%s\", pts:%d%s%s }," % (
+        ind, cid, cat, texte, pts, ", photo:true" if photo else "", ", adulte:true" if adulte else ""))
 
 restants = [c for c in nouveau if c not in vus]
 if restants:
     fin = sorties.index("];")
     bloc = ["", "  // Cartes ajoutees depuis Cartes.xlsx"]
     for cid in restants:
-        cat, texte, pts, photo = nouveau[cid]
-        bloc.append("  { id:'%s', cat:'%s', text:\"%s\", pts:%d%s }," % (
-            cid, cat, texte, pts, ", photo:true" if photo else ""))
+        cat, texte, pts, photo, adulte = nouveau[cid]
+        bloc.append("  { id:'%s', cat:'%s', text:\"%s\", pts:%d%s%s }," % (
+            cid, cat, texte, pts, ", photo:true" if photo else "", ", adulte:true" if adulte else ""))
     sorties[fin:fin] = bloc
 
 io.open(JS, "w", encoding="utf-8").write("\n".join(sorties))

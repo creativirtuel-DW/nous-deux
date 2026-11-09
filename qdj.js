@@ -41,13 +41,16 @@ function qdjMs(jour){ return Date.UTC(+jour.slice(0, 4), +jour.slice(5, 7) - 1, 
 function qdjVeille(jour){ return new Date(qdjMs(jour) - 86400000).toISOString().slice(0, 10); }
 
 // ⚠️ Même algorithme que rotation() dans worker/push-worker.js — garder les deux identiques.
+// Mode couple verrouillé : la catégorie « coquin » est retirée de la rotation.
+// (Le Worker, lui, ne connaît pas le mode : à revoir avant de réactiver ses envois.)
 function qdjRotation(){
+  const ordre = QDJ.ordre.filter(c => c !== 'coquin' || (typeof mcDebloque !== 'function') || mcDebloque());
   const lots = {};
-  QDJ.ordre.forEach(c => { lots[c] = []; });
+  ordre.forEach(c => { lots[c] = []; });
   QDJ.questions.forEach(q => { if(lots[q.cat]) lots[q.cat].push(q); });
   const out = [];
-  const max = Math.max(...QDJ.ordre.map(c => lots[c].length));
-  for(let i = 0; i < max; i++) QDJ.ordre.forEach(c => { if(lots[c][i]) out.push(lots[c][i]); });
+  const max = Math.max(...ordre.map(c => lots[c].length));
+  for(let i = 0; i < max; i++) ordre.forEach(c => { if(lots[c][i]) out.push(lots[c][i]); });
   return out;
 }
 
