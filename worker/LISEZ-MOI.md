@@ -105,3 +105,9 @@ Vérification : dans l'appli, en **dev mod**, le bloc « Question du jour »
 affiche deux liens « tester la notification : 10 h · 20 h ». Chaque téléphone
 doit d'abord avoir ouvert l'appli une fois avec les notifications activées
 (c'est à ce moment qu'il s'inscrit auprès du Worker).
+
+> ⏸️ **En pause depuis le 09/11/2026** : le déclencheur Cron a été retiré, donc
+> aucune notification automatique à 10 h ni 20 h. Les liens de test du dev mod
+> marchent toujours. **Pour réactiver** (quand l'appli sera prête à partager) :
+> page du Worker → **Settings** → **Trigger events** → **Cron triggers** → **Add**
+> → **Cron expression** `0 8,9,18,19 * * *` → **Add** → **Save**.
