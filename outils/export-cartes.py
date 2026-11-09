@@ -19,7 +19,7 @@ CHEMIN_JS = os.path.join(RACINE, "cards-data.js")
 CHEMIN_XLSX = os.path.join(RACINE, "Cartes.xlsx")
 MARQUEUR = u"[ \u2026 compl\u00e8te ici ]"
 
-LIGNE = re.compile(r"^\s*\{ id:'([^']+)', cat:'([^']+)', text:\"(.*)\", pts:(\d+)(, photo:true)? \},\s*$")
+LIGNE = re.compile(r"^\s*\{ id:'([^']+)', cat:'([^']+)', text:\"(.*)\", pts:(\d+)(, photo:true)?(, adulte:true)? \},\s*$")
 
 cartes = []
 for ligne in io.open(CHEMIN_JS, encoding="utf-8").read().split("\n"):
@@ -27,7 +27,7 @@ for ligne in io.open(CHEMIN_JS, encoding="utf-8").read().split("\n"):
     if m:
         cartes.append({"id": m.group(1), "cat": m.group(2),
                        "text": m.group(3), "pts": int(m.group(4)),
-                       "photo": bool(m.group(5))})
+                       "photo": bool(m.group(5)), "adulte": bool(m.group(6))})
 
 ONGLETS = [("gage", "Cap ou pas"), ("question", "Question"), ("defi", "Defi")]
 
@@ -51,19 +51,20 @@ for cat, nom in ONGLETS:
         str(reste) + " a completer)" if reste else "toutes completes)")
     ws["A1"].font = Font(name=POLICE, bold=True, size=13)
 
-    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=6)
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=7)
     ws["A2"] = (u"Remplace le marqueur « " + MARQUEUR + u" » par le texte voulu, directement dans "
                 u"la colonne Texte. Modifie librement les cellules creme. Colonne Action : SUPPRIMER "
                 u"pour retirer une carte. Pour en ajouter, remplis une nouvelle ligne en laissant "
                 u"l'id vide. Colonne Photo : OUI = la reponse a cette carte est une photo, "
-                u"affichee 3 secondes chez l'autre. Ne modifie jamais un id existant ni l'onglet "
+                u"affichee 3 secondes chez l'autre. Colonne Adulte : OUI = carte reservee au mode couple "
+                u"(masquee tant qu'il n'est pas deverrouille). Ne modifie jamais un id existant ni l'onglet "
                 u"d'une carte : c'est l'id qui porte le masquage et les modifications faites "
                 u"depuis l'appli.")
     ws["A2"].font = Font(name=POLICE, italic=True, size=9, color="7F7F7F")
     ws["A2"].alignment = Alignment(wrap_text=True, vertical="top")
     ws.row_dimensions[2].height = 42
 
-    for c, titre in enumerate(["id", "Etat", "Texte", "Points", "Photo", "Action"], 1):
+    for c, titre in enumerate(["id", "Etat", "Texte", "Points", "Photo", "Adulte", "Action"], 1):
         cell = ws.cell(row=4, column=c, value=titre)
         cell.font = titre_font
         cell.fill = titre_fill
@@ -90,19 +91,22 @@ for cat, nom in ONGLETS:
         ph = ws.cell(row=r, column=5, value=("OUI" if x["photo"] else ""))
         ph.alignment = Alignment(horizontal="center", vertical="top")
         ph.font = Font(name=POLICE, size=9, bold=True, color="C0392B")
-        for c in (3, 6):
+        ad = ws.cell(row=r, column=6, value=("OUI" if x["adulte"] else ""))
+        ad.alignment = Alignment(horizontal="center", vertical="top")
+        ad.font = Font(name=POLICE, size=9, bold=True, color="8E44AD")
+        for c in (3, 7):
             ws.cell(row=r, column=c).alignment = Alignment(wrap_text=True, vertical="top")
-        for c in range(3, 7):
+        for c in range(3, 8):
             ws.cell(row=r, column=c).fill = modifiable
-            if c != 5:
+            if c not in (5, 6):
                 ws.cell(row=r, column=c).font = Font(name=POLICE, size=10)
-        for c in range(1, 7):
+        for c in range(1, 8):
             ws.cell(row=r, column=c).border = bord
 
-    for c, largeur in enumerate([8, 13, 86, 8, 8, 13], 1):
+    for c, largeur in enumerate([8, 13, 86, 8, 8, 8, 13], 1):
         ws.column_dimensions[get_column_letter(c)].width = largeur
     ws.freeze_panes = "A5"
-    ws.auto_filter.ref = "A4:F" + str(4 + len(lot))
+    ws.auto_filter.ref = "A4:G" + str(4 + len(lot))
 
 wb.save(CHEMIN_XLSX)
 print("classeur ecrit :", CHEMIN_XLSX)
