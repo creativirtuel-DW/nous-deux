@@ -81,7 +81,7 @@ Les erreurs éventuelles se lisent dans l'onglet **Logs** du Worker
 
 ---
 
-## 6. Question du jour (ajout du 09/11/2026)
+## 6. Question du jour (ajout du 09/11/2026)  ✅ configuré le 09/11/2026
 
 Le Worker envoie la question du jour à **10 h** et relance à **20 h** celui ou
 celle qui n'a pas répondu (heure de Paris). Il lui faut une petite mémoire
