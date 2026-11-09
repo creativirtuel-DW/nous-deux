@@ -826,3 +826,46 @@ main#views{ flex:1; min-height:0; position:relative; }
 .pc-archive-reste{ color: var(--peach); font-weight:600; }
 .pc-archive-texte{ font-size:12.5px; color: var(--muted); line-height:1.45; }
 .pc-archive-vue:not(:empty){ margin-top:4px; }
+
+/* ====== QUESTION DU JOUR ====== */
+.qdj-bloc{
+  width:100%; max-width:430px; margin-bottom:14px; padding:16px 16px 14px;
+  background: linear-gradient(160deg, rgba(255,107,107,0.13), var(--surface) 70%);
+  border:1px solid rgba(255,160,122,0.28); border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm); animation: floatIn .3s ease;
+}
+.qdj-entete{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.qdj-titre{ font-size:13px; font-weight:800; letter-spacing:-0.01em; }
+.qdj-cat{
+  font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
+  padding:3px 8px; border-radius: var(--pill); background: rgba(255,255,255,0.08); color: var(--muted);
+}
+.qdj-cat-coquin{ background: rgba(255,107,107,0.2); color: #FF9A9A; }
+.qdj-serie{ margin-left:auto; font-size:13px; font-weight:800; color: var(--peach); }
+.qdj-serie.eteinte{ color: var(--muted-2); filter: grayscale(1); }
+.qdj-question{ font-size:16.5px; font-weight:700; line-height:1.4; margin:0 0 12px; letter-spacing:-0.01em; }
+.qdj-champ{
+  width:100%; box-sizing:border-box; resize:vertical; min-height:72px;
+  background: var(--bg-deep); color: var(--cream); border:1px solid var(--line-2); border-radius: var(--r);
+  padding:11px 12px; font-family:inherit; font-size:16px; line-height:1.45;
+}
+.qdj-champ:focus{ outline:none; border-color: rgba(255,160,122,0.6); }
+.qdj-envoyer{
+  width:100%; margin-top:10px; padding:12px; border:none; border-radius: var(--pill);
+  background: var(--grad); color:#fff; font-family:inherit; font-size:15px; font-weight:700; cursor:pointer;
+}
+.qdj-envoyer:disabled{ opacity:.4; cursor:default; }
+.qdj-statut{ font-size:12.5px; color: #8FE3B0; font-weight:600; margin:-4px 0 10px; }
+.qdj-attente{
+  font-size:13.5px; color: var(--muted); background: rgba(255,255,255,0.04);
+  border:1px dashed var(--line-2); border-radius: var(--r); padding:12px; text-align:center;
+}
+.qdj-reponses{ display:flex; flex-direction:column; gap:8px; }
+.qdj-rep{ background: rgba(255,255,255,0.05); border:1px solid var(--line); border-radius: var(--r); padding:10px 12px; animation: floatIn .4s ease; }
+.qdj-qui{ font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color: var(--peach); }
+.qdj-rep p{ margin:4px 0 0; font-size:14.5px; line-height:1.45; white-space:pre-wrap; word-break:break-word; }
+.qdj-pied{ font-size:11.5px; color: var(--muted-2); margin:10px 0 0; line-height:1.45; text-align:center; }
+.qdj-pied strong{ color: var(--peach); }
+.qdj-lien{ background:none; border:none; color: var(--muted); font-family:inherit; font-size:12.5px; text-decoration:underline; cursor:pointer; padding:6px 0 0; }
+.qdj-admin{ margin-top:10px; padding-top:8px; border-top:1px solid var(--line); font-size:11.5px; color: var(--muted-2); text-align:center; }
+.qdj-admin .qdj-lien{ font-size:11.5px; padding:0 2px; }
