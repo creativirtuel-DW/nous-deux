@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Installer Nous Deux</title>
+<meta name="theme-color" content="#14131A">
+<!-- Mêmes réglages que l'appli : si l'icône est ajoutée depuis cette page,
+     elle porte le bon nom, la bonne icône et s'ouvre en plein écran. -->
+<link rel="manifest" href="manifest.json?v=2">
+<link rel="apple-touch-icon" href="icon-512.png?v=2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Nous Deux">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script>
+  // Ouverte depuis l'icône de l'écran d'accueil : on file directement dans l'appli.
+  if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+    location.replace('./index.html');
+  }
+</script>
+<style>
+  :root{
+    --bg:#14131A; --surface:#1D1C25; --surface-2:#24232E; --line:rgba(255,255,255,0.09);
+    --coral:#FF6B6B; --peach:#FFA07A; --grad:linear-gradient(135deg,#FB5A63 0%,#FFA07A 115%);
+    --cream:#F4F1EC; --muted:#A7A3AF; --muted-2:#6E6A78;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; background:var(--bg); color:var(--cream); }
+  body{
+    font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,sans-serif;
+    min-height:100vh; padding:calc(env(safe-area-inset-top) + 28px) 18px calc(env(safe-area-inset-bottom) + 36px);
+    background: radial-gradient(120% 60% at 50% 0%, rgba(255,107,107,0.18), transparent 60%), var(--bg);
+  }
+  .wrap{ max-width:440px; margin:0 auto; }
+  .logo{ width:84px; height:84px; border-radius:22px; display:block; margin:0 auto 14px; box-shadow:0 18px 40px -14px rgba(255,107,107,0.55); }
+  h1{ text-align:center; font-size:28px; font-weight:800; letter-spacing:-0.02em; margin:0 0 6px; }
+  h1 span{ background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .sous{ text-align:center; color:var(--muted); font-size:14.5px; line-height:1.5; margin:0 0 26px; }
+
+  .alerte{
+    background:rgba(255,160,122,0.12); border:1px solid rgba(255,160,122,0.45); border-radius:18px;
+    padding:14px 16px; margin-bottom:18px; font-size:14px; line-height:1.5;
+  }
+  .alerte strong{ color:var(--peach); }
+
+  .etapes{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:12px; }
+  .etape{
+    display:flex; gap:14px; align-items:flex-start;
+    background:linear-gradient(160deg,var(--surface-2),var(--surface) 75%); border:1px solid var(--line);
+    border-radius:20px; padding:15px 16px;
+  }
+  .num{
+    flex:0 0 auto; width:30px; height:30px; border-radius:50%; background:var(--grad);
+    display:flex; align-items:center; justify-content:center; font-weight:800; font-size:14px; color:#fff;
+  }
+  .txt{ flex:1; min-width:0; }
+  .txt strong{ display:block; font-size:15.5px; font-weight:700; margin-bottom:3px; }
+  .txt p{ margin:0; font-size:13.5px; color:var(--muted); line-height:1.5; }
+  .ic{
+    display:inline-flex; align-items:center; justify-content:center; vertical-align:-6px;
+    width:26px; height:26px; border-radius:8px; background:rgba(255,255,255,0.1); margin:0 2px; color:#5AA9FF;
+  }
+  .ic svg{ width:16px; height:16px; }
+  .pastille{ display:inline-block; padding:1px 8px; border-radius:999px; background:rgba(255,255,255,0.1); color:var(--cream); font-weight:600; font-size:12.5px; }
+
+  .bouton{
+    display:block; width:100%; margin:20px 0 0; padding:15px; border:none; border-radius:999px;
+    background:var(--grad); color:#fff; font-family:inherit; font-size:16px; font-weight:800; text-align:center;
+    text-decoration:none; cursor:pointer; box-shadow:0 14px 30px -12px rgba(251,90,99,0.7);
+  }
+  .bouton.secondaire{ background:rgba(255,255,255,0.08); box-shadow:none; font-weight:700; font-size:14.5px; }
+  .note{ text-align:center; color:var(--muted-2); font-size:12.5px; line-height:1.5; margin-top:18px; }
+  .cache{ display:none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <img class="logo" src="icon-192.png?v=2" alt="">
+  <h1>Installer <span>Nous Deux</span></h1>
+  <p class="sous">Notre jeu à deux, en vraie appli sur ton téléphone.<br>Ça prend 30 secondes.</p>
+
+  <!-- Ouvert dans une appli (WhatsApp, Messenger, Instagram…) : l'installation y est impossible. -->
+  <div class="alerte cache" id="alerte-appli">
+    <strong>Ouvre d'abord cette page dans Safari.</strong><br>
+    Tu l'as ouverte depuis une autre appli, qui ne permet pas l'installation.
+    Touche le bouton <span class="pastille">⋯</span> ou l'icône boussole, puis <span class="pastille">Ouvrir dans Safari</span>.
+    <button class="bouton secondaire" id="copier">Copier le lien</button>
+  </div>
+
+  <!-- iPhone / iPad -->
+  <ol class="etapes cache" id="etapes-ios">
+    <li class="etape"><span class="num">1</span><div class="txt">
+      <strong>Touche le bouton Partager</strong>
+      <p>En bas de Safari : l'icône
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M6 11H5a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-1"/></svg></span>.
+        Si tu ne la vois pas, touche d'abord <span class="pastille">⋯</span> en bas à droite.</p>
+    </div></li>
+    <li class="etape"><span class="num">2</span><div class="txt">
+      <strong>Choisis « Sur l'écran d'accueil »</strong>
+      <p>Fais défiler la liste vers le bas si besoin
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="M12 8v8M8 12h8"/></svg></span>.</p>
+    </div></li>
+    <li class="etape"><span class="num">3</span><div class="txt">
+      <strong>Touche « Ajouter »</strong>
+      <p>Laisse le nom « Nous Deux ». Si l'option <span class="pastille">Ouvrir en tant qu'app web</span> apparaît, laisse-la activée.</p>
+    </div></li>
+    <li class="etape"><span class="num">4</span><div class="txt">
+      <strong>Ouvre Nous Deux depuis l'icône</strong>
+      <p>Pas depuis Safari : c'est depuis l'icône que les notifications fonctionnent. Écris ton prénom et le <strong style="display:inline;color:var(--peach)">code du couple</strong> que je t'ai donné, puis active les notifications.</p>
+    </div></li>
+  </ol>
+
+  <!-- Android : Chrome sait installer en un appui -->
+  <ol class="etapes cache" id="etapes-android">
+    <li class="etape"><span class="num">1</span><div class="txt">
+      <strong>Touche « Installer l'appli »</strong>
+      <p id="android-aide">Si le bouton n'apparaît pas : menu <span class="pastille">⋮</span> de Chrome, puis <span class="pastille">Ajouter à l'écran d'accueil</span> → <span class="pastille">Installer</span>.</p>
+    </div></li>
+    <li class="etape"><span class="num">2</span><div class="txt">
+      <strong>Ouvre Nous Deux depuis l'icône</strong>
+      <p>Écris ton prénom et le <strong style="display:inline;color:var(--peach)">code du couple</strong> que je t'ai donné, puis active les notifications.</p>
+    </div></li>
+  </ol>
+  <button class="bouton cache" id="installer-android">Installer l'appli</button>
+
+  <!-- Ordinateur ou autre -->
+  <div class="alerte cache" id="autre">
+    <strong>Ouvre ce lien sur ton téléphone.</strong><br>
+    Nous Deux est pensée pour l'iPhone (dans Safari) ou Android (dans Chrome).
+  </div>
+
+  <a class="bouton secondaire" href="./index.html" id="essayer">Ouvrir sans installer</a>
+  <p class="note">L'appli n'est pas sur l'App Store : elle s'installe depuis le site, c'est normal.<br>Aucun compte à créer.</p>
+</div>
+
+<script>
+  const ua = navigator.userAgent;
+  const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const android = /Android/i.test(ua);
+  // Navigateurs intégrés des applis : l'installation y est impossible.
+  const dansUneAppli = /FBAN|FBAV|FB_IAB|Instagram|Messenger|WhatsApp|Line\/|Snapchat|Twitter|LinkedInApp|GSA\//i.test(ua);
+  const montrer = id => document.getElementById(id).classList.remove('cache');
+
+  if (dansUneAppli) {
+    montrer('alerte-appli');
+  }
+  if (ios) {
+    montrer('etapes-ios');
+  } else if (android) {
+    montrer('etapes-android');
+  } else {
+    montrer('autre');
+  }
+
+  // Android / Chrome : vraie installation en un appui.
+  let invite = null;
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    invite = e;
+    montrer('installer-android');
+  });
+  document.getElementById('installer-android').addEventListener('click', () => {
+    if (!invite) return;
+    invite.prompt();
+    invite.userChoice.finally(() => { invite = null; });
+  });
+
+  document.getElementById('copier').addEventListener('click', e => {
+    const b = e.currentTarget;
+    const fin = ok => { b.textContent = ok ? 'Lien copié ✓ — colle-le dans Safari' : location.href; };
+    if (navigator.clipboard) navigator.clipboard.writeText(location.href).then(() => fin(true), () => fin(false));
+    else fin(false);
+  });
+
+  // Le service worker de l'appli rend l'installation possible sur Android.
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
