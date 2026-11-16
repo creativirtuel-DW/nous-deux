@@ -18,7 +18,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
-<link rel="stylesheet" href="style.css?v=50">
+<link rel="stylesheet" href="style.css?v=51">
 <script>
   // En appli installée sur iPhone, iOS peut donner à la page une hauteur plus
   // petite que l'écran (il retire la zone de la barre de geste). On mesure
@@ -264,6 +264,13 @@
             <h3 class="pending-title">En attente de validation</h3>
             <div id="pending-mine-list" class="pending-list"></div>
           </div>
+
+          <!-- Le reste de la file : cartes piochées par l'autre et pas encore jouées,
+               et cartes d'un joueur qui n'est plus dans la room. -->
+          <div class="pending-section" id="pending-autre-section" style="display:none;">
+            <h3 class="pending-title">Aussi dans la file</h3>
+            <div id="pending-autre-list" class="pending-list"></div>
+          </div>
         </div>
       </div>
 
@@ -380,7 +387,7 @@
 <script src="cards-data.js?v=17"></script>
 <script src="battle-data.js?v=4"></script>
 <script src="gages-data.js?v=1"></script>
-<script src="app.js?v=36"></script>
+<script src="app.js?v=37"></script>
 <script src="soiree.js?v=9"></script>
 <script src="photo-carte.js?v=1"></script>
 <script src="photo-defi.js?v=8"></script>
