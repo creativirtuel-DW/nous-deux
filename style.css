@@ -1030,3 +1030,65 @@ main#views{ flex:1; min-height:0; position:relative; }
 
 /* File d'attente : la bannière mène aux cartes en attente */
 .turn-banner.turn-banner-lien{ cursor:pointer; }
+
+/* ====== CARTE PIOCHÉE EN PLEIN ÉCRAN ====== */
+#carte-plein{
+  position:fixed; inset:0; bottom: calc(0px - var(--trou, 0px)); z-index:450;
+  overflow-y:auto; -webkit-overflow-scrolling:touch;
+  background:
+    radial-gradient(110% 60% at 50% 30%, rgba(232,35,74,0.20), transparent 60%),
+    linear-gradient(180deg, #120E14 0%, var(--bg-deep) 100%);
+  animation: qdjEntre .25s ease both;
+}
+.cp-scene{
+  position:relative; min-height:100%; max-width:460px; margin:0 auto; box-sizing:border-box;
+  display:flex; flex-direction:column; justify-content:center;
+  padding: calc(env(safe-area-inset-top, 0px) + 70px) 20px calc(env(safe-area-inset-bottom, 0px) + 34px);
+}
+.cp-carte .pending-card{ padding:22px 20px; border-color: rgba(255,160,122,0.35); box-shadow: 0 24px 60px -20px rgba(232,35,74,0.45); }
+.cp-carte .pending-card-top{ margin-bottom:6px; }
+.cp-carte .pending-text{
+  font-family:'Cormorant Garamond', Georgia, serif; font-style:italic; font-weight:500;
+  font-size:28px; line-height:1.3; text-align:center; margin:22px 0 24px;
+}
+.cp-carte .pending-answer-input{ min-height:110px; font-size:16px; }
+.pending-text-ouvrir{ cursor:pointer; }
+
+/* Révélation : le cœur apparaît, bat, s'ouvre en deux, la carte en sort. */
+.cp-revele{
+  position:absolute; left:50%; top:50%; width:150px; height:150px; margin:-75px 0 0 -75px;
+  pointer-events:none; z-index:2;
+  animation: cpPop .55s cubic-bezier(.2,.9,.3,1.3) both;
+}
+.cp-moitie{ position:absolute; inset:0; width:100%; height:100%; overflow:visible;
+  filter: drop-shadow(0 0 18px rgba(255,90,120,0.6)); }
+.cp-g{ clip-path: inset(0 50% 0 0); animation: cpOuvreG .5s ease-in .7s forwards; transform-origin:50% 80%; }
+.cp-d{ clip-path: inset(0 0 0 50%); animation: cpOuvreD .5s ease-in .7s forwards; transform-origin:50% 80%; }
+@keyframes cpPop{
+  0%{ transform: scale(.2); opacity:0; }
+  45%{ transform: scale(1.12); opacity:1; }
+  60%{ transform: scale(.96); }
+  75%{ transform: scale(1.08); }
+  100%{ transform: scale(1); opacity:1; }
+}
+@keyframes cpOuvreG{ to{ transform: translateX(-70px) rotate(-28deg); opacity:0; } }
+@keyframes cpOuvreD{ to{ transform: translateX(70px) rotate(28deg); opacity:0; } }
+.cp-eclat{
+  position:absolute; left:50%; top:52%; font-size:14px; color:#FF6B85; opacity:0;
+  text-shadow: 0 0 8px rgba(255,90,120,0.8);
+  animation: cpEclat .7s ease-out .75s forwards;
+}
+@keyframes cpEclat{
+  0%{ opacity:0; transform: translate(-50%,-50%) rotate(var(--a)) translateY(0) scale(.5); }
+  25%{ opacity:1; }
+  100%{ opacity:0; transform: translate(-50%,-50%) rotate(var(--a)) translateY(calc(-1 * var(--l))) scale(1); }
+}
+.cp-carte.cp-anime{ animation: cpCarte .55s cubic-bezier(.2,.9,.3,1.1) .85s both; }
+@keyframes cpCarte{
+  from{ opacity:0; transform: perspective(900px) scale(.55) rotateY(75deg); }
+  to{ opacity:1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce){
+  .cp-revele{ display:none; }
+  .cp-carte.cp-anime{ animation-duration:.01s; animation-delay:0s; }
+}
