@@ -3,6 +3,13 @@
 Exporte la banque de cartes (Question / Defi / Cap ou pas) vers Cartes.xlsx.
 
     python outils/export-cartes.py
+    python outils/export-cartes.py customCards.json disabledDefaults.json
+
+Avec les deux fichiers JSON (lus dans Firebase : rooms/<CODE>/customCards et
+rooms/<CODE>/disabledDefaults), le classeur montre aussi :
+  · les cartes creees dans l'appli, en fin d'onglet, id vide et Etat « APPLI »
+    (a l'import elles deviennent des cartes de base avec un id neuf) ;
+  · les cartes de base masquees dans l'appli, Etat « MASQUEE ».
 
 Un onglet par categorie. Les cartes qui contiennent encore le marqueur
 « [ ... complete ici ] » sont signalees « A COMPLETER » sur fond orange :
@@ -10,7 +17,7 @@ c'est exactement ce qu'il reste a relire et a remplir.
 
 Le classeur est volontairement exclu du depot (.gitignore).
 """
-import io, os, re, openpyxl
+import io, os, re, sys, json, openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
@@ -28,6 +35,19 @@ for ligne in io.open(CHEMIN_JS, encoding="utf-8").read().split("\n"):
         cartes.append({"id": m.group(1), "cat": m.group(2),
                        "text": m.group(3), "pts": int(m.group(4)),
                        "photo": bool(m.group(5)), "adulte": bool(m.group(6))})
+
+# Cartes de l'appli (Firebase), facultatif.
+perso, masquees = [], set()
+if len(sys.argv) > 1:
+    CATS = {"distance": "defi", "surprise": "defi"}
+    for cle, c in sorted((json.load(io.open(sys.argv[1], encoding="utf-8")) or {}).items(),
+                         key=lambda kv: kv[1].get("ts", 0)):
+        perso.append({"id": "", "cat": CATS.get(c.get("cat"), c.get("cat")),
+                      "text": c.get("text", "").replace('"', "'"), "pts": int(c.get("pts", 10)),
+                      "photo": False, "adulte": False, "appli": True, "par": c.get("by", "")})
+if len(sys.argv) > 2:
+    masquees = set((json.load(io.open(sys.argv[2], encoding="utf-8")) or {}).keys())
+cartes += perso
 
 ONGLETS = [("gage", "Cap ou pas"), ("question", "Question"), ("defi", "Defi")]
 
@@ -59,10 +79,11 @@ for cat, nom in ONGLETS:
                 u"affichee 3 secondes chez l'autre. Colonne Adulte : OUI = carte reservee au mode couple "
                 u"(masquee tant qu'il n'est pas deverrouille). Ne modifie jamais un id existant ni l'onglet "
                 u"d'une carte : c'est l'id qui porte le masquage et les modifications faites "
-                u"depuis l'appli.")
+                u"depuis l'appli. Etat APPLI = carte creee dans l'appli (deviendra une carte de base a "
+                u"l'import) ; Etat MASQUEE = carte de base masquee dans l'appli.")
     ws["A2"].font = Font(name=POLICE, italic=True, size=9, color="7F7F7F")
     ws["A2"].alignment = Alignment(wrap_text=True, vertical="top")
-    ws.row_dimensions[2].height = 42
+    ws.row_dimensions[2].height = 54
 
     for c, titre in enumerate(["id", "Etat", "Texte", "Points", "Photo", "Adulte", "Action"], 1):
         cell = ws.cell(row=4, column=c, value=titre)
@@ -78,9 +99,16 @@ for cat, nom in ONGLETS:
         idc.alignment = Alignment(horizontal="center", vertical="top")
 
         vide = MARQUEUR in x["text"]
-        ec = ws.cell(row=r, column=2, value=("A COMPLETER" if vide else "OK"))
+        etat = "APPLI" if x.get("appli") else ("MASQUEE" if x["id"] in masquees else ("A COMPLETER" if vide else "OK"))
+        ec = ws.cell(row=r, column=2, value=etat)
         ec.alignment = Alignment(horizontal="center", vertical="top")
-        if vide:
+        if etat == "APPLI":
+            ec.font = Font(name=POLICE, size=9, bold=True, color="1F4E9C")
+            ec.fill = PatternFill("solid", fgColor="D6E4FF")
+        elif etat == "MASQUEE":
+            ec.font = Font(name=POLICE, size=9, bold=True, color="7F7F7F")
+            ec.fill = PatternFill("solid", fgColor="E7E6E6")
+        elif vide:
             ec.font = Font(name=POLICE, size=9, bold=True, color="9C5700")
             ec.fill = a_completer
         else:
