@@ -228,6 +228,7 @@ function render(){
   // Le bandeau et le picker sont maintenant gérés entièrement dans renderPendingCard()
 
   renderPendingCard();
+  renderCartePlein();
   renderJDS();
   renderSoiree();
   renderPhotoDefi();
@@ -336,125 +337,12 @@ function renderPendingCard(){
   mineSection.style.display = mine.length ? 'block' : 'none';
   mineList.innerHTML = '';
   mine.forEach(([key, p]) => {
-    const row = document.createElement('div');
-    row.className = 'pending-card' + (p.status === 'review' ? ' waiting' : '');
-
-    if(p.status === 'review'){
-      row.innerHTML = `
-        <div class="pending-card-top">
-          <span class="pending-cat">${labelMap[p.cat]||'Carte'}</span>
-          <span class="pending-who">+${p.pts} en attente…</span>
-        </div>
-        <p class="pending-text">${escapeHtml(p.text)}</p>
-        ${p.answer ? `<div class="pending-answer"><span class="pending-answer-label">Ta réponse :</span> ${escapeHtml(p.answer)}</div>` : ''}
-        ${p.comment ? `<div class="pending-answer"><span class="pending-answer-label">Ton commentaire :</span> ${escapeHtml(p.comment)}</div>` : ''}
-        <div class="pending-actions">
-          ${p.pdGage ? '' : `<button class="btn-ghost pending-cancel">Annuler (0 point)</button>`}
-        </div>
-        ${p.pdGage ? `<div class="skip-note">⏳ ${escapeHtml(state.players[p.pdGage.author]||'')} doit valider avant le ${pdGageDeadlineLabel(p.pdGage.deadline)}.</div>` : ''}
-      `;
-      const cancelBtn = row.querySelector('.pending-cancel');
-      if(cancelBtn) cancelBtn.addEventListener('click', () => cancelPending(key));
-
-    } else {
-      const skipsUsed = getSkipCount(me.id, p.cat);
-      const limitReached = skipsUsed >= SKIP_LIMIT;
-      const skipNote = `<div class="skip-note">${limitReached ? '🚫 Limite de passes atteinte pour cette catégorie' : `Passes utilisées dans cette catégorie : ${skipsUsed}/${SKIP_LIMIT}`}</div>`;
-
-      if(p.cat === 'question'){
-        const skipOrPenaltyBtn = limitReached
-          ? `<button class="btn-ghost pending-penalty">Accepter de perdre ${SKIP_PENALTY} points</button>`
-          : `<button class="btn-ghost pending-cancel">Non, je passe</button>`;
-        row.innerHTML = `
-          <div class="pending-card-top">
-            <span class="pending-cat">${labelMap[p.cat]||'Carte'}</span>
-            <span class="pending-who">+${p.pts} si validé</span>
-          </div>
-          <p class="pending-text">${escapeHtml(p.text)}</p>
-          ${skipNote}
-          <textarea class="pending-answer-input" placeholder="Écris ta réponse ici…" rows="3"></textarea>
-          <div class="pending-actions">
-            ${skipOrPenaltyBtn}
-            <button class="btn-primary pending-submit">Envoyer pour validation</button>
-          </div>
-        `;
-        if(limitReached){
-          row.querySelector('.pending-penalty').addEventListener('click', () => payPenalty(key));
-        } else {
-          row.querySelector('.pending-cancel').addEventListener('click', () => skipCard(key));
-        }
-        row.querySelector('.pending-submit').addEventListener('click', () => {
-          const text = row.querySelector('.pending-answer-input').value.trim();
-          if(!text) return;
-          submitAnswer(key, text);
-        });
-
-      } else if(p.photo){
-        // Carte photo : la réponse EST la photo. Pas de champ texte, pas de
-        // « c'est fait » possible tant qu'elle n'est pas prise.
-        const skipOrPenaltyBtn = limitReached
-          ? `<button class="btn-ghost pending-penalty">Accepter de perdre ${SKIP_PENALTY} points</button>`
-          : `<button class="btn-ghost pending-nope">Non, je passe</button>`;
-        row.innerHTML = `
-          <div class="pending-card-top">
-            <span class="pending-cat">📸 ${labelMap[p.cat]||'Carte'}</span>
-            <span class="pending-who">+${p.pts} si validé</span>
-          </div>
-          <p class="pending-text">${escapeHtml(p.text)}</p>
-          ${skipNote}
-          <p class="pc-note">Ta photo ne s'affichera que ${Math.round(PC_VUE_MS/1000)} secondes chez ${escapeHtml(state.players[partnerId]||'ton/ta partenaire')}, puis elle disparaîtra. Elle restera 12 h consultables en dev mod, puis sera effacée.</p>
-          <div class="pending-actions">
-            ${skipOrPenaltyBtn}
-            <button class="btn-primary pending-photo">📸 Prendre la photo</button>
-          </div>
-        `;
-        if(limitReached){
-          row.querySelector('.pending-penalty').addEventListener('click', () => payPenalty(key));
-        } else {
-          row.querySelector('.pending-nope').addEventListener('click', () => skipCard(key));
-        }
-        row.querySelector('.pending-photo').addEventListener('click', () => envoyerPhotoCarte(key, row));
-
-      } else {
-        // défi / gage : pas de texte de réponse, juste fait ou non
-        // (le défi a en plus un commentaire optionnel visible par le/la partenaire)
-        const skipOrPenaltyBtn = p.pdGage
-          ? ''
-          : (limitReached
-            ? `<button class="btn-ghost pending-penalty">Accepter de perdre ${SKIP_PENALTY} points</button>`
-            : `<button class="btn-ghost pending-nope">Non, je passe</button>`);
-        const commentField = p.cat === 'defi'
-          ? `<textarea class="pending-comment-input" placeholder="Petit commentaire pour ${escapeHtml(state.players[partnerId]||'ton/ta partenaire')} (optionnel)…" rows="2"></textarea>`
-          : '';
-        row.innerHTML = `
-          <div class="pending-card-top">
-            <span class="pending-cat">${labelMap[p.cat]||'Carte'}</span>
-            <span class="pending-who">+${p.pts} si validé</span>
-          </div>
-          <p class="pending-text">${escapeHtml(p.text)}</p>
-          ${p.pdGage
-            ? `<div class="skip-note">🎯 Gage accepté à la place des ${PD_POINTS} points. ${escapeHtml(state.players[p.pdGage.author]||'')} doit le valider avant le ${pdGageDeadlineLabel(p.pdGage.deadline)} — sinon il s'annule et tu perds les ${PD_POINTS} points.</div>`
-            : skipNote}
-          ${commentField}
-          <div class="pending-actions">
-            ${skipOrPenaltyBtn}
-            <button class="btn-primary pending-ok">OK, c'est fait !</button>
-          </div>
-        `;
-        if(!p.pdGage){
-          if(limitReached){
-            row.querySelector('.pending-penalty').addEventListener('click', () => payPenalty(key));
-          } else {
-            row.querySelector('.pending-nope').addEventListener('click', () => skipCard(key));
-          }
-        }
-        row.querySelector('.pending-ok').addEventListener('click', () => {
-          const commentInput = row.querySelector('.pending-comment-input');
-          markDone(key, commentInput ? commentInput.value.trim() : '');
-        });
-      }
+    const row = construireCarteMine(key, p);
+    // Un appui sur le texte d'une carte à jouer la rouvre en plein écran.
+    if(p.status !== 'review'){
+      const t = row.querySelector('.pending-text');
+      if(t){ t.classList.add('pending-text-ouvrir'); t.addEventListener('click', () => cpOuvrir(key, false)); }
     }
-
     mineList.appendChild(row);
   });
 
@@ -488,6 +376,132 @@ function renderPendingCard(){
     if(retirer) retirer.addEventListener('click', () => roomRef.child('pendingCards/' + key).remove());
     autreList.appendChild(row);
   });
+}
+
+// Une de MES cartes (à jouer, ou en attente de validation). Sert à la liste
+// sous les tuiles ET à l'affichage plein écran de la carte qu'on vient de piocher.
+function construireCarteMine(key, p){
+  const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Cap ou pas' };
+  const row = document.createElement('div');
+  row.className = 'pending-card' + (p.status === 'review' ? ' waiting' : '');
+
+  if(p.status === 'review'){
+    row.innerHTML = `
+      <div class="pending-card-top">
+        <span class="pending-cat">${labelMap[p.cat]||'Carte'}</span>
+        <span class="pending-who">+${p.pts} en attente…</span>
+      </div>
+      <p class="pending-text">${escapeHtml(p.text)}</p>
+      ${p.answer ? `<div class="pending-answer"><span class="pending-answer-label">Ta réponse :</span> ${escapeHtml(p.answer)}</div>` : ''}
+      ${p.comment ? `<div class="pending-answer"><span class="pending-answer-label">Ton commentaire :</span> ${escapeHtml(p.comment)}</div>` : ''}
+      <div class="pending-actions">
+        ${p.pdGage ? '' : `<button class="btn-ghost pending-cancel">Annuler (0 point)</button>`}
+      </div>
+      ${p.pdGage ? `<div class="skip-note">⏳ ${escapeHtml(state.players[p.pdGage.author]||'')} doit valider avant le ${pdGageDeadlineLabel(p.pdGage.deadline)}.</div>` : ''}
+    `;
+    const cancelBtn = row.querySelector('.pending-cancel');
+    if(cancelBtn) cancelBtn.addEventListener('click', () => cancelPending(key));
+
+  } else {
+    const skipsUsed = getSkipCount(me.id, p.cat);
+    const limitReached = skipsUsed >= SKIP_LIMIT;
+    const skipNote = `<div class="skip-note">${limitReached ? '🚫 Limite de passes atteinte pour cette catégorie' : `Passes utilisées dans cette catégorie : ${skipsUsed}/${SKIP_LIMIT}`}</div>`;
+
+    if(p.cat === 'question'){
+      const skipOrPenaltyBtn = limitReached
+        ? `<button class="btn-ghost pending-penalty">Accepter de perdre ${SKIP_PENALTY} points</button>`
+        : `<button class="btn-ghost pending-cancel">Non, je passe</button>`;
+      row.innerHTML = `
+        <div class="pending-card-top">
+          <span class="pending-cat">${labelMap[p.cat]||'Carte'}</span>
+          <span class="pending-who">+${p.pts} si validé</span>
+        </div>
+        <p class="pending-text">${escapeHtml(p.text)}</p>
+        ${skipNote}
+        <textarea class="pending-answer-input" placeholder="Écris ta réponse ici…" rows="3"></textarea>
+        <div class="pending-actions">
+          ${skipOrPenaltyBtn}
+          <button class="btn-primary pending-submit">Envoyer pour validation</button>
+        </div>
+      `;
+      if(limitReached){
+        row.querySelector('.pending-penalty').addEventListener('click', () => payPenalty(key));
+      } else {
+        row.querySelector('.pending-cancel').addEventListener('click', () => skipCard(key));
+      }
+      row.querySelector('.pending-submit').addEventListener('click', () => {
+        const text = row.querySelector('.pending-answer-input').value.trim();
+        if(!text) return;
+        submitAnswer(key, text);
+      });
+
+    } else if(p.photo){
+      // Carte photo : la réponse EST la photo. Pas de champ texte, pas de
+      // « c'est fait » possible tant qu'elle n'est pas prise.
+      const skipOrPenaltyBtn = limitReached
+        ? `<button class="btn-ghost pending-penalty">Accepter de perdre ${SKIP_PENALTY} points</button>`
+        : `<button class="btn-ghost pending-nope">Non, je passe</button>`;
+      row.innerHTML = `
+        <div class="pending-card-top">
+          <span class="pending-cat">📸 ${labelMap[p.cat]||'Carte'}</span>
+          <span class="pending-who">+${p.pts} si validé</span>
+        </div>
+        <p class="pending-text">${escapeHtml(p.text)}</p>
+        ${skipNote}
+        <p class="pc-note">Ta photo ne s'affichera que ${Math.round(PC_VUE_MS/1000)} secondes chez ${escapeHtml(state.players[partnerId]||'ton/ta partenaire')}, puis elle disparaîtra. Elle restera 12 h consultables en dev mod, puis sera effacée.</p>
+        <div class="pending-actions">
+          ${skipOrPenaltyBtn}
+          <button class="btn-primary pending-photo">📸 Prendre la photo</button>
+        </div>
+      `;
+      if(limitReached){
+        row.querySelector('.pending-penalty').addEventListener('click', () => payPenalty(key));
+      } else {
+        row.querySelector('.pending-nope').addEventListener('click', () => skipCard(key));
+      }
+      row.querySelector('.pending-photo').addEventListener('click', () => envoyerPhotoCarte(key, row));
+
+    } else {
+      // défi / gage : pas de texte de réponse, juste fait ou non
+      // (le défi a en plus un commentaire optionnel visible par le/la partenaire)
+      const skipOrPenaltyBtn = p.pdGage
+        ? ''
+        : (limitReached
+          ? `<button class="btn-ghost pending-penalty">Accepter de perdre ${SKIP_PENALTY} points</button>`
+          : `<button class="btn-ghost pending-nope">Non, je passe</button>`);
+      const commentField = p.cat === 'defi'
+        ? `<textarea class="pending-comment-input" placeholder="Petit commentaire pour ${escapeHtml(state.players[partnerId]||'ton/ta partenaire')} (optionnel)…" rows="2"></textarea>`
+        : '';
+      row.innerHTML = `
+        <div class="pending-card-top">
+          <span class="pending-cat">${labelMap[p.cat]||'Carte'}</span>
+          <span class="pending-who">+${p.pts} si validé</span>
+        </div>
+        <p class="pending-text">${escapeHtml(p.text)}</p>
+        ${p.pdGage
+          ? `<div class="skip-note">🎯 Gage accepté à la place des ${PD_POINTS} points. ${escapeHtml(state.players[p.pdGage.author]||'')} doit le valider avant le ${pdGageDeadlineLabel(p.pdGage.deadline)} — sinon il s'annule et tu perds les ${PD_POINTS} points.</div>`
+          : skipNote}
+        ${commentField}
+        <div class="pending-actions">
+          ${skipOrPenaltyBtn}
+          <button class="btn-primary pending-ok">OK, c'est fait !</button>
+        </div>
+      `;
+      if(!p.pdGage){
+        if(limitReached){
+          row.querySelector('.pending-penalty').addEventListener('click', () => payPenalty(key));
+        } else {
+          row.querySelector('.pending-nope').addEventListener('click', () => skipCard(key));
+        }
+      }
+      row.querySelector('.pending-ok').addEventListener('click', () => {
+        const commentInput = row.querySelector('.pending-comment-input');
+        markDone(key, commentInput ? commentInput.value.trim() : '');
+      });
+    }
+  }
+
+  return row;
 }
 
 // ====== COFFRE (phrase secrète des photos) ======
@@ -656,7 +670,7 @@ function drawCard(cat){
     status: 'drafting', // en cours de réponse/réalisation par celui/celle qui a pioché
     answer: '',
     ts: Date.now()
-  });
+  }).then(() => cpOuvrir(key, true));   // la carte s'ouvre en plein écran (carte-plein.js)
 }
 
 // La photo prise remplace la réponse écrite : la carte part en validation
