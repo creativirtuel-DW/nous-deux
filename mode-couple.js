@@ -9,7 +9,7 @@
  * Tant qu'il est verrouillé :
  *   · les tuiles Cap ou pas, Soirée guidée et Défi Photo sont grisées (pastille 🔥) ;
  *   · la pioche ne sort que les cartes sans « adulte:true » (cards-data.js) ;
- *   · la Battle ne tire aucune question « coquin » ;
+ *   · la Battle ne tire qu'UNE question « coquin » (au lieu de 2) ;
  *   · la question du jour saute la catégorie « coquin ».
  *
  * Dev mod : modeCouple/manuel = 'verrouille' | 'debloque' force l'état
