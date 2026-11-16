@@ -18,11 +18,11 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
-<link rel="stylesheet" href="style.css?v=46">
+<link rel="stylesheet" href="style.css?v=47">
 </head>
 <body>
 
-<!-- ANIMATION D'OUVERTURE (≈ 4 s, un appui la passe) -->
+<!-- ANIMATION D'OUVERTURE (≈ 7 s, un appui la passe) -->
 <div id="splash" aria-hidden="true">
   <div class="sp-halo"></div>
   <div class="sp-coeurs">
@@ -62,7 +62,7 @@
       sp.classList.add('sp-sortie');
       setTimeout(function(){ if(sp.parentNode) sp.parentNode.removeChild(sp); }, 650);
     }
-    setTimeout(fermer, 4300);
+    setTimeout(fermer, 7000);   // la phrase reste lisible ~3,5 s une fois complète
     sp.addEventListener('click', fermer);
   })();
 </script>
