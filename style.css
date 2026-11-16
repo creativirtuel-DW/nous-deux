@@ -33,6 +33,10 @@
 
 *{ box-sizing:border-box; }
 html,body{ height:100%; }
+/* Fond de la page elle-même : sur iPhone, en appli plein écran, la bande de la
+   barre de geste (en bas) déborde de la mise en page et montrait le fond par
+   défaut du navigateur, blanc. */
+html{ background-color:#0E0D13; }
 body{
   margin:0;
   color: var(--cream);
