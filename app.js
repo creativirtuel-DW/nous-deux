@@ -256,6 +256,7 @@ function renderPendingCard(){
     turnBanner.style.display = 'none';
     $('#pending-to-validate-section').style.display = 'none';
     $('#pending-mine-section').style.display = 'none';
+    $('#pending-autre-section').style.display = 'none';
     return;
   }
 
@@ -270,8 +271,13 @@ function renderPendingCard(){
   // le bouton "Jeu de société" n'est jamais bloqué par la file d'attente
   $$('.cat-btn').forEach(b => { if(['jds','photo','battle','soiree'].indexOf(b.dataset.cat) === -1) b.classList.toggle('disabled', full); });
   turnBanner.textContent = full
-    ? `🚫 File pleine (${MAX_PENDING}/${MAX_PENDING}) — attends une validation`
+    ? `🚫 File pleine (${MAX_PENDING}/${MAX_PENDING}) — touche pour voir les cartes en attente`
     : `✦ Pioche une carte (${allPending.length}/${MAX_PENDING} en attente)`;
+  turnBanner.classList.toggle('turn-banner-lien', allPending.length > 0);
+  turnBanner.onclick = allPending.length ? () => {
+    const cible = [...document.querySelectorAll('.pending-section')].find(s => s.style.display !== 'none');
+    if(cible) cible.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } : null;
 
   const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Cap ou pas' };
 
@@ -450,6 +456,37 @@ function renderPendingCard(){
     }
 
     mineList.appendChild(row);
+  });
+
+  // Le reste de la file, pour qu'aucune carte comptée dans les 5 ne soit invisible :
+  // · piochée par l'autre et pas encore jouée → on attend (rien à faire ici) ;
+  // · piochée par un joueur qui n'est plus dans la room → on peut la retirer.
+  const joueurs = (state && state.players) || {};
+  const autres = allPending.filter(([k,p]) => p.by !== me.id && !(p.by === partnerId && p.status === 'review'));
+  const autreSection = $('#pending-autre-section');
+  const autreList = $('#pending-autre-list');
+  autreSection.style.display = autres.length ? 'block' : 'none';
+  autreList.innerHTML = '';
+  autres.forEach(([key, p]) => {
+    const orpheline = !p.by || !joueurs[p.by] || (p.by !== partnerId);
+    const row = document.createElement('div');
+    row.className = 'pending-card waiting';
+    row.innerHTML = orpheline
+      ? `<div class="pending-card-top">
+           <span class="pending-cat">${labelMap[p.cat]||'Carte'}</span>
+           <span class="pending-who">ancien joueur</span>
+         </div>
+         <p class="pending-text">${escapeHtml(p.text||'')}</p>
+         <div class="skip-note">Cette carte a été piochée par un joueur qui n'est plus dans la partie : personne ne peut la jouer.</div>
+         <div class="pending-actions"><button class="btn-ghost pending-retirer">Retirer de la file</button></div>`
+      : `<div class="pending-card-top">
+           <span class="pending-cat">${labelMap[p.cat]||'Carte'}</span>
+           <span class="pending-who">chez ${escapeHtml(joueurs[p.by]||'')}</span>
+         </div>
+         <div class="skip-note">⏳ ${escapeHtml(joueurs[p.by]||'Ton/ta partenaire')} a pioché cette carte et ne l'a pas encore jouée.</div>`;
+    const retirer = row.querySelector('.pending-retirer');
+    if(retirer) retirer.addEventListener('click', () => roomRef.child('pendingCards/' + key).remove());
+    autreList.appendChild(row);
   });
 }
 
