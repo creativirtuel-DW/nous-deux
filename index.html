@@ -13,14 +13,59 @@
 <meta name="apple-mobile-web-app-title" content="Nous Deux">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500;1,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,500&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500;1,600&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
-<link rel="stylesheet" href="style.css?v=44">
+<link rel="stylesheet" href="style.css?v=46">
 </head>
 <body>
+
+<!-- ANIMATION D'OUVERTURE (≈ 4 s, un appui la passe) -->
+<div id="splash" aria-hidden="true">
+  <div class="sp-halo"></div>
+  <div class="sp-coeurs">
+    <span style="--x:12%;--d:0.9s;--t:3.2s;--s:14px">♥</span>
+    <span style="--x:26%;--d:1.4s;--t:2.8s;--s:10px">♥</span>
+    <span style="--x:41%;--d:1.1s;--t:3.4s;--s:18px">♥</span>
+    <span style="--x:58%;--d:1.6s;--t:3.0s;--s:12px">♥</span>
+    <span style="--x:72%;--d:1.0s;--t:3.3s;--s:16px">♥</span>
+    <span style="--x:86%;--d:1.5s;--t:2.9s;--s:11px">♥</span>
+    <span style="--x:34%;--d:2.0s;--t:2.6s;--s:9px">♥</span>
+    <span style="--x:65%;--d:2.1s;--t:2.7s;--s:13px">♥</span>
+  </div>
+  <div class="sp-logo">
+    <span class="sp-lettre sp-d">D</span>
+    <svg class="sp-coeur" viewBox="0 0 100 100">
+      <defs>
+        <linearGradient id="spGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#FFB38A"/>
+          <stop offset="1" stop-color="#E8234A"/>
+        </linearGradient>
+      </defs>
+      <path pathLength="1" d="M50 84 C 22 62, 8 44, 17 29 C 26 14, 45 16, 50 33 C 55 16, 74 14, 83 29 C 92 44, 78 62, 50 84 Z"/>
+    </svg>
+    <span class="sp-lettre sp-w">W</span>
+  </div>
+  <p class="sp-phrase">
+    <span style="--i:0">Osez</span> <span style="--i:1">révéler</span> <span style="--i:2">ce</span> <span style="--i:3">que</span> <span style="--i:4">vous</span><br>
+    <span style="--i:5">n'avez</span> <span style="--i:6">encore</span> <span style="--i:7">jamais</span> <span style="--i:8">osé</span> <span style="--i:9">lui</span> <span style="--i:10">dire</span>
+  </p>
+</div>
+<script>
+  (function(){
+    var sp = document.getElementById('splash');
+    var fini = false;
+    function fermer(){
+      if(fini) return; fini = true;
+      sp.classList.add('sp-sortie');
+      setTimeout(function(){ if(sp.parentNode) sp.parentNode.removeChild(sp); }, 650);
+    }
+    setTimeout(fermer, 4300);
+    sp.addEventListener('click', fermer);
+  })();
+</script>
 
 <div id="app">
 
