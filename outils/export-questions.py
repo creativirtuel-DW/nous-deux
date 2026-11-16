@@ -60,7 +60,8 @@ for nom_onglet, cat in onglets:
     ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=9)
     ws["A2"] = ("Colonne 'Valide le' : date de ta derniere relecture. Les lignes orange n'ont jamais ete relues. "
                 "Modifie librement les cellules creme. Colonne Action : SUPPRIMER pour retirer une question. "
-                "Pour en ajouter, remplis une nouvelle ligne avec un id neuf. Ne modifie jamais un id existant.")
+                "Pour en ajouter, remplis une nouvelle ligne en laissant l'id vide (il est attribue a l'import). "
+                "Ne modifie jamais un id existant.")
     ws["A2"].font = Font(name=POLICE, italic=True, size=9, color="7F7F7F")
     ws["A2"].alignment = Alignment(wrap_text=True, vertical="top")
     ws.row_dimensions[2].height = 34

@@ -9,8 +9,9 @@ reçoit la date du jour dans le champ « v ». Une question inchangée conserve
 sa date d'origine ; une question dont le texte a bougé est revalidée à la
 date du jour, puisqu'elle vient d'être relue.
 
-Colonne Action : SUPPRIMER retire la question. Une nouvelle ligne avec un id
-neuf ajoute une question. Les id existants ne doivent jamais être modifiés :
+Colonne Action : SUPPRIMER retire la question. Une nouvelle ligne ajoute une
+question : laisser l'id vide, il est attribue automatiquement (q / s / c + numero
+jamais utilise). Les id existants ne doivent jamais être modifiés :
 c'est eux qui portent la mémoire anti-répétition.
 """
 import io, os, re, datetime, openpyxl
@@ -42,6 +43,20 @@ ids_vus = set()
 soucis = []
 compteurs = {"garde": 0, "modifie": 0, "ajoute": 0, "supprime": 0}
 
+# id deja pris (banque actuelle + classeur), pour attribuer des id neufs
+PREFIXE = {"quotidien": "q", "souvenir": "s", "coquin": "c"}
+pris = set(connu)
+for nom, cat in onglets:
+    for r in range(5, wb[nom].max_row + 1):
+        v0 = wb[nom].cell(row=r, column=1).value
+        if v0: pris.add(str(v0).strip())
+def id_neuf(cat):
+    pre = PREFIXE[cat]
+    n = max([int(x[len(pre):]) for x in pris if x.startswith(pre) and x[len(pre):].isdigit()] or [0]) + 1
+    ident = "%s%03d" % (pre, n)
+    pris.add(ident)
+    return ident
+
 for nom, cat in onglets:
     ws = wb[nom]
     # le classeur a soit 8 colonnes (ancien format), soit 9 (avec « Valide le »)
@@ -67,8 +82,7 @@ for nom, cat in onglets:
             soucis.append((nom, r, "champ vide"))
             continue
         if not ident:
-            soucis.append((nom, r, "id manquant"))
-            continue
+            ident = id_neuf(cat)
         if ident in ids_vus:
             soucis.append((nom, r, "id en double : " + ident))
             continue
