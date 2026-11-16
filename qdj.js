@@ -24,8 +24,32 @@ let qdjEdition = false;    // « Modifier ma réponse » : rouvre le champ
 let qdjCreditEnCours = false;
 let qdjOuvert = false;      // la question est ouverte en plein écran
 
-function qdjOuvrir(){ qdjOuvert = true; qdjSignature = ''; renderQDJ(); }
-function qdjFermer(){ qdjOuvert = false; qdjEdition = false; qdjSignature = ''; renderQDJ(); }
+function qdjOuvrir(){ qdjOuvert = true; qdjSignature = ''; qdjAideVisible = !qdjAideMasquee(); renderQDJ(); }
+
+// Bulle explicative à l'ouverture, sauf si « Ne plus afficher » a été coché
+// (mémorisé sur ce téléphone seulement).
+let qdjAideVisible = false;
+function qdjAideMasquee(){ try{ return localStorage.getItem('nousdeux_pensee_aide_masquee') === '1'; }catch(e){ return false; } }
+function qdjFermerAide(){
+  const c = document.getElementById('qdj-aide-masquer');
+  if(c && c.checked){ try{ localStorage.setItem('nousdeux_pensee_aide_masquee', '1'); }catch(e){} }
+  qdjAideVisible = false;
+  const b = document.getElementById('qdj-aide');
+  if(b) b.remove();
+}
+function qdjAfficherAide(){
+  const plein = document.getElementById('qdj-plein');
+  if(!plein || document.getElementById('qdj-aide')) return;
+  plein.insertAdjacentHTML('beforeend',
+    '<div id="qdj-aide" class="qdj-aide-fond"><div class="qdj-aide">'
+    + '<div class="qdj-aide-ic">💡</div>'
+    + '<p>Chaque jour, une petite question aléatoire pour renforcer votre couple.</p>'
+    + '<label class="qdj-aide-case"><input type="checkbox" id="qdj-aide-masquer"> Ne plus afficher</label>'
+    + '<button type="button" class="qdj-envoyer" id="qdj-aide-ok">J’ai compris</button>'
+    + '</div></div>');
+  document.getElementById('qdj-aide-ok').addEventListener('click', qdjFermerAide);
+}
+function qdjFermer(){ qdjAideVisible = false; const aide = document.getElementById('qdj-aide'); if(aide) aide.remove(); qdjOuvert = false; qdjEdition = false; qdjSignature = ''; renderQDJ(); }
 
 // ---------- calendrier (heure de Paris) ----------
 function qdjParis(date){
@@ -208,6 +232,7 @@ function renderQDJ(){
   // ---- le plein écran ----
   if(!qdjOuvert){ plein.style.display = 'none'; qdjSignature = ''; return; }
   plein.style.display = '';
+  if(qdjAideVisible) qdjAfficherAide();
 
   const signature = [jour, q.id, !!moi, !!lui, moi && moi.t, lui && lui.t, serie, qdjEdition, admin, !!e.credite].join('|');
   if(signature === qdjSignature) return;

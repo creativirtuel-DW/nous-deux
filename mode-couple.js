@@ -57,14 +57,41 @@ function mcAnnonceCle(){ return 'nousdeux_mc_vu_' + roomCode; }
 function mcAnnonceVue(){ try{ return localStorage.getItem(mcAnnonceCle()) === '1'; }catch(e){ return true; } }
 function mcMarquerAnnonceVue(){ try{ localStorage.setItem(mcAnnonceCle(), '1'); }catch(e){} }
 
-// Clic sur une tuile verrouillée : on montre le bandeau explicatif.
-function mcSignalerVerrou(){
-  const b = $('#mc-bandeau');
-  if(!b) return;
-  b.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  b.classList.remove('mc-secoue');
-  void b.offsetWidth;            // relance l'animation
-  b.classList.add('mc-secoue');
+// Message plein écran (#mc-plein, créé à la demande) :
+//   'verrou' → on a touché une tuile bloquée : explication + progression ;
+//   'debloque' → annonce unique, sur chaque téléphone, quand le seuil est atteint.
+let mcPleinOuvert = null;
+
+function mcSignalerVerrou(){ mcPleinOuvert = 'verrou'; renderMcPlein(); }
+function mcFermerPlein(){
+  if(mcPleinOuvert === 'debloque') mcMarquerAnnonceVue();
+  mcPleinOuvert = null;
+  renderMcPlein();
+}
+
+function renderMcPlein(){
+  let el = document.getElementById('mc-plein');
+  if(!mcPleinOuvert){ if(el) el.remove(); return; }
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'mc-plein';
+    document.body.appendChild(el);
+  }
+  const total = mcTotal();
+  const reste = Math.max(0, MC_SEUIL - total);
+  const pct = Math.min(100, Math.round(total / MC_SEUIL * 100));
+  const contenu = mcPleinOuvert === 'debloque'
+    ? '<div class="mc-plein-ic">🔥</div><h2>Mode HOT débloqué !</h2>'
+      + '<p>Cap ou pas, Soirée guidée, Défi Photo, cartes et questions coquines sont maintenant ouverts.</p>'
+      + '<button class="mc-plein-btn" data-mc-fermer>C’est parti</button>'
+    : '<div class="mc-plein-ic">🔥</div><h2>Mode HOT à débloquer</h2>'
+      + '<p>Débloquez-le en atteignant au minimum <b>' + MC_SEUIL + ' points</b> à deux.</p>'
+      + '<div class="mc-jauge"><div class="mc-jauge-plein" style="width:' + pct + '%"></div></div>'
+      + '<div class="mc-plein-legende">' + total + ' / ' + MC_SEUIL + ' points · encore ' + reste + ' point' + (reste > 1 ? 's' : '') + '</div>'
+      + '<button class="mc-plein-btn" data-mc-fermer>Continuer à jouer</button>';
+  el.innerHTML = '<button type="button" class="qdj-fermer" data-mc-fermer aria-label="Fermer">✕</button>'
+    + '<div class="mc-plein-corps">' + contenu + '</div>';
+  el.querySelectorAll('[data-mc-fermer]').forEach(b => b.addEventListener('click', mcFermerPlein));
 }
 
 // Dev mod, temporaire : mesures d'écran pour traquer la bande en bas sur iPhone.
@@ -112,48 +139,26 @@ function renderModeCouple(){
     }
   });
 
-  // Bandeau explicatif, sous les tuiles.
+  // Annonce plein écran unique quand le mode vient d'être débloqué.
+  if(ouvert && !mcAnnonceVue() && !mcPleinOuvert){ mcPleinOuvert = 'debloque'; renderMcPlein(); }
+  if(!ouvert && mcPleinOuvert === 'debloque'){ mcPleinOuvert = null; renderMcPlein(); }
+  if(ouvert && mcPleinOuvert === 'verrou'){ mcPleinOuvert = null; renderMcPlein(); }
+
+  // Plus d'encadré sur l'accueil : seul le dev mod y garde ses outils.
   const b = $('#mc-bandeau');
   if(!b) return;
   const picker = $('#cat-picker');
-  if(picker && picker.style.display === 'none'){ b.style.display = 'none'; return; }
+  const admin = isAdminUnlocked();
+  if(!admin || (picker && picker.style.display === 'none')){ b.style.display = 'none'; return; }
 
   const m = (state && state.modeCouple) || {};
-  const admin = isAdminUnlocked();
-  const outilsAdmin = admin
-    ? '<div class="mc-admin">Dev mod · '
-      + (m.manuel ? 'forcé « ' + (m.manuel === 'verrouille' ? 'verrouillé' : 'déverrouillé') + ' » · ' : '')
-      + '<button class="qdj-lien" data-mc="verrouille">verrouiller</button> · '
-      + '<button class="qdj-lien" data-mc="debloque">déverrouiller</button> · '
-      + '<button class="qdj-lien" data-mc="">automatique</button></div>'
-      + '<div class="mc-admin mc-mesures">' + mcMesuresEcran() + '</div>'
-    : '';
-
-  if(ouvert){
-    if(mcAnnonceVue() && !admin){ b.style.display = 'none'; return; }
-    b.style.display = '';
-    b.className = 'mc-bandeau ouvert';
-    b.innerHTML = mcAnnonceVue()
-      ? '<div class="mc-ligne"><span class="mc-ic">🔥</span><div class="mc-txt"><strong>Mode HOT débloqué</strong></div></div>' + outilsAdmin
-      : '<div class="mc-ligne"><span class="mc-ic">🔥</span><div class="mc-txt"><strong>Mode HOT débloqué !</strong>'
-        + '<span>Cap ou pas, Soirée guidée, Défi Photo, cartes et questions coquines sont maintenant ouverts.</span></div>'
-        + '<button class="push-btn" id="mc-ok">Génial</button></div>' + outilsAdmin;
-  }else{
-    const total = mcTotal();
-    const reste = Math.max(0, MC_SEUIL - total);
-    const pct = Math.min(100, Math.round(total / MC_SEUIL * 100));
-    b.style.display = '';
-    b.className = 'mc-bandeau';
-    b.innerHTML = '<div class="mc-ligne"><span class="mc-ic">🔥</span><div class="mc-txt">'
-      + '<strong>Mode HOT à débloquer</strong>'
-      + '<span>Débloquez-le en atteignant au minimum <b>' + MC_SEUIL + ' points</b> à deux. '
-      + 'Encore ' + reste + ' point' + (reste > 1 ? 's' : '') + '.</span></div></div>'
-      + '<div class="mc-jauge"><div class="mc-jauge-plein" style="width:' + pct + '%"></div></div>'
-      + '<div class="mc-jauge-legende">' + total + ' / ' + MC_SEUIL + ' points</div>'
-      + outilsAdmin;
-  }
-
-  const ok = $('#mc-ok');
-  if(ok) ok.addEventListener('click', () => { mcMarquerAnnonceVue(); renderModeCouple(); });
+  b.style.display = '';
+  b.className = 'mc-bandeau';
+  b.innerHTML = '<div class="mc-admin" style="margin:0;padding:0;border:0">Dev mod · Mode HOT ' + (ouvert ? 'débloqué' : 'bloqué') + ' (' + mcTotal() + '/' + MC_SEUIL + ')'
+    + (m.manuel ? ' · forcé « ' + (m.manuel === 'verrouille' ? 'verrouillé' : 'déverrouillé') + ' »' : '') + ' · '
+    + '<button class="qdj-lien" data-mc="verrouille">verrouiller</button> · '
+    + '<button class="qdj-lien" data-mc="debloque">déverrouiller</button> · '
+    + '<button class="qdj-lien" data-mc="">automatique</button></div>'
+    + '<div class="mc-admin mc-mesures">' + mcMesuresEcran() + '</div>';
   b.querySelectorAll('[data-mc]').forEach(el => el.addEventListener('click', () => mcForcer(el.dataset.mc)));
 }
