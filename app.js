@@ -1188,7 +1188,7 @@ function renderHistory(){
   const wrap = $('#history-list');
   wrap.innerHTML = '';
 
-  const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Cap ou pas', distance:'🔥 Défi', photo:'📸 Défi Photo', battle:'⚔️ Battle', soiree:'🌙 Soirée guidée', qdj:'💬 Question du jour' };
+  const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Cap ou pas', distance:'🔥 Défi', photo:'📸 Défi Photo', battle:'⚔️ Battle', soiree:'🌙 Soirée guidée', qdj:'💭 Une pensée par jour' };
   const entries = state.history ? Object.values(state.history).sort((a,b)=> b.ts-a.ts).slice(0,50) : [];
 
   if(entries.length === 0){

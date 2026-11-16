@@ -218,7 +218,7 @@ async function listerInscrits(env){
 
 function messageMatin(q){
   return {
-    title: '💬 Question du jour',
+    title: '💭 Une pensée par jour',
     body: q.cat === 'coquin' ? 'Une question coquine t\'attend… 😏 Réponds en secret.' : q.q,
     tag: 'qdj', url: './index.html'
   };
@@ -226,7 +226,7 @@ function messageMatin(q){
 
 function messageSoir(nomPartenaire, partenaireARepondu){
   return {
-    title: '⏳ Question du jour',
+    title: '⏳ Une pensée par jour',
     body: partenaireARepondu
       ? nomPartenaire + ' a déjà répondu : il ne manque que toi pour garder la série !'
       : 'Vous n\'avez pas encore répondu. Il vous reste jusqu\'à demain 10 h pour garder la série.',

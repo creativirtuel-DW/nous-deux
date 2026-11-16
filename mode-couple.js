@@ -67,6 +67,25 @@ function mcSignalerVerrou(){
   b.classList.add('mc-secoue');
 }
 
+// Dev mod, temporaire : mesures d'écran pour traquer la bande en bas sur iPhone.
+function mcMesuresEcran(){
+  const sonde = document.createElement('div');
+  sonde.style.cssText = 'position:fixed;left:0;bottom:0;width:1px;height:0;padding-bottom:env(safe-area-inset-bottom);visibility:hidden';
+  document.body.appendChild(sonde);
+  const zoneGeste = sonde.offsetHeight;
+  sonde.remove();
+  const app = document.getElementById('app').getBoundingClientRect();
+  const installee = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  return '📏 écran ' + screen.width + '×' + screen.height
+    + ' · page ' + window.innerWidth + '×' + window.innerHeight
+    + ' · visible ' + (window.visualViewport ? Math.round(window.visualViewport.height) : '?')
+    + ' · html ' + document.documentElement.clientHeight
+    + ' · zone geste ' + zoneGeste
+    + ' · trou ' + getComputedStyle(document.documentElement).getPropertyValue('--trou').trim()
+    + ' · bas appli ' + Math.round(app.bottom)
+    + ' · ' + (installee ? 'installée' : 'navigateur');
+}
+
 function mcForcer(valeur){
   roomRef.child('modeCouple/manuel').set(valeur || null);
 }
@@ -107,6 +126,7 @@ function renderModeCouple(){
       + '<button class="qdj-lien" data-mc="verrouille">verrouiller</button> · '
       + '<button class="qdj-lien" data-mc="debloque">déverrouiller</button> · '
       + '<button class="qdj-lien" data-mc="">automatique</button></div>'
+      + '<div class="mc-admin mc-mesures">' + mcMesuresEcran() + '</div>'
     : '';
 
   if(ouvert){
