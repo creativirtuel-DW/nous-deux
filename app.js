@@ -237,6 +237,7 @@ function render(){
   renderBattle();
   renderOsmose();
   renderModeCouple();
+  renderEvenement();
   renderQDJ();
   renderBattleCards();
   renderRewards();
