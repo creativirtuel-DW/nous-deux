@@ -2,7 +2,7 @@
  * Nous Deux — la carte piochée, en plein écran
  * ============================================
  * Quand je pioche une carte (Question, Défi, Cap ou pas), elle s'ouvre en
- * plein écran : un cœur apparaît, bat, s'ouvre en deux et révèle la carte,
+ * plein écran : un cœur vide se dessine, bat, puis s'efface doucement devant la carte,
  * avec ses boutons (répondre, c'est fait, je passe, photo…).
  *
  * L'écran se ferme tout seul dès que la carte quitte l'état « à jouer »
@@ -33,16 +33,13 @@ function cpFermer(){
 
 const CP_COEUR = 'M50 84 C 22 62, 8 44, 17 29 C 26 14, 45 16, 50 33 C 55 16, 74 14, 83 29 C 92 44, 78 62, 50 84 Z';
 
+// Révélation : un cœur vide (simple contour, comme sur le logo) se dessine,
+// bat, puis s'efface doucement pour laisser place à la carte.
 function cpRevelation(){
-  const moitie = cote => '<svg class="cp-moitie cp-' + cote + '" viewBox="0 0 100 100">'
-    + '<defs><linearGradient id="cpGrad-' + cote + '" x1="0" y1="0" x2="1" y2="1">'
-    + '<stop offset="0" stop-color="#FF7A8E"/><stop offset="1" stop-color="#C8102E"/></linearGradient></defs>'
-    + '<path d="' + CP_COEUR + '" fill="url(#cpGrad-' + cote + ')" stroke="#FFB38A" stroke-width="2.5" stroke-linejoin="round"/></svg>';
-  let eclats = '';
-  for(let i = 0; i < 10; i++){
-    eclats += '<span class="cp-eclat" style="--a:' + (i * 36) + 'deg;--l:' + (90 + (i % 3) * 30) + 'px">♥</span>';
-  }
-  return '<div class="cp-revele" aria-hidden="true">' + moitie('g') + moitie('d') + eclats + '</div>';
+  return '<div class="cp-revele" aria-hidden="true">'
+    + '<svg class="cp-coeur" viewBox="0 0 100 100"><defs><linearGradient id="cpGrad" x1="0" y1="0" x2="1" y2="1">'
+    + '<stop offset="0" stop-color="#FFB38A"/><stop offset="1" stop-color="#E8234A"/></linearGradient></defs>'
+    + '<path pathLength="1" d="' + CP_COEUR + '"/></svg></div>';
 }
 
 function renderCartePlein(){
@@ -74,6 +71,6 @@ function renderCartePlein(){
   carte.className = 'cp-carte' + (animer ? ' cp-anime' : '');
   carte.appendChild(construireCarteMine(cpCle, p));
   scene.appendChild(carte);
-  // Le cœur s'est ouvert : on le retire pour ne pas gêner les appuis.
-  if(animer) setTimeout(() => { const r = scene.querySelector('.cp-revele'); if(r) r.remove(); }, 1500);
+  // Le cœur s'est effacé : on le retire pour ne pas gêner les appuis.
+  if(animer) setTimeout(() => { const r = scene.querySelector('.cp-revele'); if(r) r.remove(); }, 1900);
 }
