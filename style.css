@@ -1054,38 +1054,28 @@ main#views{ flex:1; min-height:0; position:relative; }
 .cp-carte .pending-answer-input{ min-height:110px; font-size:16px; }
 .pending-text-ouvrir{ cursor:pointer; }
 
-/* Révélation : le cœur apparaît, bat, s'ouvre en deux, la carte en sort. */
+/* Révélation : un cœur vide, en contour dégradé comme sur le logo, se dessine,
+   bat une fois, puis s'efface doucement pendant que la carte apparaît. */
 .cp-revele{
-  position:absolute; left:50%; top:50%; width:150px; height:150px; margin:-75px 0 0 -75px;
+  position:absolute; left:50%; top:50%; width:140px; height:140px; margin:-70px 0 0 -70px;
   pointer-events:none; z-index:2;
-  animation: cpPop .55s cubic-bezier(.2,.9,.3,1.3) both;
 }
-.cp-moitie{ position:absolute; inset:0; width:100%; height:100%; overflow:visible;
-  filter: drop-shadow(0 0 18px rgba(255,90,120,0.6)); }
-.cp-g{ clip-path: inset(0 50% 0 0); animation: cpOuvreG .5s ease-in .7s forwards; transform-origin:50% 80%; }
-.cp-d{ clip-path: inset(0 0 0 50%); animation: cpOuvreD .5s ease-in .7s forwards; transform-origin:50% 80%; }
-@keyframes cpPop{
-  0%{ transform: scale(.2); opacity:0; }
-  45%{ transform: scale(1.12); opacity:1; }
-  60%{ transform: scale(.96); }
-  75%{ transform: scale(1.08); }
-  100%{ transform: scale(1); opacity:1; }
+.cp-coeur{
+  position:absolute; inset:0; width:100%; height:100%; overflow:visible;
+  animation: cpBat .5s ease .6s, cpEfface .7s ease 1.05s forwards;
 }
-@keyframes cpOuvreG{ to{ transform: translateX(-70px) rotate(-28deg); opacity:0; } }
-@keyframes cpOuvreD{ to{ transform: translateX(70px) rotate(28deg); opacity:0; } }
-.cp-eclat{
-  position:absolute; left:50%; top:52%; font-size:14px; color:#FF6B85; opacity:0;
-  text-shadow: 0 0 8px rgba(255,90,120,0.8);
-  animation: cpEclat .7s ease-out .75s forwards;
+.cp-coeur path{
+  fill:none; stroke:url(#cpGrad); stroke-width:5; stroke-linejoin:round; stroke-linecap:round;
+  stroke-dasharray:1; stroke-dashoffset:1;
+  filter: drop-shadow(0 0 10px rgba(255,140,120,0.55));
+  animation: cpTrace .6s ease-in-out forwards;
 }
-@keyframes cpEclat{
-  0%{ opacity:0; transform: translate(-50%,-50%) rotate(var(--a)) translateY(0) scale(.5); }
-  25%{ opacity:1; }
-  100%{ opacity:0; transform: translate(-50%,-50%) rotate(var(--a)) translateY(calc(-1 * var(--l))) scale(1); }
-}
-.cp-carte.cp-anime{ animation: cpCarte .55s cubic-bezier(.2,.9,.3,1.1) .85s both; }
+@keyframes cpTrace{ to{ stroke-dashoffset:0; } }
+@keyframes cpBat{ 0%,100%{ transform: scale(1); } 35%{ transform: scale(1.12); } }
+@keyframes cpEfface{ to{ opacity:0; transform: scale(1.06); } }
+.cp-carte.cp-anime{ animation: cpCarte .7s ease 1.1s both; }
 @keyframes cpCarte{
-  from{ opacity:0; transform: perspective(900px) scale(.55) rotateY(75deg); }
+  from{ opacity:0; transform: scale(.96); }
   to{ opacity:1; transform: none; }
 }
 @media (prefers-reduced-motion: reduce){
