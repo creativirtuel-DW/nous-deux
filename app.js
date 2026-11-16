@@ -1250,7 +1250,7 @@ function renderHistory(){
     const row = document.createElement('div');
     row.className = 'hist-row';
     let ptsLabel, statusNote = '';
-    if(h.cat === 'battle'){ ptsLabel = (h.osmose >= 0 ? '+' : '') + (h.osmose || 0) + ' 💗'; }
+    if(h.cat === 'battle'){ ptsLabel = (h.osmose >= 0 ? '+' : '') + (h.osmose || 0) + ' 💗' + (h.pts ? ' · +' + h.pts + ' pts chacun' : ''); }
     else if(h.validated === 'skipped'){ ptsLabel = '⏭ 0'; statusNote = ' (passée)'; }
     else if(h.validated === 'penalty'){ ptsLabel = h.pts; statusNote = ' (limite de passes — pénalité acceptée)'; }
     else if(h.validated){ ptsLabel = '+'+h.pts; }

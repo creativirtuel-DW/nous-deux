@@ -6,6 +6,9 @@
  * série. Le but n'est pas d'avoir raison, mais de répondre la même chose.
  *
  * Chaque réponse commune vaut +10 d'Osmose, chaque divergence -10.
+ * Chaque réponse commune rapporte aussi BATTLE_PTS_PAR_COMMUNE points à
+ * CHACUN des deux joueurs (scores p1 et p2) : la Battle fait avancer vers le
+ * déblocage du Mode HOT. Une divergence ne retire aucun point.
  * L'Osmose est un cumul signé, affiché dans le cœur entre les deux scores.
  */
 
@@ -14,6 +17,7 @@ const BATTLE_TIRAGE = { quotidien: 1, souvenir: 1, coquin: 3 };
 // le reste en quotidien et souvenir.
 const BATTLE_TIRAGE_SAGE = { quotidien: 2, souvenir: 2, coquin: 1 };
 const OSMOSE_PAR_REPONSE = 10;
+const BATTLE_PTS_PAR_COMMUNE = 5;
 
 // Une réponse dont le libellé commence par « Autre » ouvre un champ de saisie.
 function battleEstLibre(libelle){
@@ -230,17 +234,23 @@ function battleRepondre(reponses, mesTextes){
   updates['battle/communes'] = communes;
   updates['battle/delta'] = delta;
   updates['osmose'] = osmoseGet() + delta;
+  const gain = communes * BATTLE_PTS_PAR_COMMUNE;
+  updates['battle/gain'] = gain;
+  if(gain){
+    updates['scores/p1'] = ((state.scores && state.scores.p1) || 0) + gain;
+    updates['scores/p2'] = ((state.scores && state.scores.p2) || 0) + gain;
+  }
 
   const hk = db.ref('rooms/' + roomCode + '/history').push().key;
   updates['history/' + hk] = {
     who: me.name, cat: 'battle',
     text: 'Battle — ' + communes + ' réponse' + (communes > 1 ? 's' : '') + ' commune' + (communes > 1 ? 's' : '') + ' sur 5',
-    pts: 0, osmose: delta, validated: true, ts: Date.now()
+    pts: gain, osmose: delta, validated: true, ts: Date.now()
   };
 
   roomRef.update(updates).then(() => {
     notifyPartner('⚔️ Battle terminée',
-      me.name + ' a répondu : ' + communes + '/5 en commun, ' + (delta >= 0 ? '+' : '') + delta + ' d’Osmose.', 'battle');
+      me.name + ' a répondu : ' + communes + '/5 en commun, ' + (delta >= 0 ? '+' : '') + delta + ' d’Osmose' + (gain ? ', +' + gain + ' pts chacun' : '') + '.', 'battle');
   });
 }
 
@@ -314,7 +324,7 @@ function renderBattle(){
       <div class="jds-intro">
         <span class="jds-emoji">⚔️</span>
         <h3 class="jds-title">Battle</h3>
-        <p class="jds-sub">Réponds à ces 5 questions. ${escapeHtml(partnerName)} recevra exactement la même série — chaque réponse identique vaut <strong>+10 d'Osmose</strong>, chaque divergence <strong>−10</strong>.</p>
+        <p class="jds-sub">Réponds à ces 5 questions. ${escapeHtml(partnerName)} recevra exactement la même série — chaque réponse identique vaut <strong>+10 d'Osmose</strong> et <strong>+${BATTLE_PTS_PAR_COMMUNE} pts chacun</strong>, chaque divergence <strong>−10 d'Osmose</strong>.</p>
       </div>
       ${battleGrilleHTML(battleBrouillon.questions, battleBrouillon.reponses, false, battleBrouillon.textes)}
       <button class="btn-primary" id="bt-send"${complet ? '' : ' disabled'}>
@@ -343,8 +353,8 @@ function renderBattle(){
         <span class="jds-label">Comment ça marche</span>
         <div class="bt-regle"><span>1</span><span>Tu réponds aux 5 questions.</span></div>
         <div class="bt-regle"><span>2</span><span>${escapeHtml(partnerName)} reçoit la même série et répond à son tour.</span></div>
-        <div class="bt-regle"><span>3</span><span>Chaque réponse commune : <strong>+10 d'Osmose</strong>. Chaque divergence : <strong>−10</strong>.</span></div>
-        <p class="pd-note">Chaque série mélange 2 questions du quotidien, 1 souvenir et 2 plus intimes.</p>
+        <div class="bt-regle"><span>3</span><span>Chaque réponse commune : <strong>+10 d'Osmose</strong> et <strong>+${BATTLE_PTS_PAR_COMMUNE} pts chacun</strong>. Chaque divergence : <strong>−10 d'Osmose</strong>.</span></div>
+        <p class="pd-note">${mcDebloque() ? 'Chaque série mélange 1 question du quotidien, 1 souvenir et 3 plus intimes.' : 'Chaque série mélange 2 questions du quotidien, 2 souvenirs et 1 plus intime.'}</p>
       </div>
       <button class="btn-primary" id="bt-start">Lancer une Battle</button>
     `;
@@ -378,7 +388,7 @@ function renderBattle(){
       <div class="jds-intro">
         <span class="jds-emoji">⚔️</span>
         <h3 class="jds-title">${escapeHtml(state.players[b.by] || '')} te défie</h3>
-        <p class="jds-sub">Réponds aux mêmes 5 questions. Essaie de tomber juste : chaque réponse identique vaut <strong>+10 d'Osmose</strong>.</p>
+        <p class="jds-sub">Réponds aux mêmes 5 questions. Essaie de tomber juste : chaque réponse identique vaut <strong>+10 d'Osmose</strong> et <strong>+${BATTLE_PTS_PAR_COMMUNE} pts chacun</strong>.</p>
       </div>
       ${battleGrilleHTML(b.questions, mesReponses, false, mesTextes)}
       <button class="btn-primary" id="bt-answer"${complet ? '' : ' disabled'}>
@@ -410,7 +420,7 @@ function renderBattle(){
     <div class="bt-resultat ${b.delta >= 0 ? 'bon' : 'mauvais'}">
       <div class="bt-score">${b.communes}<span>/5</span></div>
       <div class="bt-score-label">réponse${b.communes > 1 ? 's' : ''} commune${b.communes > 1 ? 's' : ''}</div>
-      <div class="bt-delta">${b.delta >= 0 ? '+' : ''}${b.delta} d'Osmose</div>
+      <div class="bt-delta">${b.delta >= 0 ? '+' : ''}${b.delta} d'Osmose${b.gain ? ` · +${b.gain} pts chacun` : ''}</div>
     </div>
     ${b.questions.map((q, i) => {
       const ok = battleReponsesConcordent(q, i, rA[i], tA, rB[i], tB, b.by, autreId);
