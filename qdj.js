@@ -1,5 +1,5 @@
 /**
- * Nous Deux — la question du jour
+ * Nous Deux — « Une pensée par jour » (ex-question du jour ; le code garde les noms qdj…)
  * ===============================
  * Une question par jour, la même pour les deux, poussée à 10 h par le Worker
  * Cloudflare (relance à 20 h pour celui ou celle qui n'a pas répondu).
@@ -22,6 +22,10 @@ const QDJ_BONUS_TOUS = 7;
 let qdjSignature = '';     // on ne reconstruit pas le bloc (et le champ de saisie) pour rien
 let qdjEdition = false;    // « Modifier ma réponse » : rouvre le champ
 let qdjCreditEnCours = false;
+let qdjOuvert = false;      // la question est ouverte en plein écran
+
+function qdjOuvrir(){ qdjOuvert = true; qdjSignature = ''; renderQDJ(); }
+function qdjFermer(){ qdjOuvert = false; qdjEdition = false; qdjSignature = ''; renderQDJ(); }
 
 // ---------- calendrier (heure de Paris) ----------
 function qdjParis(date){
@@ -113,7 +117,7 @@ function qdjEnvoyer(){
     qdjSignature = '';
     qdjWorker({ action: 'repondu', jour: jour });
     if(!dejaRepondu){
-      notifyPartner('💬 Question du jour',
+      notifyPartner('💭 Une pensée par jour',
         autre ? me.name + ' a répondu aussi : vos réponses sont dévoilées !' : me.name + ' a répondu. À ton tour !', 'qdj');
     }
     render();
@@ -151,7 +155,7 @@ function qdjCrediter(jour){
           const hk = db.ref('rooms/' + roomCode + '/history').push().key;
           updates['history/' + hk] = {
             who: (state.players && state.players[j]) || j, cat: 'qdj',
-            text: 'Question du jour — ' + q.q + ' (série : ' + n + ' jour' + (n > 1 ? 's' : '') + ')',
+            text: 'Une pensée par jour — ' + q.q + ' (série : ' + n + ' jour' + (n > 1 ? 's' : '') + ')',
             answer: '', comment: '', pts: gain, validated: true, ts: Date.now()
           };
         });
@@ -164,14 +168,13 @@ function qdjCrediter(jour){
 // ---------- rendu ----------
 function qdjNomAutre(){ return (state.players && state.players[partnerId]) || 'Ton/ta partenaire'; }
 
+// Sur l'accueil : une simple case (qui clignote tant que j'ai à répondre),
+// sans la question. Un appui ouvre la question en plein écran (#qdj-plein).
 function renderQDJ(){
-  const bloc = $('#qdj-bloc');
-  if(!bloc || typeof QDJ === 'undefined') return;
-
-  // Masqué quand un panneau de jeu (soirée, battle…) occupe l'écran.
-  const picker = $('#cat-picker');
-  if(picker && picker.style.display === 'none'){ bloc.style.display = 'none'; qdjSignature = ''; return; }
-  bloc.style.display = '';
+  const tuile = $('#qdj-bloc');
+  const plein = $('#qdj-plein');
+  const bloc = $('#qdj-corps');
+  if(!tuile || !plein || !bloc || typeof QDJ === 'undefined') return;
 
   const jour = qdjJour();
   const q = qdjQuestion(jour);
@@ -181,8 +184,33 @@ function renderQDJ(){
   const serie = qdjSerie(jour);
   const admin = isAdminUnlocked();
 
+  if(moi && lui && !e.credite) qdjCrediter(jour);
+
+  // ---- la case de l'accueil ----
+  // Masquée quand un panneau de jeu (soirée, battle…) occupe l'écran.
+  const picker = $('#cat-picker');
+  tuile.style.display = (picker && picker.style.display === 'none') ? 'none' : '';
+  const etat = (moi && lui) ? 'devoile' : (moi && !qdjEdition) ? 'attente' : 'a-toi';
+  const sousTitre = etat === 'devoile' ? 'Vos réponses sont dévoilées 💗 Touche pour les lire.'
+    : etat === 'attente' ? 'Touche pour la relire'
+    : lui ? '✓ ' + escapeHtml(qdjNomAutre()) + ' a déjà répondu — à toi !'
+    : 'Touche pour la découvrir';
+  const signTuile = etat + '|' + sousTitre + '|' + serie;
+  if(tuile.dataset.sign !== signTuile){
+    tuile.dataset.sign = signTuile;
+    tuile.className = 'qdj-tuile qdj-' + etat;
+    tuile.innerHTML = '<span class="qdj-tuile-ic">💭</span>'
+      + '<span class="qdj-tuile-txt"><strong>Une pensée par jour</strong><span>' + sousTitre + '</span></span>'
+      + '<span class="qdj-serie' + (serie > 0 ? '' : ' eteinte') + '">🔥 ' + serie + '</span>';
+    tuile.onclick = qdjOuvrir;
+  }
+
+  // ---- le plein écran ----
+  if(!qdjOuvert){ plein.style.display = 'none'; qdjSignature = ''; return; }
+  plein.style.display = '';
+
   const signature = [jour, q.id, !!moi, !!lui, moi && moi.t, lui && lui.t, serie, qdjEdition, admin, !!e.credite].join('|');
-  if(signature === qdjSignature) { if(moi && lui && !e.credite) qdjCrediter(jour); return; }
+  if(signature === qdjSignature) return;
   qdjSignature = signature;
 
   const etiquettes = { nous: 'Nous deux', souvenir: 'Souvenir', coquin: 'Coquin', envie: 'Envies & projets' };
@@ -190,7 +218,7 @@ function renderQDJ(){
     ? '<span class="qdj-serie" title="Jours d\'affilée">🔥 ' + serie + '</span>'
     : '<span class="qdj-serie eteinte" title="Pas de série en cours">🔥 0</span>';
 
-  let html = '<div class="qdj-entete"><span class="qdj-titre">💬 Question du jour</span>'
+  let html = '<div class="qdj-entete"><span class="qdj-titre">💭 Une pensée par jour</span>'
     + '<span class="qdj-cat qdj-cat-' + q.cat + '">' + etiquettes[q.cat] + '</span>' + flamme + '</div>'
     + '<p class="qdj-question">' + escapeHtml(q.q) + '</p>';
 
@@ -208,8 +236,7 @@ function renderQDJ(){
       + (bonus ? '' : ' · bonus dans ' + (QDJ_BONUS_TOUS - (n % QDJ_BONUS_TOUS)) + ' j') + '</p>';
   }else if(moi && !qdjEdition){
     // ---- en attente de l'autre ----
-    html += '<div class="qdj-attente">🔒 Ta réponse est scellée. En attente de ' + escapeHtml(qdjNomAutre()) + '…</div>'
-      + '<button class="qdj-lien" id="qdj-modifier">Modifier ma réponse</button>';
+    html += '<button class="qdj-lien" id="qdj-modifier">Modifier ma réponse</button>';
   }else{
     // ---- à moi de répondre ----
     html += (lui ? '<div class="qdj-statut">✓ ' + escapeHtml(qdjNomAutre()) + ' a déjà répondu — à ton tour !</div>' : '')
@@ -249,8 +276,6 @@ function renderQDJ(){
 
   // Remplir les réponses (déchiffrées si besoin)
   bloc.querySelectorAll('[data-qdj]').forEach(p => qdjRemplir(p, (rep[p.dataset.qdj] || {}).t));
-
-  if(moi && lui && !e.credite) qdjCrediter(jour);
 }
 
 function qdjRemplir(el, valeur){

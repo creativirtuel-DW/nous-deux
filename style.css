@@ -979,3 +979,51 @@ main#views{ flex:1; min-height:0; position:relative; }
 @media (prefers-reduced-motion: reduce){
   #splash *, #splash{ animation-duration:.01s !important; animation-delay:0s !important; }
 }
+
+/* ====== QUESTION DU JOUR : case de l'accueil + plein écran ====== */
+.qdj-tuile{
+  width:100%; max-width:430px; margin:0 0 14px; padding:15px 16px; box-sizing:border-box;
+  display:flex; align-items:center; gap:13px; text-align:left; cursor:pointer;
+  font-family:inherit; color: var(--cream);
+  background: linear-gradient(135deg, rgba(255,107,107,0.20), var(--surface) 75%);
+  border:1px solid rgba(255,160,122,0.35); border-radius: var(--r-lg); box-shadow: var(--shadow-sm);
+}
+.qdj-tuile-ic{ font-size:24px; flex:0 0 auto; }
+.qdj-tuile-txt{ flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+.qdj-tuile-txt strong{ font-size:15.5px; font-weight:800; letter-spacing:-0.01em; }
+.qdj-tuile-txt span{ font-size:12.5px; color: var(--muted); line-height:1.4; }
+.qdj-tuile .qdj-serie{ margin-left:0; }
+/* À moi de répondre : la case clignote doucement. */
+.qdj-tuile.qdj-a-toi{ animation: qdjClignote 1.6s ease-in-out infinite; }
+@keyframes qdjClignote{
+  0%,100%{ border-color: rgba(255,160,122,0.35); box-shadow: 0 0 0 0 rgba(255,107,107,0); }
+  50%{ border-color: rgba(255,140,120,0.95); box-shadow: 0 0 24px 2px rgba(255,107,107,0.45); }
+}
+.qdj-tuile.qdj-attente{ background: var(--surface); border-color: var(--line-2); }
+
+#qdj-plein{
+  position:fixed; inset:0; bottom: calc(0px - var(--trou, 0px)); z-index:500;
+  overflow-y:auto; -webkit-overflow-scrolling:touch;
+  background:
+    radial-gradient(110% 60% at 50% 0%, rgba(255,107,107,0.22), transparent 60%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+  animation: qdjEntre .35s ease both;
+}
+@keyframes qdjEntre{ from{ opacity:0; transform: translateY(24px); } to{ opacity:1; transform:none; } }
+.qdj-fermer{
+  position:absolute; top: calc(env(safe-area-inset-top, 0px) + 12px); right:16px; z-index:1;
+  width:40px; height:40px; border-radius:50%; border:1px solid var(--line-2);
+  background: rgba(255,255,255,0.06); color: var(--cream); font-size:17px; cursor:pointer; font-family:inherit;
+}
+.qdj-corps{
+  max-width:460px; margin:0 auto; min-height:100%; box-sizing:border-box;
+  display:flex; flex-direction:column; justify-content:center;
+  padding: calc(env(safe-area-inset-top, 0px) + 70px) 22px calc(env(safe-area-inset-bottom, 0px) + 34px);
+}
+.qdj-corps .qdj-entete{ justify-content:center; flex-wrap:wrap; margin-bottom:18px; }
+.qdj-corps .qdj-serie{ margin-left:0; }
+.qdj-corps .qdj-question{
+  font-family:'Cormorant Garamond', Georgia, serif; font-style:italic; font-weight:500;
+  font-size:30px; line-height:1.3; text-align:center; margin:0 0 26px;
+}
+.qdj-corps .qdj-champ{ min-height:120px; }
