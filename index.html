@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="icon-512.png?v=2">
 <link rel="apple-touch-icon" sizes="192x192" href="icon-192.png?v=2">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <meta name="apple-mobile-web-app-title" content="Nous Deux">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -19,25 +19,6 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
 <link rel="stylesheet" href="style.css?v=59">
-<script>
-  // En appli installée sur iPhone, iOS peut donner à la page une hauteur plus
-  // petite que l'écran (il retire la zone de la barre de geste). On mesure
-  // l'écart et la page s'étire d'autant (variable CSS --trou, voir style.css).
-  (function(){
-    var installee = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-    function mesurer(){
-      var trou = 0;
-      if (installee && window.innerHeight > window.innerWidth) {
-        trou = screen.height - window.innerHeight;
-        if (trou < 0 || trou > 80) trou = 0;   // valeur aberrante : on ne touche à rien
-      }
-      document.documentElement.style.setProperty('--trou', trou + 'px');
-    }
-    mesurer();
-    window.addEventListener('resize', mesurer);
-    window.addEventListener('orientationchange', function(){ setTimeout(mesurer, 300); });
-  })();
-</script>
 </head>
 <body>
 
