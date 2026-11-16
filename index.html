@@ -18,7 +18,26 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
-<link rel="stylesheet" href="style.css?v=48">
+<link rel="stylesheet" href="style.css?v=49">
+<script>
+  // En appli installée sur iPhone, iOS peut donner à la page une hauteur plus
+  // petite que l'écran (il retire la zone de la barre de geste). On mesure
+  // l'écart et la page s'étire d'autant (variable CSS --trou, voir style.css).
+  (function(){
+    var installee = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+    function mesurer(){
+      var trou = 0;
+      if (installee && window.innerHeight > window.innerWidth) {
+        trou = screen.height - window.innerHeight;
+        if (trou < 0 || trou > 80) trou = 0;   // valeur aberrante : on ne touche à rien
+      }
+      document.documentElement.style.setProperty('--trou', trou + 'px');
+    }
+    mesurer();
+    window.addEventListener('resize', mesurer);
+    window.addEventListener('orientationchange', function(){ setTimeout(mesurer, 300); });
+  })();
+</script>
 </head>
 <body>
 

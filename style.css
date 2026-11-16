@@ -44,6 +44,9 @@ body{
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   position:fixed; overflow:hidden; width:100%;
+  /* --trou : bande de l'écran qu'iOS laisse hors de la page en appli installée
+     (mesurée au lancement dans index.html) ; on étire la page par-dessus. */
+  top:0; left:0; height: calc(100% + var(--trou, 0px));
   background:
     radial-gradient(120% 80% at 50% -15%, #26222f 0%, transparent 55%),
     radial-gradient(85% 55% at 100% 0%, rgba(255,107,107,0.10), transparent 55%),
@@ -55,7 +58,7 @@ body{
    iPhone récents donnaient à l'appli une hauteur supérieure à la zone
    réellement visible : le bas du contenu passait sous les barres du
    navigateur, hors d'atteinte, et le geste de défilement semblait sans effet. */
-#app{ height:100vh; height:100svh; width:100vw; position:relative; }
+#app{ height: calc(100vh + var(--trou, 0px)); height: calc(100svh + var(--trou, 0px)); width:100vw; position:relative; }
 .screen{ position:absolute; inset:0; display:none; flex-direction:column; }
 .screen.active{ display:flex; }
 
@@ -904,7 +907,7 @@ main#views{ flex:1; min-height:0; position:relative; }
 
 /* ====== ANIMATION D'OUVERTURE ====== */
 #splash{
-  position:fixed; inset:0; z-index:9999; overflow:hidden; cursor:pointer;
+  position:fixed; inset:0; bottom: calc(0px - var(--trou, 0px)); z-index:9999; overflow:hidden; cursor:pointer;
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:34px;
   background:#0B0609; padding:0 24px; box-sizing:border-box;
 }
