@@ -1,17 +1,18 @@
 /**
  * Nous Deux — mode BATTLE
  * =======================
- * Une série de 5 questions à 4 réponses : 2 « quotidien », 1 « souvenir »,
- * 2 « coquin ». Le premier joueur répond, le/la partenaire reçoit la même
+ * Une série de 5 questions à 4 réponses : 1 « quotidien », 1 « souvenir »,
+ * 3 « coquin » (Mode HOT verrouillé : 2 + 2 + 1 coquin). Le premier joueur répond, le/la partenaire reçoit la même
  * série. Le but n'est pas d'avoir raison, mais de répondre la même chose.
  *
  * Chaque réponse commune vaut +10 d'Osmose, chaque divergence -10.
  * L'Osmose est un cumul signé, affiché dans le cœur entre les deux scores.
  */
 
-const BATTLE_TIRAGE = { quotidien: 2, souvenir: 1, coquin: 2 };
-// Mode couple verrouillé : aucune question coquine, on complète avec du quotidien et du souvenir.
-const BATTLE_TIRAGE_SAGE = { quotidien: 3, souvenir: 2 };
+const BATTLE_TIRAGE = { quotidien: 1, souvenir: 1, coquin: 3 };
+// Mode HOT verrouillé : une seule question coquine (Intime), toujours présente,
+// le reste en quotidien et souvenir.
+const BATTLE_TIRAGE_SAGE = { quotidien: 2, souvenir: 2, coquin: 1 };
 const OSMOSE_PAR_REPONSE = 10;
 
 // Une réponse dont le libellé commence par « Autre » ouvre un champ de saisie.
@@ -115,7 +116,7 @@ function battlePool(){
 // repropose une question qu'une fois sa catégorie entièrement épuisée, et on
 // repart alors sur un cycle neuf. Deux Battles ne peuvent donc pas se recouper.
 function battleTirage(){
-  const pool = battlePool().filter(q => mcDebloque() || q.cat !== 'coquin');
+  const pool = battlePool();
   const vues = (state && state.battleVues) || {};
   const choisies = [];
   battleAOublier = [];
@@ -134,7 +135,8 @@ function battleTirage(){
 
   const manque = 5 - choisies.length;
   if(manque > 0){
-    const reste = battleMelange(pool.filter(q => choisies.indexOf(q) === -1));
+    // Mode HOT verrouillé : le complément ne prend jamais de question coquine en plus.
+    const reste = battleMelange(pool.filter(q => choisies.indexOf(q) === -1 && (mcDebloque() || q.cat !== 'coquin')));
     choisies.push(...reste.slice(0, manque));
   }
   // On fige énoncé et réponses : la série reste identique pour les deux, même
