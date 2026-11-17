@@ -1055,8 +1055,9 @@ function setupRewardsView(){
 function renderRewards(){
   const myScore = state.scores ? (state.scores[me.id]||0) : 0;
   const partnerScore = state.scores ? (state.scores[partnerId]||0) : 0;
-  const team = myScore + partnerScore;
-  $('#team-score').textContent = team;
+  // Chaque palier se débloque avec le score INDIVIDUEL de chacun.
+  $('#team-score').textContent = myScore;
+  const nomAutre = state.players[partnerId] || 'Ton/ta partenaire';
 
   let all = DEFAULT_REWARDS.map((r,i) => ({...r, id:'r'+i, custom:false}));
   if(state.customRewards){
@@ -1069,14 +1070,16 @@ function renderRewards(){
   const list = $('#rewards-list');
   list.innerHTML = '';
   all.forEach(r => {
-    const unlocked = team >= r.pts;
+    const unlocked = myScore >= r.pts;
+    const autreOk = partnerScore >= r.pts;
     const div = document.createElement('div');
     div.className = 'reward-card' + (unlocked?' unlocked':'');
     div.innerHTML = `
       <div class="reward-badge">${r.pts}</div>
       <div class="reward-body">
-        <div class="reward-points">${unlocked ? 'Débloqué' : 'À atteindre'}</div>
+        <div class="reward-points">${unlocked ? 'Débloqué pour toi' : 'Encore ' + (r.pts - myScore) + ' pts'}</div>
         <div class="reward-desc">${escapeHtml(r.desc)}</div>
+        <div class="reward-autre">${escapeHtml(nomAutre)} : ${autreOk ? 'débloqué ✓' : 'encore ' + (r.pts - partnerScore) + ' pts'}</div>
       </div>
       ${unlocked ? '<div class="reward-check">✓</div>' : ''}
       ${isAdminUnlocked() ? `<button class="ccard-del reward-del" data-id="${r.id}" data-custom="${r.custom}">✕</button>` : ''}

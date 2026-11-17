@@ -1,12 +1,11 @@
 /* ====== PARCOURS ======
  * Carte façon jeu vidéo : un chemin sinueux qui monte, un pion par joueur
- * (placé selon SES points), et les étapes communes (cadeaux des paliers,
- * porte HOT) qui se débloquent avec les points À DEUX.
- * Pour que tout tienne sur la même échelle, une étape « X pts à deux » est
- * dessinée à X/2 : elle s'ouvre quand le cœur « vous deux » (la moyenne des
- * deux scores) la dépasse.
+ * (placé selon SES points) et les cadeaux des paliers, que chacun débloque
+ * avec ses propres points. Seule la porte HOT dépend des points À DEUX :
+ * elle est dessinée à MC_SEUIL/2 et s'ouvre quand le cœur « vous deux »
+ * (la moyenne des deux scores) la dépasse.
  */
-const PRC_K = 2;           // pixels par point sur le chemin
+const PRC_K = 1.15;        // pixels par point sur le chemin
 const PRC_HAUT = 90, PRC_BAS = 70;
 const PRC_MONDES = [
   { de:0,   nom:'Les premiers pas', teinte:'rgba(255,160,122,.07)', deco:['💌','✨','🌸'] },
@@ -52,8 +51,8 @@ function renderParcours(){
   document.getElementById('prc-hot-jauge').style.width = Math.min(100, equipe / MC_SEUIL * 100) + '%';
 
   // Longueur du chemin : toujours de l'avance à parcourir devant
-  const plusLoin = Math.max(sMoi, sAutre, paliers.length ? paliers[paliers.length-1].pts / 2 : 0, hotPos);
-  const MAX = Math.max(400, Math.ceil((plusLoin + 120) / 50) * 50);
+  const plusLoin = Math.max(sMoi, sAutre, paliers.length ? paliers[paliers.length-1].pts : 0, hotPos);
+  const MAX = Math.max(600, Math.ceil((plusLoin + 150) / 50) * 50);
   const H = MAX * PRC_K + PRC_HAUT + PRC_BAS;
   const X = p => W/2 + W*0.27 * Math.sin(p * Math.PI / 60);
   const Y = p => PRC_HAUT + (MAX - p) * PRC_K;
@@ -70,10 +69,11 @@ function renderParcours(){
       h += `<div class="prc-deco" style="left:${W*cote}px;top:${Y(p)}px;animation-delay:${j*.7}s">${z.deco[j%3]}</div>`;
     }
   });
-  // Le chemin, éclairé jusqu'au cœur « vous deux »
+  // Le chemin, éclairé jusqu'au pion le plus avancé
   let d = '', d2 = '';
   for(let p=0; p<=MAX; p+=2) d += (p ? 'L' : 'M') + X(p).toFixed(1) + ' ' + Y(p).toFixed(1);
-  for(let p=0; p<=Math.min(coeur, MAX); p+=2) d2 += (p ? 'L' : 'M') + X(p).toFixed(1) + ' ' + Y(p).toFixed(1);
+  const loin = Math.min(Math.max(sMoi, sAutre), MAX);
+  for(let p=0; p<=loin; p+=2) d2 += (p ? 'L' : 'M') + X(p).toFixed(1) + ' ' + Y(p).toFixed(1);
   h += `<svg class="prc-chemin" viewBox="0 0 ${W} ${H}" aria-hidden="true">
     <defs><linearGradient id="prc-g" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#FB5A63"/><stop offset="1" stop-color="#FFA07A"/></linearGradient></defs>
     <path d="${d}" fill="none" stroke="#2E2D3A" stroke-width="14" stroke-linecap="round"/>
@@ -87,17 +87,18 @@ function renderParcours(){
     h += `<div class="prc-frontiere" style="top:${y}px;${z.de ? '' : 'border:0'}"><span style="${cote}">Monde ${i+1} · ${z.nom}</span></div>`;
   });
   // Points d'étape tous les 50
-  const etapes = paliers.map(p => p.pts / 2).concat([hotPos]);
+  const etapes = paliers.map(p => p.pts).concat([hotPos]);
   for(let p=50; p<MAX; p+=50){
     if(etapes.some(e => Math.abs(e - p) < 12)) continue;
-    h += `<div class="prc-etape" style="left:${X(p)}px;top:${Y(p)}px"><div class="prc-pt ${coeur >= p ? 'fait' : ''}"></div></div>`;
+    h += `<div class="prc-etape" style="left:${X(p)}px;top:${Y(p)}px"><div class="prc-pt ${loin >= p ? 'fait' : ''}"></div></div>`;
   }
   // Départ
   h += prcCle(X(0), Y(0), W, '🚩', true, 'Départ', '0 pts', '', null);
   // Cadeaux
   paliers.forEach((pa, i) => {
-    const pos = pa.pts / 2, ok = equipe >= pa.pts;
-    h += prcCle(X(pos), Y(pos), W, '🎁', ok, 'Cadeau de niveau ' + (i+1), pa.pts + ' pts à deux', ok ? '✓' : '🔒', i);
+    const a1 = sMoi >= pa.pts, a2 = sAutre >= pa.pts;
+    const etat = a1 && a2 ? '✓ Vous deux' : a1 ? '✓ ' + escapeHtml(nomMoi) : a2 ? '✓ ' + escapeHtml(nomAutre) : '🔒';
+    h += prcCle(X(pa.pts), Y(pa.pts), W, '🎁', a1 || a2, 'Cadeau de niveau ' + (i+1), pa.pts + ' pts', etat, i, a1 && a2);
   });
   // Porte HOT
   const xh = X(hotPos), gauche = xh < W/2;
@@ -113,7 +114,7 @@ function renderParcours(){
   h += prcPion('moi', nomMoi, sMoi, proches ? -13 : 0, devant === 'moi' && sMoi !== sAutre, X, Y, MAX);
   monde.innerHTML = h;
 
-  monde.querySelectorAll('[data-i]').forEach(b => b.onclick = () => prcFiche(paliers[+b.dataset.i], +b.dataset.i, equipe));
+  monde.querySelectorAll('[data-i]').forEach(b => b.onclick = () => prcFiche(paliers[+b.dataset.i], +b.dataset.i, sMoi, sAutre, nomAutre));
   monde.querySelector('[data-hot]').onclick = () => prcFicheHot(equipe, hotOuverte);
 
   if(!prcDejaCentre){ prcDejaCentre = true; prcAllerMoi(false); }
@@ -124,12 +125,12 @@ function prcJoueur(qui, nom, s){
     + `<div><b>${escapeHtml(nom)}</b><small>${s}<i>pts</i></small></div></div>`;
 }
 
-function prcCle(x, y, W, ic, fait, nom, pts, etat, i){
+function prcCle(x, y, W, ic, fait, nom, pts, etat, i, coche){
   const droite = x < W/2, ec = 28;
   return `<button type="button" class="prc-etape" ${i !== null ? `data-i="${i}"` : ''} style="left:${x}px;top:${y}px">
-      <div class="prc-cle ${fait ? 'fait' : 'verrou'}"><span>${ic}</span>${fait && i !== null ? '<div class="prc-ok">✓</div>' : ''}</div></button>
+      <div class="prc-cle ${fait ? 'fait' : 'verrou'}"><span>${ic}</span>${coche ? '<div class="prc-ok">✓</div>' : ''}</div></button>
     <div class="prc-etiq" style="top:${y}px;${droite ? `left:${x + ec}px` : `left:${x - ec - 120}px;text-align:right`}">
-      <b>${nom}</b><span class="prc-pts">${pts}</span>${etat && etat !== '✓' ? ' <span>' + etat + '</span>' : ''}</div>`;
+      <b>${nom}</b><span class="prc-pts">${pts}</span>${etat ? ' <span>' + etat + '</span>' : ''}</div>`;
 }
 
 function prcPion(qui, nom, s, dx, couronne, X, Y, MAX){
@@ -156,12 +157,13 @@ function prcFermerFiche(){
   document.getElementById('prc-fiche').classList.remove('on');
   document.getElementById('prc-voile').style.display = 'none';
 }
-function prcFiche(pa, i, equipe){
-  const ok = equipe >= pa.pts;
+function prcFiche(pa, i, sMoi, sAutre, nomAutre){
+  const ok = sMoi >= pa.pts;
+  const r = s => s >= pa.pts ? 'Atteint ✓' : 'encore ' + (pa.pts - s) + ' pts';
   prcOuvrirFiche(`<div class="prc-f-ic">🎁</div><h2>Cadeau de niveau ${i+1}</h2>
-    <p>${ok ? 'Votre cadeau : <b>' + escapeHtml(pa.desc || '') + '</b>' : 'Un cadeau surprise, révélé quand le niveau est atteint.'}</p>
-    <div class="prc-ligne"><span>Vos points à deux</span><b>${equipe} / ${pa.pts}</b></div>
-    ${ok ? '' : `<div class="prc-ligne"><span>Il vous manque</span><b>${pa.pts - equipe} pts</b></div>`}
+    <p>${ok ? 'Ton cadeau : <b>' + escapeHtml(pa.desc || '') + '</b>' : 'Un cadeau surprise, révélé quand tu atteins ' + pa.pts + ' points.'}</p>
+    <div class="prc-ligne"><span>Toi</span><b>${r(sMoi)}</b></div>
+    <div class="prc-ligne"><span>${escapeHtml(nomAutre)}</span><b>${r(sAutre)}</b></div>
     <button type="button" class="btn-primary" onclick="prcFermerFiche()">${ok ? 'Super !' : 'Jouer pour avancer'}</button>`);
 }
 function prcFicheHot(equipe, ouverte){
