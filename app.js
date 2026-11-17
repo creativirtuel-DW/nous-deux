@@ -1030,7 +1030,7 @@ function setupRewardsView(){
 
   $('#btn-reset-scores').addEventListener('click', () => {
     const ok = confirm(
-      "Ça va remettre les deux scores à 0, vider l'historique, vider les cartes en attente, réinitialiser les compteurs de passes et remettre l'Osmose à 0, oublier les questions Battle déjà posées, et annuler un pari « Jeu de société » ainsi qu'un Défi Photo en cours.\n\nLes cartes/paliers personnalisés et l'historique secret des paris ne sont PAS touchés.\n\nConfirmer la réinitialisation ?"
+      "Ça va remettre les deux scores à 0, vider l'historique, vider les cartes en attente, réinitialiser les compteurs de passes et remettre l'Osmose à 0, oublier les questions Battle déjà posées, et annuler un pari « Jeu de société » ainsi qu'un « T’as la date ? » en cours.\n\nLes cartes/paliers personnalisés et l'historique secret des paris ne sont PAS touchés.\n\nConfirmer la réinitialisation ?"
     );
     if(!ok) return;
     roomRef.update({
@@ -1260,7 +1260,7 @@ function renderHistory(){
   const wrap = $('#history-list');
   wrap.innerHTML = '';
 
-  const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Cap ou pas', distance:'🔥 Défi', photo:'📸 Défi Photo', battle:'⚔️ Battle', soiree:'🌙 Soirée guidée', qdj:'💭 Une pensée par jour' };
+  const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Cap ou pas', distance:'🔥 Défi', photo:'📸 T’as la date ?', battle:'⚔️ Battle', soiree:'🌙 Soirée guidée', qdj:'💭 Une pensée par jour' };
   const entries = state.history ? Object.values(state.history).sort((a,b)=> b.ts-a.ts).slice(0,50) : [];
 
   if(entries.length === 0){
@@ -1310,7 +1310,7 @@ function renderHistory(){
     if(tous.length){
       const sec = document.createElement('div');
       sec.className = 'jds-hist-section';
-      sec.innerHTML = `<h3 class="jds-hist-title">🔒 Gages de Défi Photo jamais révélés (${tous.length})</h3>`;
+      sec.innerHTML = `<h3 class="jds-hist-title">🔒 Gages de « T’as la date ? » jamais révélés (${tous.length})</h3>`;
       tous.forEach(g => {
         const d = new Date(g.ts);
         const dateStr = d.toLocaleDateString('fr-FR') + ' · ' + d.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});

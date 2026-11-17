@@ -126,7 +126,7 @@ function pdEnvoiBrut(dataUrl, month, year, gage, tire){
     pdGageOublier = [];
   }
   roomRef.update(updates);
-  notifyPartner('📸 Défi Photo', me.name + ' t' + String.fromCharCode(39) + 'envoie une photo à dater. 10 secondes pour la mémoriser !', 'photo');
+  notifyPartner('📸 T’as la date ?', me.name + ' t' + String.fromCharCode(39) + 'envoie une photo à dater. 10 secondes pour la mémoriser !', 'photo');
 }
 
 function pdCancel(){
@@ -183,18 +183,18 @@ function pdSubmit(month, year){
     const gk = pdArchiveGage(d, 'trouve', updates, pdLabel(month, year));
     const hk = db.ref('rooms/' + roomCode + '/history').push().key;
     updates['history/' + hk] = {
-      who: me.name, cat: 'photo', text: 'Défi Photo — ' + pdLabel(d.month, d.year),
+      who: me.name, cat: 'photo', text: 'T’as la date ? — ' + pdLabel(d.month, d.year),
       answer: month === null ? 'Pas de réponse' : pdLabel(month, year),
       pts: PD_POINTS, validated: true, ts: Date.now(), gageKey: gk || null
     };
     roomRef.update(updates);
-    notifyPartner('🎯 Défi Photo réussi', me.name + ' a trouvé la bonne date et te prend ' + PD_POINTS + ' points.', 'photo');
+    notifyPartner('🎯 T’as la date ? — date trouvée', me.name + ' a trouvé la bonne date et te prend ' + PD_POINTS + ' points.', 'photo');
   }else{
     pdRef().update({
       status: 'lost', photo: null,
       answer: month === null ? null : { month: month, year: year }
     });
-    notifyPartner('💔 Défi Photo perdu', me.name + ' s' + String.fromCharCode(39) + 'est trompé·e et choisit sa sanction…', 'photo');
+    notifyPartner('💔 T’as la date ? — date ratée', me.name + ' s' + String.fromCharCode(39) + 'est trompé·e et choisit sa sanction…', 'photo');
   }
 }
 
@@ -208,7 +208,7 @@ function pdChoosePoints(){
   updates['photoDefi'] = null;
   const hk = db.ref('rooms/' + roomCode + '/history').push().key;
   updates['history/' + hk] = {
-    who: me.name, cat: 'photo', text: 'Défi Photo — ' + pdLabel(d.month, d.year),
+    who: me.name, cat: 'photo', text: 'T’as la date ? — ' + pdLabel(d.month, d.year),
     answer: d.answer ? pdLabel(d.answer.month, d.answer.year) : 'Pas de réponse',
     comment: 'A choisi de perdre ' + PD_POINTS + ' points',
     pts: -PD_POINTS, validated: false, ts: Date.now(),
@@ -225,14 +225,14 @@ function pdChooseGage(){
   const updates = {};
   const ck = db.ref('rooms/' + roomCode + '/pendingCards').push().key;
   updates['pendingCards/' + ck] = {
-    by: me.id, cat: 'gage', text: '🎯 Gage du Défi Photo : ' + d.gage,
+    by: me.id, cat: 'gage', text: '🎯 Gage de « T’as la date ? » : ' + d.gage,
     pts: 0, status: 'drafting', answer: '', ts: Date.now(),
     pdGage: { author: d.by, deadline: Date.now() + PD_GAGE_MS }
   };
   updates['photoDefi'] = null;
   const hk = db.ref('rooms/' + roomCode + '/history').push().key;
   updates['history/' + hk] = {
-    who: me.name, cat: 'photo', text: 'Défi Photo — ' + pdLabel(d.month, d.year),
+    who: me.name, cat: 'photo', text: 'T’as la date ? — ' + pdLabel(d.month, d.year),
     answer: d.answer ? pdLabel(d.answer.month, d.answer.year) : 'Pas de réponse',
     comment: 'A choisi le gage', pts: 0, validated: false, ts: Date.now()
   };
@@ -314,7 +314,7 @@ function renderPhotoDefi(){
     body.innerHTML = ''
       + '<div class="jds-intro">'
       +   '<span class="jds-emoji">📸</span>'
-      +   '<h3 class="jds-title">Défi Photo</h3>'
+      +   '<h3 class="jds-title">T’as la date ?</h3>'
       +   '<p class="jds-sub">Envoie une photo à ' + escapeHtml(partnerName) + '. Elle s\'affichera <strong>10 secondes</strong>, puis il/elle aura <strong>1 minute</strong> pour deviner le mois et l\'année.</p>'
       + '</div>'
       + '<div class="jds-card">'
@@ -427,7 +427,7 @@ function renderPhotoDefi(){
     stopPdTicker();
     if(!changed) return;
     body.innerHTML = ''
-      + '<div class="jds-intro"><span class="jds-emoji">📸</span><h3 class="jds-title">Défi Photo</h3>'
+      + '<div class="jds-intro"><span class="jds-emoji">📸</span><h3 class="jds-title">T’as la date ?</h3>'
       +   '<p class="jds-sub">' + escapeHtml(senderName) + ' t\'a envoyé une photo. Tu l\'auras sous les yeux <strong>10 secondes</strong>, puis <strong>1 minute</strong> pour dire de quel mois et de quelle année elle date.</p></div>'
       + '<div class="jds-locked"><div class="jds-lock-icon">🕐</div><h4>Prêt·e ?</h4><p>Le chrono démarre dès que tu appuies.</p></div>'
       + '<button class="btn-primary" id="pd-ready">Je suis prêt·e — lancer les 10 s</button>';
