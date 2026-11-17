@@ -26,10 +26,9 @@ function evtCompteARebours(){
 function renderEvenement(){
   const el = document.getElementById('evt-banniere');
   if(!el) return;
-  const picker = document.getElementById('cat-picker');
   const d = evtCompteARebours();
-  // Masquée quand un panneau de jeu occupe l'écran, ou une fois la date passée.
-  if(!d || (picker && picker.style.display === 'none')){ el.style.display = 'none'; return; }
+  // Visible seulement sur l'accueil, et jusqu'à la date de l'événement.
+  if(!d || typeof accueilVisible !== 'function' || !accueilVisible()){ el.style.display = 'none'; return; }
   el.style.display = '';
   const html = '<span class="evt-ic">' + EVT.icone + '</span>'
     + '<span class="evt-txt"><small>Bientôt</small><strong>' + EVT.titre + '</strong></span>'

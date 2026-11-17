@@ -239,6 +239,7 @@ function render(){
   renderModeCouple();
   renderEvenement();
   renderQDJ();
+  renderPenseToi();
   renderBattleCards();
   renderRewards();
   renderHistory();
@@ -248,12 +249,24 @@ function render(){
   renderAdminLockButtons();
 }
 
+// Accueil (gros bouton « Jouer ») ou page des jeux (les 7 boutons) ?
+let jeuxOuvert = false;
+function panneauJeuOuvert(){ return jdsActive || photoActive || battleActive || soireeActive; }
+function ouvrirJeux(){ jeuxOuvert = true; render(); window.scrollTo(0, 0); }
+function fermerJeux(){ jeuxOuvert = false; render(); window.scrollTo(0, 0); }
+// Vrai quand l'accueil est affiché : ni page des jeux, ni panneau de jeu ouvert.
+function accueilVisible(){ return !jeuxOuvert && !panneauJeuOuvert(); }
+
 function renderPendingCard(){
   const catPicker = $('#cat-picker');
   const turnBanner = $('#turn-banner');
+  const jouerBtn = $('#jouer-btn');
+  const jeuxEntete = $('#jeux-entete');
 
-  // Quand le panneau "Jeu de société" est ouvert, on masque la pioche normale.
-  if(jdsActive || photoActive || battleActive || soireeActive){
+  // Quand un panneau de jeu est ouvert, on masque tout le reste.
+  if(panneauJeuOuvert()){
+    jouerBtn.style.display = 'none';
+    jeuxEntete.style.display = 'none';
     catPicker.style.display = 'none';
     turnBanner.style.display = 'none';
     $('#pending-to-validate-section').style.display = 'none';
@@ -268,8 +281,10 @@ function renderPendingCard(){
 
   const full = allPending.length >= MAX_PENDING;
 
-  catPicker.style.display = 'grid';
-  turnBanner.style.display = '';
+  jouerBtn.style.display = jeuxOuvert ? 'none' : '';
+  jeuxEntete.style.display = jeuxOuvert ? '' : 'none';
+  catPicker.style.display = jeuxOuvert ? 'grid' : 'none';
+  turnBanner.style.display = jeuxOuvert ? '' : 'none';
   // le bouton "Jeu de société" n'est jamais bloqué par la file d'attente
   $$('.cat-btn').forEach(b => { if(['jds','photo','battle','soiree'].indexOf(b.dataset.cat) === -1) b.classList.toggle('disabled', full); });
   turnBanner.textContent = full
@@ -577,6 +592,8 @@ function renderAdminLockButtons(){
 function setupTabs(){
   $$('.tab').forEach(tab => {
     tab.addEventListener('click', () => {
+      // Toucher « Jouer » en bas depuis la page des jeux ramène à l'accueil.
+      if(tab.dataset.view === 'view-play' && tab.classList.contains('active') && jeuxOuvert && !panneauJeuOuvert()) fermerJeux();
       $$('.tab').forEach(t=>t.classList.remove('active'));
       $$('.view').forEach(v=>v.classList.remove('active'));
       tab.classList.add('active');
@@ -587,6 +604,9 @@ function setupTabs(){
 
 // ====== VUE JEU ======
 function setupPlayView(){
+  $('#jouer-btn').addEventListener('click', ouvrirJeux);
+  $('#pt-tuile').addEventListener('click', ptToucherTuile);
+  $('#jeux-retour').addEventListener('click', fermerJeux);
   $$('.cat-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       if(btn.classList.contains('locked')){ mcSignalerVerrou(); return; }

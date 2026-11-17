@@ -1151,3 +1151,98 @@ main#views{ flex:1; min-height:0; position:relative; }
   background: rgba(20,8,12,0.55); color:#FFE3A3; font-size:10px; font-weight:700;
 }
 .evt-case b{ display:block; font-size:16px; line-height:1.1; color:#fff; font-weight:800; }
+
+/* ====== ACCUEIL : gros bouton « Jouer » + page des jeux ====== */
+.jouer-btn{
+  width:100%; max-width:430px; margin:4px 0 12px; padding:30px 22px; box-sizing:border-box;
+  display:flex; align-items:center; gap:16px; text-align:left; cursor:pointer;
+  font-family:inherit; color:#fff; border:0; border-radius:24px;
+  background: linear-gradient(135deg, #FF6B6B 0%, #E8234A 55%, #B5163A 100%);
+  box-shadow: 0 16px 36px -14px rgba(232,35,74,0.7), inset 0 1px 0 rgba(255,255,255,0.25);
+  transition: transform .14s;
+}
+.jouer-btn:active{ transform: scale(0.97); }
+.jouer-ic{
+  width:64px; height:64px; border-radius:50%; flex:0 0 auto; display:flex; align-items:center; justify-content:center;
+  background: rgba(255,255,255,0.2);
+}
+.jouer-ic svg{ width:30px; height:30px; margin-left:4px; }
+.jouer-txt{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+.jouer-txt strong{ font-size:30px; font-weight:800; letter-spacing:-0.01em; line-height:1.1; }
+.jouer-txt small{ font-size:13px; opacity:.85; font-weight:500; }
+
+.jeux-entete{ width:100%; max-width:430px; display:flex; align-items:center; gap:12px; margin:0 0 14px; }
+.jeux-titre{ margin:0; font-family:'Cormorant Garamond', Georgia, serif; font-style:italic; font-weight:500; font-size:30px; }
+
+/* Page des jeux : 7 boutons identiques, l'un sous l'autre. */
+.cat-picker{ grid-template-columns: 1fr; gap:10px; }
+.cat-picker .cat-btn, .cat-picker .cat-btn-jds, .cat-picker .cat-btn-photo, .cat-picker .cat-btn-soiree{
+  grid-column:auto; flex-direction:row; justify-content:flex-start; align-items:center; gap:14px;
+  padding:13px 44px 13px 14px; border-radius:18px;
+  background: linear-gradient(180deg, var(--surface-2), var(--surface)); border:1px solid var(--line-2);
+}
+.cat-picker .cat-btn::after{
+  content:''; position:absolute; right:18px; top:50%; width:8px; height:8px; margin-top:-5px;
+  border-right:2px solid var(--muted); border-top:2px solid var(--muted); transform: rotate(45deg);
+}
+.cat-picker .cat-btn .cat-ic{ width:42px; height:42px; background: rgba(255,107,107,0.12); color: var(--coral); }
+.cat-picker .cat-btn span{ font-size:16px; font-weight:700; text-align:left; }
+.cat-picker .cat-btn .cat-lock{ top:50%; right:38px; transform: translateY(-50%); font-size:11px; }
+
+/* ====== « JE PENSE À TOI » ====== */
+.pt-tuile{
+  width:100%; max-width:430px; margin:0 0 18px; padding:12px 16px; box-sizing:border-box;
+  display:flex; align-items:center; gap:12px; text-align:left; cursor:pointer; font-family:inherit; color: var(--cream);
+  background: linear-gradient(135deg, rgba(255,160,122,0.16), var(--surface) 80%);
+  border:1px solid rgba(255,160,122,0.32); border-radius:18px; box-shadow: var(--shadow-sm);
+}
+.pt-tuile:active{ transform: scale(0.98); }
+.pt-tuile-ic{ font-size:24px; flex:0 0 auto; }
+.pt-tuile-txt{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.pt-tuile-txt strong{ font-size:16px; font-weight:800; }
+.pt-tuile-txt small{ font-size:12px; color: var(--muted); }
+.pt-tuile.pt-nouvelle{ animation: qdjClignote 1.6s ease-in-out infinite; }
+.pt-tuile.pt-nouvelle small{ color: var(--peach); font-weight:700; }
+
+#pt-plein, #pt-recu{
+  position:fixed; inset:0; z-index:550; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  background:
+    radial-gradient(100% 55% at 50% 0%, rgba(255,160,122,0.22), transparent 60%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+  animation: qdjEntre .3s ease both;
+}
+.pt-corps{
+  max-width:430px; margin:0 auto; box-sizing:border-box; min-height:100%;
+  display:flex; flex-direction:column; justify-content:center; text-align:center;
+  padding: calc(env(safe-area-inset-top, 0px) + 70px) 22px calc(env(safe-area-inset-bottom, 0px) + 30px);
+}
+.pt-ic{ font-size:54px; line-height:1; margin-bottom:10px; animation: spBat 1.6s ease .2s infinite; }
+.pt-titre{ font-family:'Cormorant Garamond', Georgia, serif; font-style:italic; font-weight:500; font-size:34px; margin:0 0 6px; }
+.pt-sous{ color: var(--muted); font-size:14px; margin:0 0 18px; }
+.pt-champ{
+  width:100%; box-sizing:border-box; resize:none; min-height:120px;
+  background: rgba(0,0,0,0.28); border:1px solid var(--line); border-radius:16px; padding:14px 16px;
+  color: var(--cream); font-size:16px; font-family:inherit; outline:none; text-align:left;
+}
+.pt-champ:focus{ border-color: var(--coral); box-shadow: 0 0 0 4px rgba(255,107,107,0.16); }
+.pt-photo-btn{
+  width:100%; margin:14px 0 0; padding:15px; border-radius:16px; cursor:pointer; font-family:inherit;
+  font-size:15px; font-weight:700; color: var(--cream);
+  background: rgba(255,255,255,0.05); border:1px dashed rgba(255,160,122,0.45);
+}
+.pt-apercu{ margin-top:14px; }
+.pt-apercu img{ width:100%; max-height:300px; object-fit:cover; border-radius:16px; display:block; }
+.pt-apercu-actions{ display:flex; gap:10px; margin-top:10px; }
+.pt-apercu-actions .btn-ghost{ flex:1; }
+.pt-avert{ font-size:12.5px; color: var(--muted); line-height:1.5; margin:14px 0 18px; }
+.pt-avert b{ color: var(--peach); }
+.pt-envoyer{ width:100%; }
+.pt-envoyer:disabled{ opacity:.4; }
+.pt-message{
+  background: var(--surface); border:1px solid var(--line-2); border-radius:18px; padding:18px;
+  font-size:17px; line-height:1.55; white-space:pre-wrap; text-align:left; margin:8px 0 6px;
+}
+.pt-vue{ position:relative; margin:14px 0 18px; }
+.pt-vue img{ width:100%; border-radius:16px; display:block; }
+.pt-vue .pc-chrono{ position:absolute; top:10px; right:10px; z-index:1; }
+.pt-efface{ color: var(--muted); font-style:italic; margin:16px 0 18px; }
