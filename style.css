@@ -1345,3 +1345,5 @@ main#views{ flex:1; min-height:0; position:relative; }
 #prc-fiche p b{ color: var(--cream); }
 .prc-ligne{ display:flex; justify-content:space-between; font-size:13px; padding:9px 12px; background: var(--surface-2); border-radius:12px; margin-bottom:6px; }
 #prc-fiche .btn-primary{ width:100%; margin-top:10px; }
+
+.reward-autre{ font-size:11.5px; color: var(--muted-2); margin-top:3px; }
