@@ -212,8 +212,7 @@ function renderQDJ(){
 
   // ---- la case de l'accueil ----
   // Masquée quand un panneau de jeu (soirée, battle…) occupe l'écran.
-  const picker = $('#cat-picker');
-  tuile.style.display = (picker && picker.style.display === 'none') ? 'none' : '';
+  tuile.style.display = accueilVisible() ? '' : 'none';
   const etat = (moi && lui) ? 'devoile' : (moi && !qdjEdition) ? 'attente' : 'a-toi';
   const sousTitre = etat === 'devoile' ? 'Vos réponses sont dévoilées 💗 Touche pour les lire.'
     : etat === 'attente' ? 'Touche pour la relire'

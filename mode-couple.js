@@ -7,7 +7,7 @@
  * même si les scores redescendent.
  *
  * Tant qu'il est verrouillé :
- *   · les tuiles Cap ou pas, Soirée guidée et Défi Photo sont grisées (pastille 🔥) ;
+ *   · les tuiles Cap ou pas et Soirée guidée sont grisées (pastille 🔥) ;
  *   · la pioche ne sort que les cartes sans « adulte:true » (cards-data.js) ;
  *   · la Battle ne tire qu'UNE question « coquin » (au lieu de 2) ;
  *   · la question du jour saute la catégorie « coquin ».
@@ -17,7 +17,7 @@
  */
 
 const MC_SEUIL = 300;
-const MC_TUILES = ['gage', 'soiree', 'photo'];   // tuiles entièrement réservées au mode HOT (Cap ou pas, Soirée guidée, Défi Photo)
+const MC_TUILES = ['gage', 'soiree'];   // tuiles entièrement réservées au mode HOT (Cap ou pas, Soirée guidée)
 
 let mcEcritureEnCours = false;
 
@@ -82,7 +82,7 @@ function renderMcPlein(){
   const pct = Math.min(100, Math.round(total / MC_SEUIL * 100));
   const contenu = mcPleinOuvert === 'debloque'
     ? '<div class="mc-plein-ic">🔥</div><h2>Mode HOT débloqué !</h2>'
-      + '<p>Cap ou pas, Soirée guidée, Défi Photo, cartes et questions coquines sont maintenant ouverts.</p>'
+      + '<p>Cap ou pas, Soirée guidée, cartes et questions coquines sont maintenant ouverts.</p>'
       + '<button class="mc-plein-btn" data-mc-fermer>C’est parti</button>'
     : '<div class="mc-plein-ic">🔥</div><h2>Mode HOT à débloquer</h2>'
       + '<p>Débloquez-le en atteignant au minimum <b>' + MC_SEUIL + ' points</b> à deux.</p>'
@@ -147,9 +147,8 @@ function renderModeCouple(){
   // Plus d'encadré sur l'accueil : seul le dev mod y garde ses outils.
   const b = $('#mc-bandeau');
   if(!b) return;
-  const picker = $('#cat-picker');
   const admin = isAdminUnlocked();
-  if(!admin || (picker && picker.style.display === 'none')){ b.style.display = 'none'; return; }
+  if(!admin || !accueilVisible()){ b.style.display = 'none'; return; }
 
   const m = (state && state.modeCouple) || {};
   b.style.display = '';
