@@ -68,7 +68,7 @@ function qdjMs(jour){ return Date.UTC(+jour.slice(0, 4), +jour.slice(5, 7) - 1, 
 
 function qdjVeille(jour){ return new Date(qdjMs(jour) - 86400000).toISOString().slice(0, 10); }
 
-// ⚠️ Même algorithme que rotation() dans worker/push-worker.js — garder les deux identiques.
+// La rotation n'existe plus que dans l'appli : le Worker n'envoie que des rappels neutres, sans la question.
 // Mode couple verrouillé : la catégorie « coquin » est retirée de la rotation.
 // (Le Worker, lui, ne connaît pas le mode : à revoir avant de réactiver ses envois.)
 function qdjRotation(){
