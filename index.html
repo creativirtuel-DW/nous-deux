@@ -18,7 +18,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
-<link rel="stylesheet" href="style.css?v=61">
+<link rel="stylesheet" href="style.css?v=63">
 </head>
 <body>
 
@@ -61,10 +61,37 @@
       if(fini) return; fini = true;
       sp.classList.add('sp-sortie');
       setTimeout(function(){ if(sp.parentNode) sp.parentNode.removeChild(sp); }, 650);
+      // Juste après l'animation : le message de bienvenue.
+      // (sauf si « Ne plus afficher » a été coché sur ce téléphone)
+      var masque = false;
+      try{ masque = localStorage.getItem('nousdeux_bienvenue_masquee') === '1'; }catch(e){}
+      var bv = document.getElementById('bienvenue');
+      if(bv && !masque) setTimeout(function(){ bv.style.display = ''; }, 350);
     }
     setTimeout(fermer, 7000);   // la phrase reste lisible ~3,5 s une fois complète
     sp.addEventListener('click', fermer);
   })();
+</script>
+
+<!-- MESSAGE DE BIENVENUE, à chaque ouverture, après l'animation -->
+<div id="bienvenue" style="display:none;">
+  <div class="bv-carte">
+    <div class="bv-ic">💞</div>
+    <p>Ce jeu est développé par l’IA. Les jeux proposés n’ont qu’un seul but : <b>s’amuser en couple !</b></p>
+    <p>La confidentialité est maximale : vos échanges ne sont visibles que par vous deux, et les photos ne s’affichent que quelques secondes avant de disparaître.</p>
+    <p>Le contenu du jeu sera enrichi chaque semaine, pour que chaque jour soit un nouveau jour de couple !</p>
+    <p class="bv-fin">Lâchez prise et amusez-vous !</p>
+    <label class="bv-case"><input type="checkbox" id="bv-masquer"> Ne plus afficher</label>
+    <button type="button" class="btn-primary" onclick="bvFermer()">C’est parti</button>
+  </div>
+</div>
+
+<script>
+  function bvFermer(){
+    var c = document.getElementById('bv-masquer');
+    if(c && c.checked){ try{ localStorage.setItem('nousdeux_bienvenue_masquee', '1'); }catch(e){} }
+    document.getElementById('bienvenue').style.display = 'none';
+  }
 </script>
 
 <!-- CARTE PIOCHÉE EN PLEIN ÉCRAN (carte-plein.js) -->
@@ -173,10 +200,16 @@
         <!-- Accueil : un seul gros bouton qui ouvre la page des jeux -->
         <button type="button" id="jouer-btn" class="jouer-btn" style="display:none;">
           <span class="jouer-ic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.2v13.6c0 .8.9 1.3 1.6.8l10.2-6.8c.6-.4.6-1.2 0-1.6L9.6 4.4C8.9 3.9 8 4.4 8 5.2z"/></svg></span>
-          <span class="jouer-txt"><strong>Jouer</strong><small>Question, Défi, Battle, Défi Photo…</small></span>
+          <span class="jouer-txt"><strong>Jouer</strong><small>Question, Défi, Battle et plus…</small></span>
         </button>
-        <!-- « Je pense à toi » : demi-case sous « Jouer » (pense-toi.js) -->
-        <button type="button" id="pt-tuile" class="pt-tuile" style="display:none;"></button>
+        <!-- Deux cases carrées sous « Jouer » : « Je pense à toi » (pense-toi.js) et une case à venir -->
+        <div id="acc-duo" class="acc-duo" style="display:none;">
+          <button type="button" id="pt-tuile" class="pt-tuile"></button>
+          <button type="button" class="acc-dev" disabled>
+            <span class="acc-dev-ic">🛠️</span>
+            <span class="acc-dev-txt">En cours de dev.</span>
+          </button>
+        </div>
         <!-- Page des jeux -->
         <div class="jeux-entete" id="jeux-entete" style="display:none;">
           <button type="button" class="jds-back" id="jeux-retour">← Accueil</button>
@@ -205,7 +238,7 @@
             </button>
             <button class="cat-btn cat-btn-photo" data-cat="photo">
               <span class="cat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h1.7l1.1-2h5.4l1.1 2h3.7A2.5 2.5 0 0 1 21 8.5v9A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5v-9z"/><circle cx="12" cy="13" r="3.6"/></svg></span>
-              <span>Défi Photo</span>
+              <span>T’as la date ?</span>
             </button>
             <button class="cat-btn cat-btn-jds" data-cat="jds">
               <span class="cat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><circle cx="8.6" cy="8.6" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.4" cy="8.6" r="1.15" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="8.6" cy="15.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.4" cy="15.4" r="1.15" fill="currentColor" stroke="none"/></svg></span>
@@ -233,7 +266,7 @@
             <div class="jds-intro">
               <span class="jds-emoji">♟️</span>
               <h3 class="jds-title">Jeu de société</h3>
-              <p class="jds-sub">Chacun mise un gain secret. Le gagnant de la vraie partie remporte le sien !</p>
+              <p class="jds-sub">Faites une partie d’un jeu de société classique que vous aimez. Avant de commencer, chacun mise un gain secret : le gagnant du jeu remporte le sien !</p>
             </div>
             <div id="jds-body"></div>
           </div>
@@ -362,8 +395,8 @@
 
     <nav class="tabbar">
       <button class="tab active" data-view="view-play">
-        <span class="tab-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7.5" width="12.5" height="13.5" rx="2.6"/><path d="M8 7.5V6.2A2.2 2.2 0 0 1 10.2 4h9A1.8 1.8 0 0 1 21 5.8v10.4a2.2 2.2 0 0 1-2.2 2.2h-1.3"/></svg></span>
-        Jouer
+        <span class="tab-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10.5 12 3.5l8.5 7"/><path d="M5.5 9v10.5a1 1 0 0 0 1 1H10v-6h4v6h3.5a1 1 0 0 0 1-1V9"/></svg></span>
+        Accueil
       </button>
       <button class="tab" data-view="view-rewards">
         <span class="tab-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v4a5 5 0 0 1-10 0V4z"/><path d="M7 5H4.5v1A3.5 3.5 0 0 0 8 9.5M17 5h2.5v1A3.5 3.5 0 0 1 16 9.5"/><path d="M12 13v3.5M8.5 20h7M9.5 20l.6-3.5h3.8L14.5 20"/></svg></span>
@@ -387,12 +420,12 @@
 <script src="cards-data.js?v=17"></script>
 <script src="battle-data.js?v=4"></script>
 <script src="gages-data.js?v=1"></script>
-<script src="app.js?v=42"></script>
+<script src="app.js?v=43"></script>
 <script src="soiree.js?v=9"></script>
 <script src="photo-carte.js?v=1"></script>
-<script src="photo-defi.js?v=8"></script>
+<script src="photo-defi.js?v=9"></script>
 <script src="evenement.js?v=3"></script>
-<script src="pense-toi.js?v=1"></script>
+<script src="pense-toi.js?v=2"></script>
 <script src="carte-plein.js?v=3"></script>
 <script src="mode-couple.js?v=5"></script>
 <script src="qdj-data.js?v=1"></script>

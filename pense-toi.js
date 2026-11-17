@@ -204,14 +204,15 @@ function renderPenseeRecue(forcer){
 // ---------- rendu (appelé par render() à chaque mise à jour) ----------
 function renderPenseToi(){
   const tuile = document.getElementById('pt-tuile');
+  const duo = document.getElementById('acc-duo');
   if(!tuile || !state || !me) return;
   const recues = ptRecues();
-  tuile.style.display = accueilVisible() ? '' : 'none';
+  if(duo) duo.style.display = accueilVisible() ? '' : 'none';
   const nouvelle = recues.length > 0;
   tuile.classList.toggle('pt-nouvelle', nouvelle);
   const sous = nouvelle
     ? (recues.length > 1 ? recues.length + ' pensées de ' : 'Une pensée de ') + escapeHtml(ptNomAutre()) + ' t’attend'
-    : 'Un mot, une photo, maintenant';
+    : 'Un mot, une photo';
   const html = '<span class="pt-tuile-ic">💌</span><span class="pt-tuile-txt"><strong>Je pense à toi</strong><small>' + sous + '</small></span>';
   if(tuile.innerHTML !== html) tuile.innerHTML = html;
 
