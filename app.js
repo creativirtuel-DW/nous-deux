@@ -240,6 +240,7 @@ function render(){
   renderEvenement();
   renderQDJ();
   renderPenseToi();
+  renderParcours();
   renderBattleCards();
   renderRewards();
   renderHistory();
@@ -598,6 +599,7 @@ function setupTabs(){
       $$('.view').forEach(v=>v.classList.remove('active'));
       tab.classList.add('active');
       $('#'+tab.dataset.view).classList.add('active');
+      if(tab.dataset.view === 'view-parcours') prcOuvert();
     });
   });
 }

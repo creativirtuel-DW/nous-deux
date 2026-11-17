@@ -18,7 +18,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
-<link rel="stylesheet" href="style.css?v=63">
+<link rel="stylesheet" href="style.css?v=64">
 </head>
 <body>
 
@@ -93,6 +93,10 @@
     document.getElementById('bienvenue').style.display = 'none';
   }
 </script>
+
+<!-- FICHE D'UNE ÉTAPE DU PARCOURS (parcours.js) -->
+<div id="prc-voile" onclick="prcFermerFiche()"></div>
+<div id="prc-fiche"></div>
 
 <!-- CARTE PIOCHÉE EN PLEIN ÉCRAN (carte-plein.js) -->
 <div id="carte-plein" style="display:none;">
@@ -308,6 +312,20 @@
       </div>
 
       <!-- VUE PALIERS / RÉCOMPENSES -->
+      <!-- VUE PARCOURS (parcours.js) -->
+      <div id="view-parcours" class="view">
+        <div class="prc-entete">
+          <h2>Votre parcours</h2>
+          <div class="prc-duel" id="prc-duel"></div>
+          <div class="prc-hotbar">
+            <div class="prc-hot-l"><span>🔥 Porte HOT</span><span id="prc-hot-txt"></span></div>
+            <div class="prc-jauge"><div id="prc-hot-jauge"></div></div>
+          </div>
+        </div>
+        <div class="prc-monde" id="prc-monde"></div>
+        <button type="button" class="prc-moi" onclick="prcAllerMoi(true)" title="Mon pion" aria-label="Aller à mon pion">📍</button>
+      </div>
+
       <div id="view-rewards" class="view">
         <div class="view-header">
           <h2>Paliers &amp; récompenses</h2>
@@ -398,6 +416,10 @@
         <span class="tab-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10.5 12 3.5l8.5 7"/><path d="M5.5 9v10.5a1 1 0 0 0 1 1H10v-6h4v6h3.5a1 1 0 0 0 1-1V9"/></svg></span>
         Accueil
       </button>
+      <button class="tab" data-view="view-parcours">
+        <span class="tab-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2"/><path d="M8 19h6.5a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7H16"/><path d="M16 2.5v6M16 2.5l4 1.6-4 1.6"/></svg></span>
+        Parcours
+      </button>
       <button class="tab" data-view="view-rewards">
         <span class="tab-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v4a5 5 0 0 1-10 0V4z"/><path d="M7 5H4.5v1A3.5 3.5 0 0 0 8 9.5M17 5h2.5v1A3.5 3.5 0 0 1 16 9.5"/><path d="M12 13v3.5M8.5 20h7M9.5 20l.6-3.5h3.8L14.5 20"/></svg></span>
         Paliers
@@ -420,7 +442,7 @@
 <script src="cards-data.js?v=17"></script>
 <script src="battle-data.js?v=4"></script>
 <script src="gages-data.js?v=1"></script>
-<script src="app.js?v=43"></script>
+<script src="app.js?v=44"></script>
 <script src="soiree.js?v=9"></script>
 <script src="photo-carte.js?v=1"></script>
 <script src="photo-defi.js?v=9"></script>
@@ -428,6 +450,7 @@
 <script src="pense-toi.js?v=2"></script>
 <script src="carte-plein.js?v=3"></script>
 <script src="mode-couple.js?v=5"></script>
+<script src="parcours.js?v=1"></script>
 <script src="qdj-data.js?v=1"></script>
 <script src="qdj.js?v=7"></script>
 <script src="push.js?v=3"></script>
