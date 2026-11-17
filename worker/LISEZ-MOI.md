@@ -83,8 +83,11 @@ Les erreurs éventuelles se lisent dans l'onglet **Logs** du Worker
 
 ## 6. Question du jour (ajout du 09/11/2026)  ✅ configuré le 09/11/2026
 
-Le Worker envoie la question du jour à **10 h** et relance à **20 h** celui ou
-celle qui n'a pas répondu (heure de Paris). Il lui faut une petite mémoire
+Le Worker envoie un **rappel** « Une pensée par jour » à **10 h** et relance à
+**20 h** celui ou celle qui n'a pas répondu (heure de Paris). Depuis le
+17/11/2026, la notification ne contient JAMAIS la question (texte neutre :
+« Ta pensée du jour t'attend… ») : le Worker ne lit plus `qdj-data.js`, c'est
+l'appli seule qui choisit la question, en tenant compte du Mode HOT. Il lui faut une petite mémoire
 (Cloudflare **KV**) et un réveil (**Cron Trigger**). Tout reste gratuit.
 
 1. **Créer la mémoire** : menu de gauche **Storage & Databases → KV** →

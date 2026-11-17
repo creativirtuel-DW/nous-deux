@@ -5,8 +5,10 @@
  * (RFC 8291, aes128gcm), signe la requête avec la clé VAPID (RFC 8292)
  * et la transmet au service de push d'Apple/Google.
  *
- * Il envoie aussi la QUESTION DU JOUR à 10 h et la relance de 20 h (heure de
- * Paris) grâce à un déclencheur Cron. Pour ça il retient, dans une mémoire
+ * Il envoie aussi le rappel « Une pensée par jour » à 10 h et la relance de
+ * 20 h (heure de Paris) grâce à un déclencheur Cron. Ces messages ne
+ * contiennent JAMAIS la question : c'est l'appli qui la choisit (en tenant
+ * compte du Mode HOT) et ne la montre qu'une fois ouverte. Pour ça il retient, dans une mémoire
  * Cloudflare KV, les abonnements des deux joueurs et qui a répondu — mais il
  * ne lit jamais Firebase. La clé privée VAPID ne quitte jamais Cloudflare.
  *
@@ -148,10 +150,8 @@ async function envoyerPush(sub, payloadObj, env){
 //   sub:<room>:<p1|p2>        → { sub, nom }    abonnement push de chaque joueur
 //   rep:<room>:<jour>:<p1|p2> → '1'             « a répondu », effacé au bout de 3 jours
 // Il ne lit jamais Firebase : c'est l'appli qui le tient au courant.
-// La banque de questions est le fichier public qdj-data.js de l'appli,
-// le même que celui que lit le téléphone : les deux tombent sur la même question.
+// Il ne connaît pas la question du jour : il n'envoie que des rappels neutres.
 
-const DATA_URL = 'https://creativirtuel-dw.github.io/nous-deux/qdj-data.js';
 const HEURE_MATIN = 10;   // heure de Paris de la question
 const HEURE_SOIR  = 20;   // heure de Paris de la relance
 
@@ -167,36 +167,6 @@ function paris(date){
 // Le « jour » de la question court de 10 h à 10 h le lendemain.
 function jourQDJ(date){
   return paris(new Date(date.getTime() - HEURE_MATIN * 3600 * 1000)).jour;
-}
-
-function numeroJour(jour, debut){
-  const ms = s => Date.UTC(+s.slice(0, 4), +s.slice(5, 7) - 1, +s.slice(8, 10));
-  return Math.round((ms(jour) - ms(debut)) / 86400000);
-}
-
-// Ordre de passage : les catégories alternent, chacune avance dans l'ordre du fichier.
-// ⚠️ Même algorithme que qdjRotation() dans qdj.js (appli) — garder les deux identiques.
-function rotation(data){
-  const lots = {};
-  data.ordre.forEach(c => { lots[c] = []; });
-  data.questions.forEach(q => { if(lots[q.cat]) lots[q.cat].push(q); });
-  const out = [];
-  const max = Math.max(...data.ordre.map(c => lots[c].length));
-  for(let i = 0; i < max; i++) data.ordre.forEach(c => { if(lots[c][i]) out.push(lots[c][i]); });
-  return out;
-}
-
-function questionDuJour(data, jour){
-  const rot = rotation(data);
-  const n = numeroJour(jour, data.debut);
-  return rot[((n % rot.length) + rot.length) % rot.length];
-}
-
-async function chargerBanque(){
-  const r = await fetch(DATA_URL + '?t=' + Date.now(), { cf: { cacheTtl: 0 } });
-  if(!r.ok) throw new Error('banque introuvable (' + r.status + ')');
-  const texte = await r.text();
-  return JSON.parse(texte.split('/*JSON*/')[1].split('/*FIN*/')[0]);
 }
 
 // Tous les joueurs inscrits, regroupés par room : { room: { p1:{sub,nom}, p2:{…} } }
@@ -216,10 +186,11 @@ async function listerInscrits(env){
   return rooms;
 }
 
-function messageMatin(q){
+// Rappel neutre : la question n'apparaît jamais dans la notification.
+function messageMatin(){
   return {
     title: '💭 Une pensée par jour',
-    body: q.cat === 'coquin' ? 'Une question coquine t\'attend… 😏 Réponds en secret.' : q.q,
+    body: 'Ta pensée du jour t\'attend… Touche pour la découvrir.',
     tag: 'qdj', url: './index.html'
   };
 }
@@ -246,8 +217,6 @@ async function envoyerOuPurger(env, room, joueur, inscrit, payload){
 async function tournee(env, moment, cible){
   const maintenant = new Date();
   const jour = jourQDJ(maintenant);
-  const data = await chargerBanque();
-  const q = questionDuJour(data, jour);
   const rooms = await listerInscrits(env);
   const bilan = [];
 
@@ -259,7 +228,7 @@ async function tournee(env, moment, cible){
       if(!inscrit) continue;
 
       if(moment === 'matin'){
-        bilan.push([joueur, await envoyerOuPurger(env, room, joueur, inscrit, messageMatin(q))]);
+        bilan.push([joueur, await envoyerOuPurger(env, room, joueur, inscrit, messageMatin())]);
       }else{
         const autre = joueur === 'p1' ? 'p2' : 'p1';
         const moi  = await env.QDJ.get('rep:' + room + ':' + jour + ':' + joueur);
@@ -270,7 +239,7 @@ async function tournee(env, moment, cible){
       }
     }
   }
-  return { jour, question: q && q.id, bilan };
+  return { jour, bilan };
 }
 
 // ---------- point d'entrée ----------
