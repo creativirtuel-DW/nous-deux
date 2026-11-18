@@ -11,9 +11,16 @@
  * Banque : plaisirs-data.js (GÉNÉRÉ depuis Plaisirs-Intimes.xlsx, voir outils/).
  * Anti-répétition partagée : rooms/$room/plaisirsVus/<questions|defis>/<id> = true,
  * remis à zéro quand toute la catégorie est sortie.
+ *
+ * Passes : chacun peut PASSER 5 cartes par jour (questions + défis confondus,
+ * jour civil Paris) → rooms/$room/plaisirsPasses/<pid>/<AAAA-MM-JJ> = nombre.
+ * Au-delà, un pop-up demande d'accepter de perdre PI_MALUS points par passe.
+ * « C'est fait » (carte réalisée) ne compte pas comme une passe.
  */
 const PI_ACTIF = false;
 const PI_SEUIL = 250;          // début du monde 3 « Fusionnels » (parcours.js)
+const PI_PASSES = 5;           // passes gratuites par jour
+const PI_MALUS = 20;           // points perdus par passe au-delà
 
 let piOuvert = false;          // plein écran ouvert
 let piCarte = null;            // { mode, id, t } carte affichée
@@ -73,10 +80,51 @@ function piDessiner(){
     + '<div class="pi-carte-type">' + (q ? '💬 Question' : '🔥 Défi') + '</div>'
     + '<p class="pi-carte-texte">' + escapeHtml(piCarte.t) + '</p>'
     + '<div class="pi-carte-pied">Plaisirs Intimes</div></div>'
-    + '<button type="button" class="pi-btn" data-pi-autre>' + (q ? 'Une autre question' : 'Un autre défi') + '</button>'
+    + '<button type="button" class="pi-btn" data-pi-fait>' + (q ? '✓ J’ai répondu · question suivante' : '✓ Défi réalisé · défi suivant') + '</button>'
+    + '<button type="button" class="pi-btn ghost" data-pi-passer>' + (q ? 'Passer cette question' : 'Passer ce défi') + ' <small>' + piTextePasses() + '</small></button>'
     + '<button type="button" class="pi-btn ghost" data-pi-retour>Changer de jeu</button>';
-  c.querySelector('[data-pi-autre]').onclick = () => piTirer(piCarte.mode);
-  c.querySelector('[data-pi-retour]').onclick = () => { piCarte = null; piDessiner(); };
+  c.querySelector('[data-pi-fait]').onclick = () => { piCarte.fait = true; piTirer(piCarte.mode); };
+  c.querySelector('[data-pi-passer]').onclick = () => piPasser(() => piTirer(piCarte.mode));
+  // Changer de jeu sans avoir fait la carte = passer aussi.
+  c.querySelector('[data-pi-retour]').onclick = () => {
+    if(piCarte.fait) { piCarte = null; piDessiner(); return; }
+    piPasser(() => { piCarte = null; piDessiner(); });
+  };
+}
+
+// ---------- passes (5 par jour, puis malus) ----------
+function piJour(){ return typeof qdjParis === 'function' ? qdjParis(new Date()).jour : new Date().toISOString().slice(0, 10); }
+function piNbPasses(){
+  const p = state && state.plaisirsPasses && state.plaisirsPasses[me.id];
+  return (p && p[piJour()]) || 0;
+}
+function piTextePasses(){
+  const reste = PI_PASSES - piNbPasses();
+  return reste > 0 ? '(' + reste + ' restante' + (reste > 1 ? 's' : '') + ' aujourd’hui)' : '(−' + PI_MALUS + ' pts)';
+}
+function piPasser(suite){
+  if(piNbPasses() < PI_PASSES){
+    roomRef.child('plaisirsPasses/' + me.id + '/' + piJour()).transaction(n => (n || 0) + 1);
+    suite();
+    return;
+  }
+  // Plus de passe gratuite : on demande l'accord pour perdre des points.
+  const el = ptEcran('pi-malus');
+  el.className = 'env-voile pi-voile';
+  el.innerHTML = '<div class="env-pop pi-pop"><div class="env-pop-ic">⚠️</div><h2>Plus de passe gratuite</h2>'
+    + '<p>Tu as déjà passé <b>' + PI_PASSES + ' cartes</b> aujourd’hui.</p>'
+    + '<p>Si tu passes encore, tu acceptes de <b>perdre ' + PI_MALUS + ' points</b>.</p>'
+    + '<button type="button" class="btn-primary" data-pi-relever>Je relève le défi 🔥</button>'
+    + '<button type="button" class="btn-ghost" data-pi-accepte>Je passe quand même (−' + PI_MALUS + ' pts)</button></div>';
+  el.querySelector('[data-pi-relever]').onclick = () => el.remove();
+  el.querySelector('[data-pi-accepte]').onclick = () => {
+    el.remove();
+    roomRef.child('plaisirsPasses/' + me.id + '/' + piJour()).transaction(n => (n || 0) + 1);
+    roomRef.child('scores/' + me.id).transaction(sc => (sc || 0) - PI_MALUS);
+    const hk = roomRef.child('history').push().key;
+    roomRef.child('history/' + hk).set({ who: me.name, cat: 'plaisirs', text: 'Plaisirs Intimes — carte passée', pts: -PI_MALUS, validated: true, ts: Date.now() });
+    suite();
+  };
 }
 
 function piTirer(mode){
