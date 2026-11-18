@@ -1548,3 +1548,5 @@ main#views{ flex:1; min-height:0; position:relative; }
 .prc-cle.prc-pi{ background: linear-gradient(135deg,#C8102E,#FF6A2B); border-color:#FFB49A; }
 .pi-tuile{ flex:0 0 auto; min-height:78px; }
 .pi-corps{ min-height:100%; display:flex; flex-direction:column; justify-content:center; }
+.env-manque{ list-style:none; padding:0; margin:0 0 12px; display:flex; flex-direction:column; gap:6px; }
+.env-manque li{ padding:9px 12px; border-radius:12px; background: rgba(255,255,255,.06); border:1px solid var(--line-2); font-weight:700; color: var(--cream); }

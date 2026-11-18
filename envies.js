@@ -422,7 +422,16 @@ function envOuvrirListe(){
   envDessiner();
 }
 
+// Thèmes où je n'ai encore écrit aucune envie.
+function envThemesVides(){
+  const items = (envListe && envListe.items) || [];
+  return ENV_THEMES.filter(th => !items.some(it => it.cat === th.id));
+}
+
 function envFermer(){
+  // Blocage : impossible de quitter sans au moins une envie dans chaque thème.
+  const vides = envListe ? envThemesVides() : [];
+  if(vides.length){ envBlocage(vides); return; }
   // On referme le coffre : il faudra le mot de passe la prochaine fois.
   envListe = null; envEmpreintes = {};
   const el = document.getElementById('env-plein');
@@ -503,6 +512,21 @@ async function envRetirer(id){
   envListe.items = envListe.items.filter(it => it.id !== id);
   await envSauver();
   envDessiner();
+}
+
+function envBlocage(vides){
+  const el = ptEcran('env-blocage');
+  el.className = 'env-voile';
+  el.innerHTML = '<div class="env-pop"><div class="env-pop-ic">✍️</div><h2>Encore un petit effort !</h2>'
+    + '<p>Pour quitter ta liste, écris <b>au moins une envie dans chaque thème</b>.</p>'
+    + '<p>Il te manque :</p><ul class="env-manque">'
+    + vides.map(th => '<li>' + th.ic + ' ' + escapeHtml(th.nom) + '</li>').join('') + '</ul>'
+    + '<button type="button" class="btn-primary" data-env-ok>Je complète</button></div>';
+  el.querySelector('[data-env-ok]').onclick = () => {
+    el.remove();
+    const c = document.querySelector('#env-corps [data-champ="' + vides[0].id + '"]');
+    if(c){ c.scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => c.focus(), 350); }
+  };
 }
 
 function envAlerteImmediate(){
