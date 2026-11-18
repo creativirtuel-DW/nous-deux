@@ -117,10 +117,10 @@ async function envPublier(){
   }
   const empreintes = Object.keys(envEmpreintes);
   // Nouvelles envies communes créées par CE changement (ajout, ou nouvelle analyse du sens) ?
-  const e = (state && state.envies) || {};
+  const e = (state && state.enviesEmpreintes) || {};
   const avant = new Set(Array.isArray(e[me.id]) ? e[me.id] : Object.values(e[me.id] || {}));
   const autre = new Set(Array.isArray(e[envAutreId()]) ? e[envAutreId()] : Object.values(e[envAutreId()] || {}));
-  const neuves = liste.filter(h => autre.has(h) && !avant.has(h));
+  const neuves = empreintes.filter(h => autre.has(h) && !avant.has(h));
   if(neuves.length){
     // Moi aussi, je ne la découvre qu'au bout d'une minute (comme l'autre).
     const d = envLireDelais(), ts = Date.now() + ENV_DELAI_ALERTE;
