@@ -1,8 +1,8 @@
 /**
  * Nous Deux — le « mode HOT » (contenus réservés aux adultes)
  * ==============================================================
- * Verrouillé par défaut. Il se déverrouille quand le couple a cumulé
- * MC_SEUIL points à deux (score de l'un + score de l'autre), et reste
+ * Verrouillé par défaut. Il se déverrouille quand L'UN OU L'AUTRE atteint
+ * MC_SEUIL points (meilleur des deux scores, depuis le 18/11/2026), et reste
  * ensuite déverrouillé pour de bon (rooms/$room/modeCouple/debloque),
  * même si les scores redescendent.
  *
@@ -11,6 +11,9 @@
  *   · la pioche ne sort que les cartes sans « adulte:true » (cards-data.js) ;
  *   · la Battle ne tire qu'UNE question « coquin » (au lieu de 2) ;
  *   · la question du jour saute la catégorie « coquin ».
+ *
+ * Le même seuil ouvre le jeu « Plaisirs Intimes » (plaisirs.js : piDebloque = mcDebloque).
+ * Au déblocage : grande annonce animée, une fois par téléphone.
  *
  * Dev mod : modeCouple/manuel = 'verrouille' | 'debloque' force l'état
  * (pour tester), sans rien effacer.
@@ -21,9 +24,15 @@ const MC_TUILES = ['gage', 'soiree'];   // tuiles entièrement réservées au mo
 
 let mcEcritureEnCours = false;
 
+// Meilleur des deux scores : il suffit que L'UN des deux atteigne le seuil.
 function mcTotal(){
   const s = (state && state.scores) || {};
-  return (s.p1 || 0) + (s.p2 || 0);
+  return Math.max(s.p1 || 0, s.p2 || 0);
+}
+// Prénom de celui / celle qui mène (pour l'annonce).
+function mcMeneur(){
+  const s = (state && state.scores) || {}, p = (state && state.players) || {};
+  return (s.p2 || 0) > (s.p1 || 0) ? p.p2 : p.p1;
 }
 
 // Vrai si les contenus adultes sont accessibles.
@@ -46,14 +55,14 @@ function mcEnregistrerSiAtteint(){
     .then(res => {
       mcEcritureEnCours = false;
       if(res && res.committed) notifyPartner('🔥 Mode HOT débloqué',
-        'Vous avez atteint ' + MC_SEUIL + ' points à deux : les contenus coquins sont ouverts !', 'mode-couple');
+        (mcMeneur() || 'L’un de vous') + ' a atteint ' + MC_SEUIL + ' points : sujets intimes et nouveau jeu Plaisirs Intimes ouverts !', 'mode-couple');
     }, () => { mcEcritureEnCours = false; });
 }
 
 // Garde-fou pour les modules : une carte / question est-elle autorisée ?
 function mcCarteAutorisee(c){ return mcDebloque() || !(c && c.adulte); }
 
-function mcAnnonceCle(){ return 'nousdeux_mc_vu_' + roomCode; }
+function mcAnnonceCle(){ return 'nousdeux_hot_vu_' + roomCode; }   // nouvelle annonce (18/11/2026)
 function mcAnnonceVue(){ try{ return localStorage.getItem(mcAnnonceCle()) === '1'; }catch(e){ return true; } }
 function mcMarquerAnnonceVue(){ try{ localStorage.setItem(mcAnnonceCle(), '1'); }catch(e){} }
 
@@ -68,6 +77,25 @@ function mcFermerPlein(){
   mcPleinOuvert = null;
   renderMcPlein();
 }
+function mcRevoirAnnonce(){ mcPleinOuvert = 'debloque'; renderMcPlein(); }   // dev mod
+
+// Grande annonce animée du déblocage.
+function mcAnnonceHtml(){
+  const parts = ['🔥', '🌶️', '💋', '❤️', '✨', '🔥', '💦', '🌶️', '✨', '💋', '🔥', '❤️'];
+  const pluie = parts.map((e, i) => '<span style="left:' + (4 + i * 8) + '%;animation-delay:' + (i * 0.23).toFixed(2) + 's;--d:' + (2.6 + (i % 4) * 0.5) + 's">' + e + '</span>').join('');
+  const qui = mcMeneur();
+  return '<div class="hot-annonce">'
+    + '<div class="hot-rayons" aria-hidden="true"></div><div class="hot-pluie" aria-hidden="true">' + pluie + '</div>'
+    + '<div class="hot-corps">'
+    + '<div class="hot-flamme">🔥</div>'
+    + '<div class="hot-sur">' + MC_SEUIL + ' points atteints' + (qui ? ' par ' + escapeHtml(qui) : '') + ' !</div>'
+    + '<h2 class="hot-titre">Mode HOT<br>débloqué !</h2>'
+    + '<div class="hot-point"><span>🔓</span><p><b>Des sujets plus intimes</b> s’ouvrent dans tous vos jeux : cartes, Battle, pensée du jour, Cap ou pas, Soirée guidée…</p></div>'
+    + '<div class="hot-point"><span>🌶️</span><p><b>Nouveau jeu à tester : « Plaisirs Intimes »</b> — des questions très explicites et des défis brûlants. Retrouvez-le sur la case <b>HOT</b> de l’accueil.</p></div>'
+    + '<button class="hot-btn" data-mc-tester>Tester Plaisirs Intimes 🌶️</button>'
+    + '<button class="hot-btn ghost" data-mc-fermer>Plus tard</button>'
+    + '</div></div>';
+}
 
 function renderMcPlein(){
   let el = document.getElementById('mc-plein');
@@ -80,14 +108,20 @@ function renderMcPlein(){
   const total = mcTotal();
   const reste = Math.max(0, MC_SEUIL - total);
   const pct = Math.min(100, Math.round(total / MC_SEUIL * 100));
-  const contenu = mcPleinOuvert === 'debloque'
-    ? '<div class="mc-plein-ic">🔥</div><h2>Mode HOT débloqué !</h2>'
-      + '<p>Cap ou pas, Soirée guidée, cartes et questions coquines sont maintenant ouverts.</p>'
-      + '<button class="mc-plein-btn" data-mc-fermer>C’est parti</button>'
-    : '<div class="mc-plein-ic">🔥</div><h2>Mode HOT à débloquer</h2>'
-      + '<p>Débloquez-le en atteignant au minimum <b>' + MC_SEUIL + ' points</b> à deux.</p>'
+  el.classList.toggle('hot', mcPleinOuvert === 'debloque');
+  if(mcPleinOuvert === 'debloque'){
+    el.innerHTML = mcAnnonceHtml();
+    el.querySelectorAll('[data-mc-fermer]').forEach(b => b.addEventListener('click', mcFermerPlein));
+    el.querySelector('[data-mc-tester]').addEventListener('click', () => {
+      mcFermerPlein();
+      if(typeof piOuvrir === 'function') piOuvrir();
+    });
+    return;
+  }
+  const contenu = '<div class="mc-plein-ic">🔥</div><h2>Mode HOT à débloquer</h2>'
+      + '<p>Il se débloque dès que <b>l’un de vous deux</b> atteint <b>' + MC_SEUIL + ' points</b>. Au programme : des sujets plus intimes dans tous les jeux et un nouveau jeu, « Plaisirs Intimes ».</p>'
       + '<div class="mc-jauge"><div class="mc-jauge-plein" style="width:' + pct + '%"></div></div>'
-      + '<div class="mc-plein-legende">' + total + ' / ' + MC_SEUIL + ' points · encore ' + reste + ' point' + (reste > 1 ? 's' : '') + '</div>'
+      + '<div class="mc-plein-legende">Meilleur score : ' + total + ' / ' + MC_SEUIL + ' points · encore ' + reste + ' point' + (reste > 1 ? 's' : '') + '</div>'
       + '<button class="mc-plein-btn" data-mc-fermer>Continuer à jouer</button>';
   el.innerHTML = '<button type="button" class="qdj-fermer" data-mc-fermer aria-label="Fermer">✕</button>'
     + '<div class="mc-plein-corps">' + contenu + '</div>';
@@ -157,7 +191,9 @@ function renderModeCouple(){
     + (m.manuel ? ' · forcé « ' + (m.manuel === 'verrouille' ? 'verrouillé' : 'déverrouillé') + ' »' : '') + ' · '
     + '<button class="qdj-lien" data-mc="verrouille">verrouiller</button> · '
     + '<button class="qdj-lien" data-mc="debloque">déverrouiller</button> · '
-    + '<button class="qdj-lien" data-mc="">automatique</button></div>'
+    + '<button class="qdj-lien" data-mc="">automatique</button> · '
+    + '<button class="qdj-lien" data-mc-annonce>revoir l’annonce</button></div>'
     + '<div class="mc-admin mc-mesures">' + mcMesuresEcran() + '</div>';
   b.querySelectorAll('[data-mc]').forEach(el => el.addEventListener('click', () => mcForcer(el.dataset.mc)));
+  b.querySelector('[data-mc-annonce]').addEventListener('click', mcRevoirAnnonce);
 }

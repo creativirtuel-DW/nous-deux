@@ -1,12 +1,12 @@
 /**
  * Nous Deux — mode de jeu « Plaisirs Intimes » (monde 3 du Parcours : Fusionnels)
  * ===============================================================================
- * Se débloque quand L'UN OU L'AUTRE atteint PI_SEUIL points (début du monde 3).
+ * S'ouvre EN MÊME TEMPS que le Mode HOT (mode-couple.js) : quand l'un ou
+ * l'autre atteint MC_SEUIL (300) points — harmonisé le 18/11/2026.
  * Une case « HOT » apparaît alors sur l'accueil ; elle ouvre un mode aux
  * couleurs chaudes avec deux choix : Question (très explicite) ou Défi (très HOT).
  *
- * ⚠️ PAS ENCORE ACCESSIBLE : PI_ACTIF = false → la case n'apparaît pour personne
- * (sauf en dev mod, pour l'aperçu). Passer PI_ACTIF à true pour l'ouvrir.
+ * PI_ACTIF = false couperait le jeu pour tout le monde (sauf aperçu dev mod).
  *
  * Banque : plaisirs-data.js (GÉNÉRÉ depuis Plaisirs-Intimes.xlsx, voir outils/).
  * Anti-répétition partagée : rooms/$room/plaisirsVus/<questions|defis>/<id> = true,
@@ -23,19 +23,15 @@
  * Le partenaire est prévenu (notification) ; la case HOT et l'écran du mode
  * affichent les réponses en attente de sa validation.
  */
-const PI_ACTIF = false;
-const PI_SEUIL = 250;          // début du monde 3 « Fusionnels » (parcours.js)
+const PI_ACTIF = true;
+const PI_SEUIL = MC_SEUIL;     // même seuil que le Mode HOT (300)
 const PI_PASSES = 5;           // passes gratuites par jour
 const PI_MALUS = 20;           // points perdus par passe au-delà
 
 let piOuvert = false;          // plein écran ouvert
 let piCarte = null;            // { mode, id, t } carte affichée
 
-function piAtteint(){
-  const s = (state && state.scores) || {};
-  return Math.max(s.p1 || 0, s.p2 || 0) >= PI_SEUIL;
-}
-function piDebloque(){ return PI_ACTIF && piAtteint(); }
+function piDebloque(){ return PI_ACTIF && typeof mcDebloque === 'function' && mcDebloque(); }
 function piVisible(){ return piDebloque() || (typeof isAdminUnlocked === 'function' && isAdminUnlocked()); }
 
 // ---------- case de l'accueil ----------
