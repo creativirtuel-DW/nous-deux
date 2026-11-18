@@ -241,6 +241,7 @@ function render(){
   renderQDJ();
   renderPenseToi();
   renderParcours();
+  renderEnvies();
   renderBattleCards();
   renderRewards();
   renderHistory();
