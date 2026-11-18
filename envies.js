@@ -364,9 +364,10 @@ function envDemanderMdp(){
   const m = el.querySelector('#env-mdp'), err = el.querySelector('#env-err');
   m.focus();
   const ouvrir = async () => {
-    err.textContent = '…';
-    if(await envOuvrirCoffre(m.value)){ el.remove(); await envPublier(); envOuvrirListe(); }
-    else { err.textContent = 'Mot de passe incorrect.'; m.select(); }
+    if(envLireMdp() === m.value){
+      envListe = envLireStock() || { items: [] };
+      el.remove(); await envPublier(); envOuvrirListe();
+    } else { err.textContent = 'Mot de passe incorrect.'; m.select(); }
   };
   m.addEventListener('keydown', e => { if(e.key === 'Enter') ouvrir(); });
   el.querySelector('[data-env-ouvrir]').onclick = ouvrir;
