@@ -74,6 +74,22 @@
   .bouton.secondaire{ background:rgba(255,255,255,0.08); box-shadow:none; font-weight:700; font-size:14.5px; }
   .note{ text-align:center; color:var(--muted-2); font-size:12.5px; line-height:1.5; margin-top:18px; }
   .cache{ display:none !important; }
+
+  .presente{
+    position:relative; overflow:hidden; margin:0 0 26px; padding:20px 18px 16px; border-radius:24px;
+    background:linear-gradient(160deg, rgba(255,107,107,0.16), rgba(255,160,122,0.06) 60%, var(--surface) 100%);
+    border:1px solid rgba(255,160,122,0.35); box-shadow:0 20px 40px -24px rgba(251,90,99,0.6);
+  }
+  .presente-tag{ display:inline-block; padding:4px 11px; border-radius:999px; background:rgba(255,255,255,0.1); font-size:12px; font-weight:700; color:var(--peach); letter-spacing:.3px; }
+  .presente h2{ font-size:21px; font-weight:800; letter-spacing:-0.01em; margin:10px 0 8px; }
+  .presente > p{ margin:0 0 14px; font-size:14px; line-height:1.6; color:var(--muted); }
+  .presente > p b{ color:var(--cream); }
+  .presente-liste{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:10px; }
+  .presente-liste li{ display:flex; gap:12px; align-items:flex-start; padding:11px 12px; border-radius:16px; background:rgba(0,0,0,0.18); }
+  .presente-liste span{ font-size:22px; line-height:1.2; }
+  .presente-liste div{ font-size:13px; line-height:1.5; color:var(--muted); }
+  .presente-liste b{ display:block; font-size:14.5px; color:var(--cream); margin-bottom:1px; }
+  .titre-etapes{ font-size:17px; font-weight:800; margin:0 0 12px; }
 </style>
 </head>
 <body>
@@ -81,6 +97,21 @@
   <img class="logo" src="icon-192.png?v=2" alt="">
   <h1>Installer <span>Nous Deux</span></h1>
   <p class="sous">Notre jeu à deux, en vraie appli sur ton téléphone.<br>Ça prend 30 secondes.</p>
+
+  <!-- Présentation : ce qu'est Nous Deux -->
+  <section class="presente">
+    <div class="presente-tag">✨ Créée par l'IA</div>
+    <h2>Une appli rien que pour nous deux</h2>
+    <p>Nous Deux n'existe nulle part ailleurs : c'est une application <b>imaginée et réalisée avec l'intelligence artificielle</b>, spécialement pour notre couple. Pas de boutique, pas de pub, pas d'inconnus : juste toi et moi, réunis par notre code de couple.</p>
+    <ul class="presente-liste">
+      <li><span>🎲</span><div><b>Des jeux pour se découvrir</b>Questions, défis, Battle, pensée du jour… pour rire, se surprendre et se rapprocher.</div></li>
+      <li><span>🏆</span><div><b>Des points et un parcours</b>Chaque jeu rapporte des points qui débloquent des cadeaux, des surprises… et des mondes plus coquins 🔥.</div></li>
+      <li><span>💌</span><div><b>Des petites attentions</b>« Je pense à toi », le Coffre Surprise du jour, notre liste des envies secrète…</div></li>
+      <li><span>🌱</span><div><b>Elle grandit avec nous</b>L'appli s'enrichit régulièrement de nouveaux jeux et de nouvelles idées.</div></li>
+    </ul>
+  </section>
+
+  <h2 class="titre-etapes">📲 L'installer en 30 secondes</h2>
 
   <!-- Ouvert dans une appli (WhatsApp, Messenger, Instagram…) : l'installation y est impossible. -->
   <div class="alerte cache" id="alerte-appli">
