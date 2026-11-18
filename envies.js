@@ -28,10 +28,8 @@ const ENV_THEMES = [
   { id:'coquin', ic:'🔥', nom:'Fantasme coquin'}
 ];
 
-let envListe = null;      // liste déchiffrée (en mémoire seulement tant que la page est ouverte)
-let envCle = null;        // CryptoKey du mot de passe, oubliée à la fermeture
-let envSel = null;        // sel du coffre local
-let envEmpreintes = {};   // empreinte -> true, pour MES envies (calculée au déverrouillage)
+let envListe = null;      // liste (en mémoire tant que la page est ouverte)
+let envEmpreintes = {};   // empreinte -> true, pour MES envies (calculée à la publication)
 let envAttente = null;      // minuteur du pop-up différé
 let envSigCommunes = '';  // dernières envies communes connues (pour redessiner la liste ouverte)
 
