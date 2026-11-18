@@ -171,8 +171,25 @@ function cjCleAide(){ return 'nousdeux_coffre_jour_aide_masquee_' + roomCode + '
 function cjAideMasquee(){ try{ return localStorage.getItem(cjCleAide()) === '1'; }catch(e){ return false; } }
 
 function cjToucher(){
-  if(!cjDuJour() && !cjAideMasquee()) cjExplication();
+  if(cjDuJour()) cjDemain();          // déjà ouvert aujourd'hui
+  else if(!cjAideMasquee()) cjExplication();
   else cjOuvrirPage();
+}
+
+// Coffre déjà ouvert aujourd'hui : petit pop-up « Reviens demain ».
+function cjDemain(){
+  const el = ptEcran('cj-aide');
+  el.className = 'env-voile';
+  el.innerHTML = '<div class="env-pop cj-pop">'
+    + '<div class="cj-pop-ic">' + cjCoffreSvg(false) + '</div>'
+    + '<h2>Reviens demain !</h2>'
+    + '<p>Tu as déjà ouvert le Coffre Surprise aujourd’hui. Reviens demain pour une nouvelle surprise ! 🎁</p>'
+    + '<p class="cj-demain-h">Prochain coffre ' + cjProchain() + '</p>'
+    + '<button type="button" class="btn-primary" data-cj-ok>OK</button>'
+    + '<button type="button" class="btn-ghost" data-cj-voir>Revoir ma surprise et mes bons</button>'
+    + '</div>';
+  el.querySelector('[data-cj-ok]').onclick = () => el.remove();
+  el.querySelector('[data-cj-voir]').onclick = () => { el.remove(); cjOuvrirPage(); };
 }
 
 function cjExplication(){
