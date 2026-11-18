@@ -46,29 +46,10 @@ function envEcrireMdp(p){ try{ localStorage.setItem(envCleMdp(), p); }catch(e){}
 
 // ---------- sauvegarde (liste en clair + empreintes) ----------
 
-async function envDeriver(mdp, sel){
-  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(mdp), 'PBKDF2', false, ['deriveKey']);
-  return crypto.subtle.deriveKey({ name:'PBKDF2', salt: sel, iterations: ENV_TOURS, hash:'SHA-256' },
-    base, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']);
-}
 async function envSauver(){
-  if(!envCle || !envListe) return;
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const data = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, envCle, new TextEncoder().encode(JSON.stringify(envListe)));
-  envEcrireStock({ v:1, sel: envB64(envSel), iv: envB64(iv), data: envB64(data) });
+  if(!envListe) return;
+  envEcrireStock(envListe);
   await envPublier();
-}
-async function envOuvrirCoffre(mdp){
-  const o = envLireStock();
-  if(!o) return false;
-  try{
-    const sel = envDeB64(o.sel);
-    const cle = await envDeriver(mdp, sel);
-    const clair = await crypto.subtle.decrypt({ name:'AES-GCM', iv: envDeB64(o.iv) }, cle, envDeB64(o.data));
-    envListe = JSON.parse(new TextDecoder().decode(clair));
-    envCle = cle; envSel = sel;
-    return true;
-  }catch(e){ return false; }
 }
 
 // ---------- empreintes (rapprochement des envies) ----------
