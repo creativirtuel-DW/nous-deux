@@ -4,20 +4,22 @@
  * Case de l'accueil, à côté de « Je pense à toi ». Chacun remplit SA liste
  * d'envies (4 thèmes), protégée par un mot de passe créé au premier usage.
  *
- * Secret :
- *  - la liste est chiffrée dans le téléphone (AES-GCM, clé tirée du mot de
- *    passe par PBKDF2) et ne quitte jamais l'appareil ;
- *  - seules des EMPREINTES anonymes (SHA-256) partent dans la base :
- *    rooms/$room/envies/<p1|p2> = [empreinte, …]
+ * Stockage :
+ *  - la liste est en clair dans la base :
+ *    rooms/$room/envies/<p1|p2> = [{ id, cat, txt }, …]
+ *  - les EMPREINTES anonymes (SHA-256) servent à repérer les envies communes :
+ *    rooms/$room/enviesEmpreintes/<p1|p2> = [empreinte, …]
  *    Deux envies identiques donnent la même empreinte : c'est ainsi qu'on
- *    repère une envie commune sans jamais montrer la liste de l'autre.
+ *    repère une envie commune.
+ *  - le mot de passe reste local : il protège l'accès à la liste dans l'appli.
  *
  * Envie commune : alerte à l'accueil (une fois par envie), puis l'envie est
  * illuminée dans la liste une fois déverrouillée.
- * Mot de passe oublié = liste effacée (rien n'est récupérable, par principe).
+ * Mot de passe oublié = liste effacée.
+ * Dev mod : la liste du partenaire est consultable.
  */
 
-const ENV_TOURS = 150000;
+
 
 const ENV_THEMES = [
   { id:'sorties', ic:'🥂', nom:'Sorties à 2'},
@@ -26,46 +28,48 @@ const ENV_THEMES = [
   { id:'coquin', ic:'🔥', nom:'Fantasme coquin'}
 ];
 
-let envListe = null;      // liste déchiffrée (en mémoire seulement tant que la page est ouverte)
-let envCle = null;        // CryptoKey du mot de passe, oubliée à la fermeture
-let envSel = null;        // sel du coffre local
-let envEmpreintes = {};   // empreinte -> true, pour MES envies (calculée au déverrouillage)
+let envListe = null;      // liste (en mémoire tant que la page est ouverte)
+let envEmpreintes = {};   // empreinte -> true, pour MES envies (calculée à la publication)
 let envAttente = null;      // minuteur du pop-up différé
 let envSigCommunes = '';  // dernières envies communes connues (pour redessiner la liste ouverte)
 
 // ---------- stockage local ----------
 function envCleStock(){ return 'nousdeux_envies_' + roomCode + '_' + me.id; }
 function envCleVus(){ return 'nousdeux_envies_vus_' + roomCode + '_' + me.id; }
+function envCleMdp(){ return 'nousdeux_envies_mdp_' + roomCode + '_' + me.id; }
 function envLireStock(){ try{ return JSON.parse(localStorage.getItem(envCleStock()) || 'null'); }catch(e){ return null; } }
 function envEcrireStock(o){ try{ localStorage.setItem(envCleStock(), JSON.stringify(o)); }catch(e){} }
 function envLireVus(){ try{ return JSON.parse(localStorage.getItem(envCleVus()) || '[]'); }catch(e){ return []; } }
 function envEcrireVus(a){ try{ localStorage.setItem(envCleVus(), JSON.stringify(a)); }catch(e){} }
+function envLireMdp(){ try{ return localStorage.getItem(envCleMdp()); }catch(e){ return null; } }
+function envEcrireMdp(p){ try{ localStorage.setItem(envCleMdp(), p); }catch(e){} }
 
-// ---------- chiffrement ----------
+// ---------- sauvegarde (liste en clair + empreintes) ----------
+
+async function envSauver(){
+  if(!envListe) return;
+  envEcrireStock(envListe);
+  await envPublier();
+}
+
+// ---------- migration (ancienne liste chiffrée AES) ----------
+// Sert uniquement à récupérer une liste créée avant le passage en clair.
+const ENV_TOURS = 150000;
 const envB64 = b => btoa(String.fromCharCode(...new Uint8Array(b)));
 const envDeB64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
-
 async function envDeriver(mdp, sel){
   const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(mdp), 'PBKDF2', false, ['deriveKey']);
   return crypto.subtle.deriveKey({ name:'PBKDF2', salt: sel, iterations: ENV_TOURS, hash:'SHA-256' },
     base, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']);
 }
-async function envSauver(){
-  if(!envCle || !envListe) return;
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const data = await crypto.subtle.encrypt({ name:'AES-GCM', iv }, envCle, new TextEncoder().encode(JSON.stringify(envListe)));
-  envEcrireStock({ v:1, sel: envB64(envSel), iv: envB64(iv), data: envB64(data) });
-  await envPublier();
-}
 async function envOuvrirCoffre(mdp){
   const o = envLireStock();
-  if(!o) return false;
+  if(!o || !o.data) return false;
   try{
     const sel = envDeB64(o.sel);
     const cle = await envDeriver(mdp, sel);
     const clair = await crypto.subtle.decrypt({ name:'AES-GCM', iv: envDeB64(o.iv) }, cle, envDeB64(o.data));
     envListe = JSON.parse(new TextDecoder().decode(clair));
-    envCle = cle; envSel = sel;
     return true;
   }catch(e){ return false; }
 }
@@ -133,12 +137,12 @@ async function envPublier(){
     await envEmpreintesItem(it);
     it.es.forEach(e => envEmpreintes[e] = true);
   }
-  const liste = Object.keys(envEmpreintes);
+  const empreintes = Object.keys(envEmpreintes);
   // Nouvelles envies communes créées par CE changement (ajout, ou nouvelle analyse du sens) ?
-  const e = (state && state.envies) || {};
+  const e = (state && state.enviesEmpreintes) || {};
   const avant = new Set(Array.isArray(e[me.id]) ? e[me.id] : Object.values(e[me.id] || {}));
   const autre = new Set(Array.isArray(e[envAutreId()]) ? e[envAutreId()] : Object.values(e[envAutreId()] || {}));
-  const neuves = liste.filter(h => autre.has(h) && !avant.has(h));
+  const neuves = empreintes.filter(h => autre.has(h) && !avant.has(h));
   if(neuves.length){
     // Moi aussi, je ne la découvre qu'au bout d'une minute (comme l'autre).
     const d = envLireDelais(), ts = Date.now() + ENV_DELAI_ALERTE;
@@ -147,7 +151,10 @@ async function envPublier(){
     envPlanifier(ts);
     await envProgrammerAlerte();                 // AVANT les empreintes : l'autre attend la minute
   }
-  if(roomRef) await roomRef.child('envies/' + me.id).set(liste.length ? liste : null);
+  if(roomRef){
+    await roomRef.child('enviesEmpreintes/' + me.id).set(empreintes.length ? empreintes : null);
+    await roomRef.child('envies/' + me.id).set((envListe.items || []).length ? envListe.items : null);
+  }
 }
 
 // ---------- alerte au partenaire, 1 minute après la détection ----------
@@ -222,7 +229,7 @@ function envPresence(){
 function envAutreId(){ return me && me.id === 'p1' ? 'p2' : 'p1'; }
 function envNomAutre(){ return (state && state.players && state.players[envAutreId()]) || 'ton/ta partenaire'; }
 function envCommunes(){
-  const e = (state && state.envies) || {};
+  const e = (state && state.enviesEmpreintes) || {};
   const a = Array.isArray(e[me.id]) ? e[me.id] : Object.values(e[me.id] || {});
   const b = new Set(Array.isArray(e[envAutreId()]) ? e[envAutreId()] : Object.values(e[envAutreId()] || {}));
   const now = Date.now();
@@ -304,7 +311,6 @@ function envAlerte(n){
 }
 
 function envToucherTuile(){
-  if(!(window.crypto && crypto.subtle)){ alert('Ton navigateur ne permet pas de protéger la liste.'); return; }
   // Le pop-up d'explication s'affiche à chaque ouverture, tant que « Ne plus afficher » n'est pas coché.
   if(!envLireStock() || !envAideMasquee()) envExplication();
   else envDemanderMdp();
@@ -323,7 +329,7 @@ function envExplication(){
     + '<p>Voici une liste très personnelle. Tu vas pouvoir la remplir, et la modifier quand tu le souhaites.</p>'
     + '<p><b>Le but ?</b> Si l’une de tes envies est similaire à une envie de la liste de ' + escapeHtml(envNomAutre())
     +   ', tu recevras une alerte et l’envie commune sera illuminée dans ta liste. À vous ensuite de la réaliser ensemble…</p>'
-    + '<p>Si aucune de vos envies n’est en commun, l’application permettra sans doute de vous rapprocher et d’avoir des envies en commun rapidement.</p>'
+    + '<p><b>Si aucune envie n’est commune, le but sera d’ajouter des sujets à ta liste, selon l’humeur du moment, pour trouver des envies communes et les réaliser ensemble !</b></p>'
     + '<p>Ta liste reste secrète et personnelle tant que tu le souhaites : tout est stocké dans ton propre téléphone.</p>'
     + '<label class="qdj-aide-case env-aide-case"><input type="checkbox" id="env-aide-masquer"' + (envAideMasquee() ? ' checked' : '') + '> Ne plus afficher</label>'
     + '<button type="button" class="btn-primary" data-env-ok>C’est parti</button>'
@@ -356,9 +362,7 @@ function envCreerMdp(){
   el.querySelector('[data-env-creer]').onclick = async () => {
     if(m1.value.length < 4){ err.textContent = 'Au moins 4 caractères.'; return; }
     if(m1.value !== m2.value){ err.textContent = 'Les deux mots de passe ne sont pas identiques.'; return; }
-    err.textContent = '…';
-    envSel = crypto.getRandomValues(new Uint8Array(16));
-    envCle = await envDeriver(m1.value, envSel);
+    envEcrireMdp(m1.value);
     envListe = { items: [] };
     await envSauver();
     el.remove();
@@ -382,17 +386,29 @@ function envDemanderMdp(){
   const m = el.querySelector('#env-mdp'), err = el.querySelector('#env-err');
   m.focus();
   const ouvrir = async () => {
-    err.textContent = '…';
-    if(await envOuvrirCoffre(m.value)){ el.remove(); await envPublier(); envOuvrirListe(); }
-    else { err.textContent = 'Mot de passe incorrect.'; m.select(); }
+    if(envLireMdp() === m.value){
+      envListe = envLireStock() || { items: [] };
+      el.remove(); await envPublier(); envOuvrirListe();
+      return;
+    }
+    // Migration : ancienne liste chiffrée AES.
+    if(envLireStock() && envLireStock().data){
+      if(await envOuvrirCoffre(m.value)){
+        envEcrireMdp(m.value);
+        envEcrireStock(envListe);
+        el.remove(); await envPublier(); envOuvrirListe();
+        return;
+      }
+    }
+    err.textContent = 'Mot de passe incorrect.'; m.select();
   };
   m.addEventListener('keydown', e => { if(e.key === 'Enter') ouvrir(); });
   el.querySelector('[data-env-ouvrir]').onclick = ouvrir;
   el.querySelector('[data-env-annule]').onclick = () => el.remove();
   el.querySelector('[data-env-oubli]').onclick = () => {
     if(!confirm('Effacer ta liste des envies et recréer un mot de passe ? Tes envies seront perdues.')) return;
-    try{ localStorage.removeItem(envCleStock()); localStorage.removeItem(envCleVus()); }catch(e){}
-    if(roomRef) roomRef.child('envies/' + me.id).remove();
+    try{ localStorage.removeItem(envCleStock()); localStorage.removeItem(envCleMdp()); localStorage.removeItem(envCleVus()); }catch(e){}
+    if(roomRef){ roomRef.child('envies/' + me.id).remove(); roomRef.child('enviesEmpreintes/' + me.id).remove(); }
     envExplication();
   };
 }
@@ -408,7 +424,7 @@ function envOuvrirListe(){
 
 function envFermer(){
   // On referme le coffre : il faudra le mot de passe la prochaine fois.
-  envListe = null; envCle = null; envSel = null; envEmpreintes = {};
+  envListe = null; envEmpreintes = {};
   const el = document.getElementById('env-plein');
   if(el) el.remove();
   renderEnvies();
@@ -442,6 +458,21 @@ function envDessiner(){
     h += '<div class="env-ajout"><input type="text" maxlength="120" placeholder="Ma propre envie…" data-champ="' + th.id + '">'
       + '<button type="button" data-ajout="' + th.id + '">Ajouter</button></div></section>';
   });
+  // Dev mod : la liste du partenaire, en clair.
+  if(typeof isAdminUnlocked === 'function' && isAdminUnlocked()){
+    const listeAutre = (state && state.envies && state.envies[envAutreId()]) || [];
+    const itemsAutre = Array.isArray(listeAutre) ? listeAutre : Object.values(listeAutre || {});
+    h += '<section class="env-theme env-dev"><h3>🔧 Liste de ' + escapeHtml(envNomAutre()) + ' (dev)</h3>';
+    if(itemsAutre.length){
+      itemsAutre.forEach(it => {
+        const th = ENV_THEMES.find(t => t.id === it.cat);
+        h += '<div class="env-item"><span>' + (th ? th.ic + ' ' : '') + escapeHtml(it.txt || '') + '</span></div>';
+      });
+    } else {
+      h += '<p class="pt-sous">Liste vide.</p>';
+    }
+    h += '</section>';
+  }
   h += '<p class="pt-avert">🔒 Ta liste est chiffrée dans ce téléphone. ' + escapeHtml(envNomAutre())
     + ' ne voit que les envies que vous avez en commun.</p>';
   corps.innerHTML = h;
