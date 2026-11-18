@@ -82,11 +82,55 @@ async function envEmpreinte(texte){
   const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('nd-envie:' + roomCode + ':' + n));
   return Array.from(new Uint8Array(h)).slice(0, 12).map(b => b.toString(16).padStart(2, '0')).join('');
 }
+// ---------- rapprochement par le SENS (dictionnaire envies-sens.js) ----------
+function envMots(t){
+  return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter(Boolean);
+}
+function envMotEgal(m, p){
+  if(p.endsWith('*')) return m.startsWith(p.slice(0, -1));
+  return m === p || m === p + 's' || m === p + 'x' || m === p + 'e' || m === p + 'es';
+}
+// L'expression se retrouve-t-elle dans les mots, avec au plus 2 mots intercalés ?
+function envContient(mots, expr){
+  const p = expr.split(' ');
+  for(let i = 0; i < mots.length; i++){
+    if(!envMotEgal(mots[i], p[0])) continue;
+    let pos = i, ok = true;
+    for(let k = 1; k < p.length; k++){
+      let trouve = -1;
+      for(let j = pos + 1; j <= Math.min(pos + 3, mots.length - 1); j++){ if(envMotEgal(mots[j], p[k])){ trouve = j; break; } }
+      if(trouve < 0){ ok = false; break; }
+      pos = trouve;
+    }
+    if(ok) return true;
+  }
+  return false;
+}
+// Idées reconnues dans une envie (seulement celles de son thème).
+function envIdeesDe(txt, cat){
+  if(typeof ENV_IDEES === 'undefined') return [];
+  const mots = envMots(txt);
+  return ENV_IDEES.filter(id => id.cat === cat && id.mots.some(e => envContient(mots, e)));
+}
+async function envHash(cle){
+  const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('nd-envie:' + roomCode + ':' + cle));
+  return Array.from(new Uint8Array(h)).slice(0, 12).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+// Empreintes d'une envie : une par idée reconnue ; à défaut, celle du texte.
+async function envEmpreintesItem(it){
+  const idees = envIdeesDe(it.txt, it.cat);
+  it.es = []; it.noms = [];
+  for(const id of idees){ it.es.push(await envHash('idee:' + id.id)); it.noms.push(id.nom); }
+  if(!it.es.length){ const e = await envEmpreinte(it.txt); if(e) it.es.push(e); }
+  delete it.e;
+}
+
 async function envPublier(){
   envEmpreintes = {};
   for(const it of (envListe.items || [])){
-    const e = await envEmpreinte(it.txt);
-    if(e){ it.e = e; envEmpreintes[e] = true; }
+    await envEmpreintesItem(it);
+    it.es.forEach(e => envEmpreintes[e] = true);
   }
   const liste = Object.keys(envEmpreintes);
   if(roomRef) await roomRef.child('envies/' + me.id).set(liste.length ? liste : null);
@@ -257,7 +301,8 @@ function envDessiner(){
   if(!corps || !envListe) return;
   const communes = new Set(envCommunes());
   const items = envListe.items || [];
-  const nbCom = items.filter(it => it.e && communes.has(it.e)).length;
+  const enCommun = it => (it.es || []).map((e, k) => communes.has(e) ? (it.noms && it.noms[k]) || '' : null).filter(x => x !== null);
+  const nbCom = items.filter(it => enCommun(it).length).length;
   let h = '<div class="env-entete"><div class="pt-ic">🌠</div><h2 class="pt-titre">Ma liste des envies</h2>'
     + '<p class="pt-sous">' + (nbCom ? '✨ <b>' + nbCom + (nbCom > 1 ? ' envies communes' : ' envie commune') + '</b> avec ' + escapeHtml(envNomAutre())
       : 'Écris tes envies, avec tes mots. Personne ne les voit.') + '</p></div>';
@@ -267,8 +312,10 @@ function envDessiner(){
     h += '<section class="env-theme env-' + th.id + '"><h3>' + th.ic + ' ' + th.nom + '</h3>';
     // mes envies d'abord (communes illuminées)
     miens.forEach(it => {
-      const com = it.e && communes.has(it.e);
-      h += '<div class="env-item' + (com ? ' commune' : '') + '"><span>' + (com ? '✨ ' : '') + escapeHtml(it.txt) + '</span>'
+      const noms = enCommun(it), com = noms.length > 0;
+      const etiq = com ? noms.filter(Boolean).join(' · ') : (it.noms || []).join(' · ');
+      h += '<div class="env-item' + (com ? ' commune' : '') + '"><span>' + (com ? '✨ ' : '') + escapeHtml(it.txt)
+        + (etiq ? '<small class="env-sens">' + (com ? 'En commun : ' : '🔎 ') + escapeHtml(etiq) + '</small>' : '') + '</span>'
         + (com ? '<em>Envie commune</em>' : '')
         + '<button type="button" class="env-suppr" data-suppr="' + it.id + '" aria-label="Retirer">✕</button></div>';
     });
@@ -299,10 +346,12 @@ async function envAjouter(cat, txt){
   await envSauver();
   envDessiner();
   // Si elle est déjà dans la liste de l'autre : petite fête tout de suite.
-  const e = envListe.items[envListe.items.length - 1].e;
+  const es = envListe.items[envListe.items.length - 1].es || [];
   const b = (state.envies && state.envies[envAutreId()]) || [];
-  if(e && !avant.has(e) && (Array.isArray(b) ? b : Object.values(b)).indexOf(e) >= 0){
-    envEcrireVus(envLireVus().concat([e]));
+  const autre = new Set(Array.isArray(b) ? b : Object.values(b));
+  const neuves = es.filter(e => !avant.has(e) && autre.has(e));
+  if(neuves.length){
+    envEcrireVus(envLireVus().concat(neuves));
     envAlerteImmediate();
   }
 }
