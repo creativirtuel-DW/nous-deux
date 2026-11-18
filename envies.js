@@ -36,10 +36,13 @@ let envSigCommunes = '';  // dernières envies communes connues (pour redessiner
 // ---------- stockage local ----------
 function envCleStock(){ return 'nousdeux_envies_' + roomCode + '_' + me.id; }
 function envCleVus(){ return 'nousdeux_envies_vus_' + roomCode + '_' + me.id; }
+function envCleMdp(){ return 'nousdeux_envies_mdp_' + roomCode + '_' + me.id; }
 function envLireStock(){ try{ return JSON.parse(localStorage.getItem(envCleStock()) || 'null'); }catch(e){ return null; } }
 function envEcrireStock(o){ try{ localStorage.setItem(envCleStock(), JSON.stringify(o)); }catch(e){} }
 function envLireVus(){ try{ return JSON.parse(localStorage.getItem(envCleVus()) || '[]'); }catch(e){ return []; } }
 function envEcrireVus(a){ try{ localStorage.setItem(envCleVus(), JSON.stringify(a)); }catch(e){} }
+function envLireMdp(){ try{ return localStorage.getItem(envCleMdp()); }catch(e){ return null; } }
+function envEcrireMdp(p){ try{ localStorage.setItem(envCleMdp(), p); }catch(e){} }
 
 // ---------- chiffrement ----------
 const envB64 = b => btoa(String.fromCharCode(...new Uint8Array(b)));
