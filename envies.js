@@ -115,7 +115,7 @@ async function envPublier(){
     await envEmpreintesItem(it);
     it.es.forEach(e => envEmpreintes[e] = true);
   }
-  const liste = Object.keys(envEmpreintes);
+  const empreintes = Object.keys(envEmpreintes);
   // Nouvelles envies communes créées par CE changement (ajout, ou nouvelle analyse du sens) ?
   const e = (state && state.envies) || {};
   const avant = new Set(Array.isArray(e[me.id]) ? e[me.id] : Object.values(e[me.id] || {}));
