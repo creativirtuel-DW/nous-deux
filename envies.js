@@ -143,9 +143,13 @@ function envAlerte(n){
 
 function envToucherTuile(){
   if(!(window.crypto && crypto.subtle)){ alert('Ton navigateur ne permet pas de protéger la liste.'); return; }
-  if(!envLireStock()) envExplication();
+  // Le pop-up d'explication s'affiche à chaque ouverture, tant que « Ne plus afficher » n'est pas coché.
+  if(!envLireStock() || !envAideMasquee()) envExplication();
   else envDemanderMdp();
 }
+
+function envCleAide(){ return 'nousdeux_envies_aide_masquee_' + roomCode + '_' + me.id; }
+function envAideMasquee(){ try{ return localStorage.getItem(envCleAide()) === '1'; }catch(e){ return false; } }
 
 // ---------- 1. pop-up d'explication ----------
 function envExplication(){
@@ -157,11 +161,16 @@ function envExplication(){
     + '<p>Voici une liste très personnelle. Tu vas pouvoir la remplir, et la modifier quand tu le souhaites.</p>'
     + '<p><b>Le but ?</b> Si l’une de tes envies est similaire à une envie de la liste de ' + escapeHtml(envNomAutre())
     +   ', tu recevras une alerte et l’envie commune sera illuminée dans ta liste. À vous ensuite de la réaliser ensemble…</p>'
+    + '<p>Si aucune de vos envies n’est en commun, l’application permettra sans doute de vous rapprocher et d’avoir des envies en commun rapidement.</p>'
     + '<p>Ta liste reste secrète et personnelle tant que tu le souhaites : tout est stocké dans ton propre téléphone.</p>'
+    + '<label class="qdj-aide-case env-aide-case"><input type="checkbox" id="env-aide-masquer"' + (envAideMasquee() ? ' checked' : '') + '> Ne plus afficher</label>'
     + '<button type="button" class="btn-primary" data-env-ok>C’est parti</button>'
     + '<button type="button" class="btn-ghost" data-env-annule>Plus tard</button>'
     + '</div>';
-  el.querySelector('[data-env-ok]').onclick = () => envCreerMdp();
+  el.querySelector('[data-env-ok]').onclick = () => {
+    try{ localStorage.setItem(envCleAide(), el.querySelector('#env-aide-masquer').checked ? '1' : '0'); }catch(e){}
+    if(envLireStock()) envDemanderMdp(); else envCreerMdp();
+  };
   el.querySelector('[data-env-annule]').onclick = () => el.remove();
 }
 
