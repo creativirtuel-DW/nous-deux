@@ -140,7 +140,11 @@ async function envPublier(){
   const autre = new Set(Array.isArray(e[envAutreId()]) ? e[envAutreId()] : Object.values(e[envAutreId()] || {}));
   const neuves = liste.filter(h => autre.has(h) && !avant.has(h));
   if(neuves.length){
-    envEcrireVus(envLireVus().concat(neuves));   // moi, je la vois déjà illuminée
+    // Moi aussi, je ne la découvre qu'au bout d'une minute (comme l'autre).
+    const d = envLireDelais(), ts = Date.now() + ENV_DELAI_ALERTE;
+    neuves.forEach(h => d[h] = ts);
+    envEcrireDelais(d);
+    envPlanifier(ts);
     await envProgrammerAlerte();                 // AVANT les empreintes : l'autre attend la minute
   }
   if(roomRef) await roomRef.child('envies/' + me.id).set(liste.length ? liste : null);
@@ -221,7 +225,26 @@ function envCommunes(){
   const e = (state && state.envies) || {};
   const a = Array.isArray(e[me.id]) ? e[me.id] : Object.values(e[me.id] || {});
   const b = new Set(Array.isArray(e[envAutreId()]) ? e[envAutreId()] : Object.values(e[envAutreId()] || {}));
-  return a.filter(x => b.has(x));
+  const now = Date.now();
+  const delais = envLireDelais();
+  // L'autre vient de créer une envie commune : je ne la vois qu'à l'heure prévue.
+  const al = state && state.enviesAlerte && state.enviesAlerte[me.id];
+  const enAttente = al && al.ts > now;
+  const vus = enAttente ? new Set(envLireVus()) : null;
+  return a.filter(x => b.has(x) && !(delais[x] > now) && !(enAttente && !vus.has(x)));
+}
+
+// Délais de révélation côté auteur : { empreinte: heure }, dans le téléphone.
+function envCleDelais(){ return 'nousdeux_envies_delais_' + roomCode + '_' + me.id; }
+function envLireDelais(){ try{ return JSON.parse(localStorage.getItem(envCleDelais()) || '{}'); }catch(e){ return {}; } }
+function envEcrireDelais(o){
+  const now = Date.now();
+  Object.keys(o).forEach(k => { if(o[k] < now - 3600000) delete o[k]; });   // ménage
+  try{ localStorage.setItem(envCleDelais(), JSON.stringify(o)); }catch(e){}
+}
+function envPlanifier(ts){
+  clearTimeout(envAttente);
+  envAttente = setTimeout(renderEnvies, Math.max(0, ts - Date.now()) + 300);
 }
 
 // ---------- case de l'accueil ----------
@@ -249,9 +272,14 @@ function renderEnvies(){
   // Alerte : une (ou plusieurs) nouvelle(s) envie(s) commune(s), affichée 1 minute
   // après sa détection chez l'autre (heure prévue dans enviesAlerte/<moi>).
   const al = state.enviesAlerte && state.enviesAlerte[me.id];
-  if(nouvelles.length && al && al.ts > Date.now()){
-    clearTimeout(envAttente);
-    envAttente = setTimeout(renderEnvies, al.ts - Date.now() + 300);
+  if(al && al.ts > Date.now()) envPlanifier(al.ts);
+  const dl = Object.values(envLireDelais()).filter(t => t > Date.now());
+  if(dl.length) envPlanifier(Math.min(...dl));
+  if(nouvelles.length && document.getElementById('env-plein') && envListe && !document.getElementById('env-alerte')){
+    envEcrireVus(vus.concat(nouvelles));
+    if(al) roomRef.child('enviesAlerte/' + me.id).update({ envoye: true });
+    envDessiner();
+    envAlerteImmediate();
     return;
   }
   if(nouvelles.length && !document.getElementById('env-alerte') && !document.getElementById('env-plein')){
@@ -390,6 +418,8 @@ function envDessiner(){
   const corps = document.getElementById('env-corps');
   if(!corps || !envListe) return;
   const communes = new Set(envCommunes());
+  // Ce qui s'affiche illuminé est « vu » : pas de pop-up en double plus tard.
+  const vusL = envLireVus(); if([...communes].some(c => vusL.indexOf(c) < 0)) envEcrireVus(vusL.concat([...communes].filter(c => vusL.indexOf(c) < 0)));
   const items = envListe.items || [];
   const enCommun = it => (it.es || []).map((e, k) => communes.has(e) ? (it.noms && it.noms[k]) || '' : null).filter(x => x !== null);
   const nbCom = items.filter(it => enCommun(it).length).length;
@@ -431,19 +461,10 @@ async function envAjouter(cat, txt){
   if(!txt || !envListe) return;
   const n = envNormaliser(txt);
   if(!n || envListe.items.some(it => envNormaliser(it.txt) === n)){ envDessiner(); return; }
-  const avant = new Set(envCommunes());
   envListe.items.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), cat, txt });
   await envSauver();
   envDessiner();
-  // Si elle est déjà dans la liste de l'autre : petite fête tout de suite.
-  const es = envListe.items[envListe.items.length - 1].es || [];
-  const b = (state.envies && state.envies[envAutreId()]) || [];
-  const autre = new Set(Array.isArray(b) ? b : Object.values(b));
-  const neuves = es.filter(e => !avant.has(e) && autre.has(e));
-  if(neuves.length){
-    envEcrireVus(envLireVus().concat(neuves));
-    envAlerteImmediate();
-  }
+  // Envie commune ? Elle ne se révèle qu'au bout d'une minute (voir envPublier).
 }
 
 async function envRetirer(id){
