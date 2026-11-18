@@ -4,17 +4,19 @@
  * Case de l'accueil, à côté de « Je pense à toi ». Chacun remplit SA liste
  * d'envies (4 thèmes), protégée par un mot de passe créé au premier usage.
  *
- * Secret :
- *  - la liste est chiffrée dans le téléphone (AES-GCM, clé tirée du mot de
- *    passe par PBKDF2) et ne quitte jamais l'appareil ;
- *  - seules des EMPREINTES anonymes (SHA-256) partent dans la base :
- *    rooms/$room/envies/<p1|p2> = [empreinte, …]
+ * Stockage :
+ *  - la liste est en clair dans la base :
+ *    rooms/$room/envies/<p1|p2> = [{ id, cat, txt }, …]
+ *  - les EMPREINTES anonymes (SHA-256) servent à repérer les envies communes :
+ *    rooms/$room/enviesEmpreintes/<p1|p2> = [empreinte, …]
  *    Deux envies identiques donnent la même empreinte : c'est ainsi qu'on
- *    repère une envie commune sans jamais montrer la liste de l'autre.
+ *    repère une envie commune.
+ *  - le mot de passe reste local : il protège l'accès à la liste dans l'appli.
  *
  * Envie commune : alerte à l'accueil (une fois par envie), puis l'envie est
  * illuminée dans la liste une fois déverrouillée.
- * Mot de passe oublié = liste effacée (rien n'est récupérable, par principe).
+ * Mot de passe oublié = liste effacée.
+ * Dev mod : la liste du partenaire est consultable.
  */
 
 const ENV_TOURS = 150000;
