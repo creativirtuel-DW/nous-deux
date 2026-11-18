@@ -1347,3 +1347,41 @@ main#views{ flex:1; min-height:0; position:relative; }
 #prc-fiche .btn-primary{ width:100%; margin-top:10px; }
 
 .reward-autre{ font-size:11.5px; color: var(--muted-2); margin-top:3px; }
+
+/* ====== MA LISTE DES ENVIES (envies.js) ====== */
+.env-tuile{ background: linear-gradient(135deg, rgba(142,140,255,0.18), var(--surface) 80%); border-color: rgba(142,140,255,0.35); }
+.env-tuile.env-brille{ animation: envBrille 2.2s ease-in-out infinite; }
+.env-tuile.env-brille small{ color:#FFD98A; font-weight:700; }
+@keyframes envBrille{ 50%{ box-shadow: 0 0 0 4px rgba(255,217,138,.18), 0 0 26px rgba(255,217,138,.45); } }
+.env-voile{ position:fixed; inset:0; z-index:9500; display:flex; align-items:center; justify-content:center; padding:0 20px; background: rgba(8,6,10,.72); animation: qdjEntre .25s ease both; }
+.env-pop{ width:100%; max-width:390px; box-sizing:border-box; background: var(--surface); border:1px solid var(--line-2); border-radius:24px; padding:24px 20px 18px; text-align:center; box-shadow:0 30px 60px -20px #000; max-height:90vh; overflow-y:auto; }
+.env-pop-ic{ font-size:46px; line-height:1; }
+.env-pop h2{ margin:8px 0 10px; font-family:'Cormorant Garamond', Georgia, serif; font-style:italic; font-weight:600; font-size:30px; color: var(--peach); }
+.env-pop p{ font-size:14px; line-height:1.55; color: var(--muted); margin:0 0 10px; }
+.env-pop p b{ color: var(--cream); }
+.env-pop .btn-primary, .env-pop .btn-ghost{ width:100%; margin-top:8px; }
+.env-pop-fete{ border-color: rgba(255,217,138,.5); box-shadow: 0 0 40px rgba(255,217,138,.25); }
+.env-mdp{ width:100%; box-sizing:border-box; margin-top:8px; padding:13px 14px; border-radius:14px; border:1px solid var(--line); background: rgba(0,0,0,.28); color: var(--cream); font-size:16px; font-family:inherit; outline:none; }
+.env-mdp:focus{ border-color:#8E8CFF; box-shadow:0 0 0 4px rgba(142,140,255,.18); }
+.env-err{ min-height:18px; font-size:12.5px; color:#FF8A8A; margin-top:6px; }
+.env-oubli{ margin-top:10px; background:none; border:none; color: var(--muted); font-size:12px; text-decoration:underline; font-family:inherit; cursor:pointer; }
+#env-plein{ position:fixed; inset:0; z-index:550; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  background: radial-gradient(100% 55% at 50% 0%, rgba(142,140,255,0.22), transparent 60%), linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+  animation: qdjEntre .3s ease both; }
+.env-corps{ max-width:430px; margin:0 auto; box-sizing:border-box; padding: calc(env(safe-area-inset-top, 0px) + 60px) 18px calc(env(safe-area-inset-bottom, 0px) + 30px); }
+.env-entete{ text-align:center; }
+.env-entete .pt-sous b{ color:#FFD98A; }
+.env-theme{ background: var(--surface); border:1px solid var(--line-2); border-radius:20px; padding:14px; margin-bottom:14px; }
+.env-theme h3{ margin:0 0 10px; font-size:16px; font-weight:800; }
+.env-coquin{ border-color: rgba(255,77,46,.35); }
+.env-item{ display:flex; align-items:center; gap:8px; padding:10px 12px; margin-bottom:6px; border-radius:12px; background: var(--surface-2); font-size:14px; }
+.env-item span{ flex:1; min-width:0; }
+.env-item em{ font-style:normal; font-size:10px; font-weight:800; color:#14131A; background:#FFD98A; padding:2px 7px; border-radius:99px; white-space:nowrap; }
+.env-item.commune{ background: linear-gradient(135deg, rgba(255,217,138,.28), rgba(255,160,122,.14)); border:1px solid rgba(255,217,138,.6); box-shadow:0 0 18px rgba(255,217,138,.3); font-weight:700; animation: envBrille 2.2s ease-in-out infinite; }
+.env-suppr{ flex:0 0 auto; width:26px; height:26px; border-radius:50%; border:none; background: rgba(255,255,255,.06); color: var(--muted); font-size:12px; cursor:pointer; }
+.env-idees{ display:flex; flex-wrap:wrap; gap:6px; margin:4px 0 10px; }
+.env-idee{ border:1px dashed var(--line-2); background:none; color: var(--muted); font-family:inherit; font-size:12.5px; padding:6px 10px; border-radius:99px; cursor:pointer; }
+.env-idee:active{ background: rgba(142,140,255,.15); }
+.env-ajout{ display:flex; gap:8px; }
+.env-ajout input{ flex:1; min-width:0; padding:10px 12px; border-radius:12px; border:1px solid var(--line); background: rgba(0,0,0,.25); color: var(--cream); font-size:16px; font-family:inherit; outline:none; }
+.env-ajout button{ flex:0 0 auto; border:none; border-radius:12px; padding:0 14px; font-family:inherit; font-weight:700; color:#fff; background: var(--grad); cursor:pointer; }
