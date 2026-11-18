@@ -52,6 +52,28 @@ async function envSauver(){
   await envPublier();
 }
 
+// ---------- migration (ancienne liste chiffrée AES) ----------
+// Sert uniquement à récupérer une liste créée avant le passage en clair.
+const ENV_TOURS = 150000;
+const envB64 = b => btoa(String.fromCharCode(...new Uint8Array(b)));
+const envDeB64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+async function envDeriver(mdp, sel){
+  const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(mdp), 'PBKDF2', false, ['deriveKey']);
+  return crypto.subtle.deriveKey({ name:'PBKDF2', salt: sel, iterations: ENV_TOURS, hash:'SHA-256' },
+    base, { name:'AES-GCM', length:256 }, false, ['encrypt','decrypt']);
+}
+async function envOuvrirCoffre(mdp){
+  const o = envLireStock();
+  if(!o || !o.data) return false;
+  try{
+    const sel = envDeB64(o.sel);
+    const cle = await envDeriver(mdp, sel);
+    const clair = await crypto.subtle.decrypt({ name:'AES-GCM', iv: envDeB64(o.iv) }, cle, envDeB64(o.data));
+    envListe = JSON.parse(new TextDecoder().decode(clair));
+    return true;
+  }catch(e){ return false; }
+}
+
 // ---------- empreintes (rapprochement des envies) ----------
 const ENV_MOTS_VIDES = new Set('le la les l un une des de du d a au aux et en on se s nous notre nos avec pour faire juste rien qu ensemble'.split(' '));
 function envNormaliser(t){
