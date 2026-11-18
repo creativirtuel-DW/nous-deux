@@ -425,6 +425,21 @@ function envDessiner(){
     h += '<div class="env-ajout"><input type="text" maxlength="120" placeholder="Ma propre envie…" data-champ="' + th.id + '">'
       + '<button type="button" data-ajout="' + th.id + '">Ajouter</button></div></section>';
   });
+  // Dev mod : la liste du partenaire, en clair.
+  if(typeof isAdminUnlocked === 'function' && isAdminUnlocked()){
+    const listeAutre = (state && state.envies && state.envies[envAutreId()]) || [];
+    const itemsAutre = Array.isArray(listeAutre) ? listeAutre : Object.values(listeAutre || {});
+    h += '<section class="env-theme env-dev"><h3>🔧 Liste de ' + escapeHtml(envNomAutre()) + ' (dev)</h3>';
+    if(itemsAutre.length){
+      itemsAutre.forEach(it => {
+        const th = ENV_THEMES.find(t => t.id === it.cat);
+        h += '<div class="env-item"><span>' + (th ? th.ic + ' ' : '') + escapeHtml(it.txt || '') + '</span></div>';
+      });
+    } else {
+      h += '<p class="pt-sous">Liste vide.</p>';
+    }
+    h += '</section>';
+  }
   h += '<p class="pt-avert">🔒 Ta liste est chiffrée dans ce téléphone. ' + escapeHtml(envNomAutre())
     + ' ne voit que les envies que vous avez en commun.</p>';
   corps.innerHTML = h;
