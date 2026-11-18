@@ -340,9 +340,7 @@ function envCreerMdp(){
   el.querySelector('[data-env-creer]').onclick = async () => {
     if(m1.value.length < 4){ err.textContent = 'Au moins 4 caractères.'; return; }
     if(m1.value !== m2.value){ err.textContent = 'Les deux mots de passe ne sont pas identiques.'; return; }
-    err.textContent = '…';
-    envSel = crypto.getRandomValues(new Uint8Array(16));
-    envCle = await envDeriver(m1.value, envSel);
+    envEcrireMdp(m1.value);
     envListe = { items: [] };
     await envSauver();
     el.remove();
