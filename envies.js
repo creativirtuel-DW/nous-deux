@@ -129,7 +129,10 @@ async function envPublier(){
     envPlanifier(ts);
     await envProgrammerAlerte();                 // AVANT les empreintes : l'autre attend la minute
   }
-  if(roomRef) await roomRef.child('envies/' + me.id).set(liste.length ? liste : null);
+  if(roomRef){
+    await roomRef.child('enviesEmpreintes/' + me.id).set(empreintes.length ? empreintes : null);
+    await roomRef.child('envies/' + me.id).set((envListe.items || []).length ? envListe.items : null);
+  }
 }
 
 // ---------- alerte au partenaire, 1 minute après la détection ----------
