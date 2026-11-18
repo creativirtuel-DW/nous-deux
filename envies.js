@@ -44,9 +44,7 @@ function envEcrireVus(a){ try{ localStorage.setItem(envCleVus(), JSON.stringify(
 function envLireMdp(){ try{ return localStorage.getItem(envCleMdp()); }catch(e){ return null; } }
 function envEcrireMdp(p){ try{ localStorage.setItem(envCleMdp(), p); }catch(e){} }
 
-// ---------- chiffrement ----------
-const envB64 = b => btoa(String.fromCharCode(...new Uint8Array(b)));
-const envDeB64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+// ---------- sauvegarde (liste en clair + empreintes) ----------
 
 async function envDeriver(mdp, sel){
   const base = await crypto.subtle.importKey('raw', new TextEncoder().encode(mdp), 'PBKDF2', false, ['deriveKey']);
