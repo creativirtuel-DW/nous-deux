@@ -20,6 +20,11 @@ for onglet, cle, pref in FEUILLES:
     connu = {x["id"]: x for x in ancien.get(cle, [])}
     num = max([int(re.sub(r"\D", "", i) or 0) for i in connu] + [0])
     ws = wb[onglet]
+    # numérotation : tenir compte aussi des ID tapés à la main dans le classeur
+    for r in range(5, ws.max_row + 1):
+        i = str(ws.cell(row=r, column=1).value or "").strip()
+        if re.fullmatch(pref + r"\d+", i):
+            num = max(num, int(i[len(pref):]))
     res, vus = [], set()
     for r in range(5, ws.max_row + 1):
         val = lambda c: (str(ws.cell(row=r, column=c).value).strip() if ws.cell(row=r, column=c).value is not None else "")
@@ -30,6 +35,7 @@ for onglet, cle, pref in FEUILLES:
             continue
         if not texte:
             soucis.append((onglet, r, "texte vide")); continue
+        # Les doublons de texte sont VOULUS : ils augmentent la chance de tirer la carte.
         if not ident:
             num += 1; ident = pref + str(num).zfill(2)
         if ident in vus:
