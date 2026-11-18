@@ -87,7 +87,8 @@ function renderParcours(){
     h += `<div class="prc-frontiere" style="top:${y}px;${z.de ? '' : 'border:0'}"><span style="${cote}">Monde ${i+1} · ${z.nom}</span></div>`;
   });
   // Points d'étape tous les 50
-  const etapes = paliers.map(p => p.pts).concat([hotPos]);
+  const piPos = typeof PI_SEUIL !== 'undefined' ? PI_SEUIL : 250;
+  const etapes = paliers.map(p => p.pts).concat([hotPos, piPos]);
   for(let p=50; p<MAX; p+=50){
     if(etapes.some(e => Math.abs(e - p) < 12)) continue;
     h += `<div class="prc-etape" style="left:${X(p)}px;top:${Y(p)}px"><div class="prc-pt ${loin >= p ? 'fait' : ''}"></div></div>`;
@@ -104,6 +105,12 @@ function renderParcours(){
   const xh = X(hotPos), gauche = xh < W/2;
   h += `<button type="button" class="prc-porte ${hotOuverte ? 'ouverte' : ''}" data-hot="1" style="left:${xh}px;top:${Y(hotPos)}px"><span>${hotOuverte ? '🔥' : '🔒'}</span></button>
     <div class="prc-porte-etiq" style="top:${Y(hotPos)}px;left:${gauche ? xh + 30 : xh - 130}px;${gauche ? '' : 'text-align:right'}"><b>Porte HOT</b><span>${hotOuverte ? 'Débloquée' : MC_SEUIL + ' pts à deux'}</span></div>`;
+  // Mode « Plaisirs Intimes » (monde 3)
+  const piOk = typeof piDebloque === 'function' && piDebloque();
+  const piAtt = Math.max(sMoi, sAutre) >= piPos;
+  const xp = X(piPos), dp = xp < W/2;
+  h += `<button type="button" class="prc-etape" data-pi="1" style="left:${xp}px;top:${Y(piPos)}px"><div class="prc-cle prc-pi ${piOk ? 'fait' : 'verrou'}"><span>🌶️</span></div></button>
+    <div class="prc-etiq" style="top:${Y(piPos)}px;${dp ? `left:${xp + 28}px` : `left:${xp - 148}px;text-align:right`}"><b>Plaisirs Intimes</b><span class="prc-pts">${piPos} pts</span> <span>${piOk ? '🔥 Ouvert' : piAtt ? 'Bientôt…' : '🔒'}</span></div>`;
   // Fin provisoire
   h += `<div class="prc-etiq prc-suite" style="top:${PRC_HAUT - 60}px;left:${X(MAX) - 64}px"><b>☁️ La suite arrive…</b><span>De nouveaux mondes à venir</span></div>`;
   // Cœur « vous deux » puis les pions
@@ -116,6 +123,7 @@ function renderParcours(){
 
   monde.querySelectorAll('[data-i]').forEach(b => b.onclick = () => prcFiche(paliers[+b.dataset.i], +b.dataset.i, sMoi, sAutre, nomAutre));
   monde.querySelector('[data-hot]').onclick = () => prcFicheHot(equipe, hotOuverte);
+  monde.querySelector('[data-pi]').onclick = () => prcFichePlaisirs(sMoi, sAutre, nomAutre, piPos, piOk);
 
   if(!prcDejaCentre){ prcDejaCentre = true; prcAllerMoi(false); }
 }
@@ -171,6 +179,15 @@ function prcFicheHot(equipe, ouverte){
     <p>Elle s’ouvre quand vos points à deux atteignent <b>${MC_SEUIL}</b>. Derrière : Cap ou pas, Soirée guidée et les questions coquines.</p>
     <div class="prc-ligne"><span>Vos points à deux</span><b>${ouverte ? 'Débloquée ✓' : equipe + ' / ' + MC_SEUIL}</b></div>
     <button type="button" class="btn-primary" onclick="prcFermerFiche()">${ouverte ? 'Super !' : 'Jouer pour avancer'}</button>`);
+}
+
+function prcFichePlaisirs(sMoi, sAutre, nomAutre, seuil, ouvert){
+  const r = s => s >= seuil ? 'Atteint ✓' : 'encore ' + (seuil - s) + ' pts';
+  prcOuvrirFiche(`<div class="prc-f-ic">🌶️</div><h2>Plaisirs Intimes</h2>
+    <p>Un mode de jeu très HOT : questions explicites et défis brûlants. Il s’ouvre quand <b>l’un de vous deux</b> atteint <b>${seuil} points</b>${ouvert ? '.' : ' — <b>bientôt disponible</b>.'}</p>
+    <div class="prc-ligne"><span>Toi</span><b>${r(sMoi)}</b></div>
+    <div class="prc-ligne"><span>${escapeHtml(nomAutre)}</span><b>${r(sAutre)}</b></div>
+    <button type="button" class="btn-primary" onclick="prcFermerFiche()">${ouvert ? 'Super !' : 'Jouer pour avancer'}</button>`);
 }
 
 // Appelé quand on ouvre l'onglet

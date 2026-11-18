@@ -243,6 +243,7 @@ function render(){
   renderParcours();
   renderEnvies();
   renderCoffreJour();
+  renderPlaisirs();
   renderBattleCards();
   renderRewards();
   renderHistory();
