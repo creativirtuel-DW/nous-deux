@@ -289,7 +289,6 @@ function envAlerte(n){
 }
 
 function envToucherTuile(){
-  if(!(window.crypto && crypto.subtle)){ alert('Ton navigateur ne permet pas de protéger la liste.'); return; }
   // Le pop-up d'explication s'affiche à chaque ouverture, tant que « Ne plus afficher » n'est pas coché.
   if(!envLireStock() || !envAideMasquee()) envExplication();
   else envDemanderMdp();
