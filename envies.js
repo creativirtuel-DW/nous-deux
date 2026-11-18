@@ -389,7 +389,18 @@ function envDemanderMdp(){
     if(envLireMdp() === m.value){
       envListe = envLireStock() || { items: [] };
       el.remove(); await envPublier(); envOuvrirListe();
-    } else { err.textContent = 'Mot de passe incorrect.'; m.select(); }
+      return;
+    }
+    // Migration : ancienne liste chiffrée AES.
+    if(envLireStock() && envLireStock().data){
+      if(await envOuvrirCoffre(m.value)){
+        envEcrireMdp(m.value);
+        envEcrireStock(envListe);
+        el.remove(); await envPublier(); envOuvrirListe();
+        return;
+      }
+    }
+    err.textContent = 'Mot de passe incorrect.'; m.select();
   };
   m.addEventListener('keydown', e => { if(e.key === 'Enter') ouvrir(); });
   el.querySelector('[data-env-ouvrir]').onclick = ouvrir;
