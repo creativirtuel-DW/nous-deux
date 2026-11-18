@@ -242,6 +242,7 @@ function render(){
   renderPenseToi();
   renderParcours();
   renderEnvies();
+  renderCoffreJour();
   renderBattleCards();
   renderRewards();
   renderHistory();
@@ -1266,7 +1267,7 @@ function renderHistory(){
   const wrap = $('#history-list');
   wrap.innerHTML = '';
 
-  const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Cap ou pas', distance:'🔥 Défi', photo:'📸 T’as la date ?', battle:'⚔️ Battle', soiree:'🌙 Soirée guidée', qdj:'💭 Une pensée par jour' };
+  const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Cap ou pas', distance:'🔥 Défi', photo:'📸 T’as la date ?', battle:'⚔️ Battle', soiree:'🌙 Soirée guidée', qdj:'💭 Une pensée par jour', coffre:'🧰 Coffre Surprise' };
   const entries = state.history ? Object.values(state.history).sort((a,b)=> b.ts-a.ts).slice(0,50) : [];
 
   if(entries.length === 0){
@@ -1279,7 +1280,7 @@ function renderHistory(){
     if(h.cat === 'battle'){ ptsLabel = (h.osmose >= 0 ? '+' : '') + (h.osmose || 0) + ' 💗' + (h.pts ? ' · +' + h.pts + ' pts chacun' : ''); }
     else if(h.validated === 'skipped'){ ptsLabel = '⏭ 0'; statusNote = ' (passée)'; }
     else if(h.validated === 'penalty'){ ptsLabel = h.pts; statusNote = ' (limite de passes — pénalité acceptée)'; }
-    else if(h.validated){ ptsLabel = '+'+h.pts; }
+    else if(h.validated){ ptsLabel = (h.pts < 0 ? '' : '+') + h.pts; }
     else { ptsLabel = '0'; statusNote = ' (refusée)'; }
     // Défi Photo dont le gage n'a jamais été montré : on peut le dévoiler ici, en dev mod.
     const gageCache = isAdminUnlocked() && h.gageKey && state.photoGages && state.photoGages[h.gageKey];

@@ -18,7 +18,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
-<link rel="stylesheet" href="style.css?v=68">
+<link rel="stylesheet" href="style.css?v=69">
 </head>
 <body>
 
@@ -200,7 +200,11 @@
       <div id="view-play" class="view active">
         <div id="push-banner" class="push-banner" style="display:none;"></div>
         <div id="evt-banniere" class="evt-banniere" style="display:none;"></div>
-        <button type="button" id="qdj-bloc" class="qdj-tuile" style="display:none;"></button>
+        <!-- « Une pensée par jour » + le Coffre Surprise (coffre-jour.js) côte à côte -->
+        <div class="acc-ligne">
+          <button type="button" id="qdj-bloc" class="qdj-tuile" style="display:none;"></button>
+          <button type="button" id="cj-tuile" class="cj-tuile" style="display:none;" aria-label="Le Coffre Surprise"></button>
+        </div>
         <!-- Accueil : un seul gros bouton qui ouvre la page des jeux -->
         <button type="button" id="jouer-btn" class="jouer-btn" style="display:none;">
           <span class="jouer-ic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.2v13.6c0 .8.9 1.3 1.6.8l10.2-6.8c.6-.4.6-1.2 0-1.6L9.6 4.4C8.9 3.9 8 4.4 8 5.2z"/></svg></span>
@@ -439,7 +443,7 @@
 <script src="cards-data.js?v=17"></script>
 <script src="battle-data.js?v=4"></script>
 <script src="gages-data.js?v=1"></script>
-<script src="app.js?v=46"></script>
+<script src="app.js?v=47"></script>
 <script src="soiree.js?v=9"></script>
 <script src="photo-carte.js?v=1"></script>
 <script src="photo-defi.js?v=9"></script>
@@ -450,6 +454,7 @@
 <script src="parcours.js?v=2"></script>
 <script src="envies-sens.js?v=2"></script>
 <script src="envies.js?v=7"></script>
+<script src="coffre-jour.js?v=1"></script>
 <script src="qdj-data.js?v=1"></script>
 <script src="qdj.js?v=7"></script>
 <script src="push.js?v=4"></script>
