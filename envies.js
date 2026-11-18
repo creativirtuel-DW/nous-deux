@@ -19,7 +19,7 @@
  * Dev mod : la liste du partenaire est consultable.
  */
 
-const ENV_TOURS = 150000;
+
 
 const ENV_THEMES = [
   { id:'sorties', ic:'🥂', nom:'Sorties à 2'},
