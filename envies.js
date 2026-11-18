@@ -391,7 +391,7 @@ function envOuvrirListe(){
 
 function envFermer(){
   // On referme le coffre : il faudra le mot de passe la prochaine fois.
-  envListe = null; envCle = null; envSel = null; envEmpreintes = {};
+  envListe = null; envEmpreintes = {};
   const el = document.getElementById('env-plein');
   if(el) el.remove();
   renderEnvies();
