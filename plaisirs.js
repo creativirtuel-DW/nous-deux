@@ -16,6 +16,12 @@
  * jour civil Paris) → rooms/$room/plaisirsPasses/<pid>/<AAAA-MM-JJ> = nombre.
  * Au-delà, un pop-up demande d'accepter de perdre PI_MALUS points par passe.
  * « C'est fait » (carte réalisée) ne compte pas comme une passe.
+ *
+ * Questions : la réponse s'ÉCRIT dans l'appli, puis le partenaire la VALIDE
+ * sur son téléphone → rooms/$room/plaisirsReponses/<clé> =
+ *   { de, pour, qid, q, rep, ts, valide: ts|null }
+ * Le partenaire est prévenu (notification) ; la case HOT et l'écran du mode
+ * affichent les réponses en attente de sa validation.
  */
 const PI_ACTIF = false;
 const PI_SEUIL = 250;          // début du monde 3 « Fusionnels » (parcours.js)
@@ -36,14 +42,51 @@ function piVisible(){ return piDebloque() || (typeof isAdminUnlocked === 'functi
 function renderPlaisirs(){
   const t = document.getElementById('pi-tuile');
   if(!t || !state || !me || !me.id) return;
+  if(piOuvert && !piCarte) piDessiner();
   const vis = piVisible() && accueilVisible();
   t.style.display = vis ? '' : 'none';
   if(!vis) return;
   const dev = !piDebloque();
+  const n = piAValider().length;
   const html = '<span class="pi-tuile-hot">HOT</span>'
-    + '<span class="pi-tuile-txt"><strong>Plaisirs Intimes</strong><small>' + (dev ? 'Aperçu dev mod · verrouillé pour vous deux' : 'Questions & défis très chauds… 🔥') + '</small></span>'
-    + '<span class="pi-tuile-ic">🌶️</span>';
+    + '<span class="pi-tuile-txt"><strong>Plaisirs Intimes</strong><small>'
+    + (n ? '✍️ ' + n + (n > 1 ? ' réponses' : ' réponse') + ' à valider' : dev ? 'Aperçu dev mod · verrouillé pour vous deux' : 'Questions & défis très chauds… 🔥') + '</small></span>'
+    + '<span class="pi-tuile-ic">🌶️</span>' + (n ? '<span class="pi-badge">' + n + '</span>' : '');
   if(t.innerHTML !== html) t.innerHTML = html;
+}
+
+// ---------- réponses écrites aux questions ----------
+function piAutreId(){ return me && me.id === 'p1' ? 'p2' : 'p1'; }
+function piNomAutre(){ return (state && state.players && state.players[piAutreId()]) || 'ton/ta partenaire'; }
+function piReponses(){ return Object.entries((state && state.plaisirsReponses) || {}).map(([k, r]) => Object.assign({ k }, r)); }
+// Réponses de mon/ma partenaire que je dois valider
+function piAValider(){ return piReponses().filter(r => r.pour === me.id && !r.valide).sort((a, b) => a.ts - b.ts); }
+// Mes réponses encore en attente
+function piEnAttente(){ return piReponses().filter(r => r.de === me.id && !r.valide); }
+
+function piEnvoyerReponse(txt){
+  txt = String(txt || '').trim();
+  if(!txt || !piCarte) return false;
+  roomRef.child('plaisirsReponses').push({ de: me.id, pour: piAutreId(), qid: piCarte.id, q: piCarte.t, rep: txt, ts: Date.now(), valide: null });
+  if(typeof notifyPartner === 'function')
+    notifyPartner('🌶️ ' + me.name + ' a répondu à une question HOT', 'Ouvre Plaisirs Intimes pour lire sa réponse et la valider.', 'plaisirs');
+  return true;
+}
+function piValider(k){
+  const r = (state.plaisirsReponses || {})[k];
+  if(!r || r.pour !== me.id) return;
+  roomRef.child('plaisirsReponses/' + k + '/valide').set(Date.now());
+  if(typeof notifyPartner === 'function')
+    notifyPartner('✓ Réponse validée', me.name + ' a lu et validé ta réponse 🔥', 'plaisirs');
+}
+function piBlocValider(){
+  const l = piAValider();
+  if(!l.length) return '';
+  return '<section class="pi-valider"><h3>✍️ ' + escapeHtml(piNomAutre()) + ' t’a répondu</h3>'
+    + l.map(r => '<div class="pi-rep"><div class="pi-rep-q">💬 ' + escapeHtml(r.q || '') + '</div>'
+      + '<div class="pi-rep-txt">« ' + escapeHtml(r.rep || '') + ' »</div>'
+      + '<button type="button" class="pi-btn" data-pi-valider="' + r.k + '">✓ Je valide sa réponse</button></div>').join('')
+    + '</section>';
 }
 
 // ---------- plein écran ----------
@@ -70,9 +113,12 @@ function piDessiner(){
       + '<h2 class="pi-titre">Plaisirs Intimes</h2>'
       + '<p class="pi-sous">Rien que vous deux. Choisis ton jeu…</p>'
       + (piDebloque() ? '' : '<p class="pi-dev">🔧 Aperçu dev mod : ce mode est encore verrouillé pour vous deux.</p>')
-      + '<button type="button" class="pi-choix" data-pi-mode="questions"><span>💬</span><b>Question</b><small>Une question très explicite, à laquelle répondre sans tabou.</small></button>'
+      + piBlocValider()
+      + (piEnAttente().length ? '<p class="pi-attente">⏳ ' + piEnAttente().length + (piEnAttente().length > 1 ? ' réponses attendent' : ' réponse attend') + ' la validation de ' + escapeHtml(piNomAutre()) + '</p>' : '')
+      + '<button type="button" class="pi-choix" data-pi-mode="questions"><span>💬</span><b>Question</b><small>Une question très explicite : réponds par écrit, sans tabou.</small></button>'
       + '<button type="button" class="pi-choix defi" data-pi-mode="defis"><span>🔥</span><b>Défi</b><small>Un défi très HOT à réaliser, maintenant.</small></button>';
     c.querySelectorAll('[data-pi-mode]').forEach(b => b.onclick = () => piTirer(b.dataset.piMode));
+    c.querySelectorAll('[data-pi-valider]').forEach(b => b.onclick = () => piValider(b.dataset.piValider));
     return;
   }
   const q = piCarte.mode === 'questions';
@@ -80,10 +126,21 @@ function piDessiner(){
     + '<div class="pi-carte-type">' + (q ? '💬 Question' : '🔥 Défi') + '</div>'
     + '<p class="pi-carte-texte">' + escapeHtml(piCarte.t) + '</p>'
     + '<div class="pi-carte-pied">Plaisirs Intimes</div></div>'
-    + '<button type="button" class="pi-btn" data-pi-fait>' + (q ? '✓ J’ai répondu · question suivante' : '✓ Défi réalisé · défi suivant') + '</button>'
+    + (q ? '<textarea class="pi-champ" maxlength="600" rows="4" placeholder="Écris ta réponse… ' + escapeHtml(piNomAutre()) + ' la lira et la validera."></textarea>' : '')
+    + '<button type="button" class="pi-btn" data-pi-fait>' + (q ? '📨 Envoyer ma réponse · question suivante' : '✓ Défi réalisé · défi suivant') + '</button>'
     + '<button type="button" class="pi-btn ghost" data-pi-passer>' + (q ? 'Passer cette question' : 'Passer ce défi') + ' <small>' + piTextePasses() + '</small></button>'
     + '<button type="button" class="pi-btn ghost" data-pi-retour>Changer de jeu</button>';
-  c.querySelector('[data-pi-fait]').onclick = () => { piCarte.fait = true; piTirer(piCarte.mode); };
+  c.querySelector('[data-pi-fait]').onclick = () => {
+    if(q){
+      const champ = c.querySelector('.pi-champ');
+      if(!piEnvoyerReponse(champ.value)){
+        champ.classList.add('vide'); champ.placeholder = 'Écris ta réponse avant de l’envoyer…'; champ.focus();
+        setTimeout(() => champ.classList.remove('vide'), 900);
+        return;
+      }
+    }
+    piCarte.fait = true; piTirer(piCarte.mode);
+  };
   c.querySelector('[data-pi-passer]').onclick = () => piPasser(() => piTirer(piCarte.mode));
   // Changer de jeu sans avoir fait la carte = passer aussi.
   c.querySelector('[data-pi-retour]').onclick = () => {
