@@ -20,22 +20,10 @@
 const ENV_TOURS = 150000;
 
 const ENV_THEMES = [
-  { id:'sorties', ic:'🥂', nom:'Sorties à 2', idees:[
-    'Dîner dans un grand restaurant', 'Pique-nique au coucher du soleil', 'Cinéma en plein air',
-    'Aller à un concert ensemble', 'Cours de cuisine à deux', 'Balade à vélo une journée entière',
-    'Faire un escape game', 'Spa et massage en duo' ]},
-  { id:'voyage', ic:'✈️', nom:'Voyage', idees:[
-    'Week-end surprise', 'Road trip sans programme', 'Nuit dans une cabane perchée',
-    'Une semaine au soleil', 'Visiter une capitale européenne', 'Faire une croisière',
-    'Séjour à la montagne', 'Un voyage au bout du monde' ]},
-  { id:'couple', ic:'🏡', nom:'Vie de couple', idees:[
-    'Adopter un animal', 'Un rituel rien qu’à nous le dimanche', 'Une soirée sans écrans par semaine',
-    'Renouveler nos vœux', 'Un projet de déco ou de bricolage ensemble', 'Faire du sport ensemble',
-    'Écrire nos souvenirs dans un carnet', 'Changer de maison ou de ville' ]},
-  { id:'coquin', ic:'🔥', nom:'Fantasme coquin', idees:[
-    'Faire l’amour dehors', 'Massage sensuel complet', 'Jeu de rôle',
-    'Un sextoy à deux', 'Les yeux bandés', 'Un lieu insolite',
-    'Une nuit d’hôtel juste pour ça', 'Un strip-tease', 'Lingerie choisie par l’autre', 'Se filmer' ]}
+  { id:'sorties', ic:'🥂', nom:'Sorties à 2'},
+  { id:'voyage', ic:'✈️', nom:'Voyage'},
+  { id:'couple', ic:'🏡', nom:'Vie de couple'},
+  { id:'coquin', ic:'🔥', nom:'Fantasme coquin'}
 ];
 
 let envListe = null;      // liste déchiffrée (en mémoire seulement tant que la page est ouverte)
@@ -263,11 +251,10 @@ function envDessiner(){
   const nbCom = items.filter(it => it.e && communes.has(it.e)).length;
   let h = '<div class="env-entete"><div class="pt-ic">🌠</div><h2 class="pt-titre">Ma liste des envies</h2>'
     + '<p class="pt-sous">' + (nbCom ? '✨ <b>' + nbCom + (nbCom > 1 ? ' envies communes' : ' envie commune') + '</b> avec ' + escapeHtml(envNomAutre())
-      : 'Coche ou écris tes envies. Personne ne les voit.') + '</p></div>';
+      : 'Écris tes envies, avec tes mots. Personne ne les voit.') + '</p></div>';
 
   ENV_THEMES.forEach(th => {
     const miens = items.filter(it => it.cat === th.id);
-    const choisies = new Set(miens.map(it => envNormaliser(it.txt)));
     h += '<section class="env-theme env-' + th.id + '"><h3>' + th.ic + ' ' + th.nom + '</h3>';
     // mes envies d'abord (communes illuminées)
     miens.forEach(it => {
@@ -276,11 +263,6 @@ function envDessiner(){
         + (com ? '<em>Envie commune</em>' : '')
         + '<button type="button" class="env-suppr" data-suppr="' + it.id + '" aria-label="Retirer">✕</button></div>';
     });
-    // idées pas encore choisies
-    const idees = th.idees.filter(t => !choisies.has(envNormaliser(t)));
-    if(idees.length){
-      h += '<div class="env-idees">' + idees.map(t => '<button type="button" class="env-idee" data-cat="' + th.id + '" data-txt="' + escapeHtml(t) + '">+ ' + escapeHtml(t) + '</button>').join('') + '</div>';
-    }
     h += '<div class="env-ajout"><input type="text" maxlength="120" placeholder="Ma propre envie…" data-champ="' + th.id + '">'
       + '<button type="button" data-ajout="' + th.id + '">Ajouter</button></div></section>';
   });
@@ -289,7 +271,6 @@ function envDessiner(){
   corps.innerHTML = h;
 
   corps.querySelectorAll('[data-suppr]').forEach(b => b.onclick = () => envRetirer(b.dataset.suppr));
-  corps.querySelectorAll('.env-idee').forEach(b => b.onclick = () => envAjouter(b.dataset.cat, b.dataset.txt));
   corps.querySelectorAll('[data-ajout]').forEach(b => b.onclick = () => {
     const c = corps.querySelector('[data-champ="' + b.dataset.ajout + '"]');
     envAjouter(b.dataset.ajout, c.value);
