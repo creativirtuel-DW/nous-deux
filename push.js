@@ -108,7 +108,8 @@ function notifyPartner(title, body, tag){
 
     fetch(PUSH_WORKER_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      keepalive: true,   // l'envoi survit à la mise en veille de l'appli
+      headers: { 'Content-Type': 'text/plain' },   // requête « simple » : pas de pré-vol CORS, compatible keepalive
       body: JSON.stringify({ sub: sub, payload: { title: title, body: body, tag: tag || 'nous-deux', url: './index.html' } })
     })
     .then(r => r.json())
