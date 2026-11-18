@@ -374,8 +374,8 @@ function envDemanderMdp(){
   el.querySelector('[data-env-annule]').onclick = () => el.remove();
   el.querySelector('[data-env-oubli]').onclick = () => {
     if(!confirm('Effacer ta liste des envies et recréer un mot de passe ? Tes envies seront perdues.')) return;
-    try{ localStorage.removeItem(envCleStock()); localStorage.removeItem(envCleVus()); }catch(e){}
-    if(roomRef) roomRef.child('envies/' + me.id).remove();
+    try{ localStorage.removeItem(envCleStock()); localStorage.removeItem(envCleMdp()); localStorage.removeItem(envCleVus()); }catch(e){}
+    if(roomRef){ roomRef.child('envies/' + me.id).remove(); roomRef.child('enviesEmpreintes/' + me.id).remove(); }
     envExplication();
   };
 }
