@@ -207,7 +207,7 @@ function envPresence(){
 function envAutreId(){ return me && me.id === 'p1' ? 'p2' : 'p1'; }
 function envNomAutre(){ return (state && state.players && state.players[envAutreId()]) || 'ton/ta partenaire'; }
 function envCommunes(){
-  const e = (state && state.envies) || {};
+  const e = (state && state.enviesEmpreintes) || {};
   const a = Array.isArray(e[me.id]) ? e[me.id] : Object.values(e[me.id] || {});
   const b = new Set(Array.isArray(e[envAutreId()]) ? e[envAutreId()] : Object.values(e[envAutreId()] || {}));
   const now = Date.now();
