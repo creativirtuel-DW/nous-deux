@@ -1499,3 +1499,5 @@ main#views{ flex:1; min-height:0; position:relative; }
 .cj-tr .cj-jouet{ width:16px; height:44px; display:block; filter: drop-shadow(0 2px 2px rgba(0,0,0,.35)); }
 .cj-gros .cj-tr .cj-jouet{ width:18px; height:50px; }
 .cj-tuile-txt{ text-align:center; line-height:1.15; }
+.cj-demain-h{ font-size:12.5px !important; color:#FFD98A !important; font-weight:700; }
+.cj-pop .cj-pop-ic .cj-coffre{ filter: grayscale(.4) drop-shadow(0 0 10px rgba(255,210,120,.5)); }
