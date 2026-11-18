@@ -139,11 +139,11 @@ async function envPublier(){
   const avant = new Set(Array.isArray(e[me.id]) ? e[me.id] : Object.values(e[me.id] || {}));
   const autre = new Set(Array.isArray(e[envAutreId()]) ? e[envAutreId()] : Object.values(e[envAutreId()] || {}));
   const neuves = liste.filter(h => autre.has(h) && !avant.has(h));
-  if(roomRef) await roomRef.child('envies/' + me.id).set(liste.length ? liste : null);
   if(neuves.length){
     envEcrireVus(envLireVus().concat(neuves));   // moi, je la vois déjà illuminée
-    envProgrammerAlerte();
+    await envProgrammerAlerte();                 // AVANT les empreintes : l'autre attend la minute
   }
+  if(roomRef) await roomRef.child('envies/' + me.id).set(liste.length ? liste : null);
 }
 
 // ---------- alerte au partenaire, 1 minute après la détection ----------
@@ -153,44 +153,62 @@ async function envPublier(){
 const ENV_DELAI_ALERTE = 60000;
 let envMinuteur = null;
 
-function envProgrammerAlerte(){
+async function envProgrammerAlerte(){
   if(!roomRef) return;
   const ts = Date.now() + ENV_DELAI_ALERTE;
-  roomRef.child('enviesAlerte/' + envAutreId()).set({ ts, envoye: false });
+  await roomRef.child('enviesAlerte/' + envAutreId()).set({ ts, envoye: false });
   clearTimeout(envMinuteur);
   envMinuteur = setTimeout(envEnvoyerAlerte, ENV_DELAI_ALERTE);
 }
 
-function envEnvoyerAlerte(){
+function envEnvoyerAlerte(direct){
   clearTimeout(envMinuteur); envMinuteur = null;
   if(!roomRef) return;
   const autre = envAutreId();
+  if(direct){
+    // Pas le temps d'une transaction : la notification part immédiatement.
+    if(!envPresent(autre)) envNotifier();
+    roomRef.child('enviesAlerte/' + autre + '/envoye').set(true);
+    return;
+  }
   roomRef.child('enviesAlerte/' + autre).transaction(a => {
     if(!a || a.envoye) return;          // déjà traitée (ou vue par l'autre)
     a.envoye = true; return a;
   }, (err, ok) => {
     if(err || !ok) return;
-    const present = state && state.presence && state.presence[autre];
-    if(present) return;                 // il/elle est dans l'appli : le pop-up s'en charge
-    if(typeof notifyPartner === 'function')
-      notifyPartner('✨ Une envie en commun !',
-        'Toi et ' + (me.name || 'ton/ta partenaire') + ' avez une nouvelle envie en commun. Ouvre ta liste des envies pour la découvrir.',
-        'envies');
+    if(envPresent(autre)) return;       // il/elle est dans l'appli : le pop-up s'en charge
+    envNotifier();
   });
 }
+function envNotifier(){
+  if(typeof notifyPartner === 'function')
+    notifyPartner('✨ Une envie en commun !',
+      'Toi et ' + (me.name || 'ton/ta partenaire') + ' avez une nouvelle envie en commun. Ouvre ta liste des envies pour la découvrir.',
+      'envies');
+}
 
-// Présence : ce téléphone a-t-il l'appli ouverte au premier plan ?
+// Présence : l'iPhone ne prévient pas toujours quand il met l'appli en veille ;
+// on se fie donc à un battement régulier (15 s) : présent = battement de moins de 40 s.
+function envPresent(pid){
+  const t = state && state.presence && state.presence[pid];
+  return typeof t === 'number' && Date.now() - t < 40000;
+}
+let envBattement = null;
 let envPresenceOk = false;
 function envPresence(){
   if(envPresenceOk || !roomRef || !me || !me.id) return;
   envPresenceOk = true;
   const ref = roomRef.child('presence/' + me.id);
   const maj = () => {
-    if(document.visibilityState === 'visible'){ ref.set(Date.now()); ref.onDisconnect().remove(); }
-    else {
+    clearInterval(envBattement);
+    if(document.visibilityState === 'visible'){
+      ref.set(Date.now()); ref.onDisconnect().remove();
+      envBattement = setInterval(() => ref.set(Date.now()), 15000);
+    } else {
       ref.remove();
-      // On quitte l'appli avant la minute : on n'attend pas, sinon la notification serait perdue.
-      if(envMinuteur) envEnvoyerAlerte();
+      // On quitte l'appli avant la minute : on envoie tout de suite, sinon l'iPhone gèle l'appli
+      // et la notification serait perdue.
+      if(envMinuteur) envEnvoyerAlerte(true);
     }
   };
   document.addEventListener('visibilitychange', maj);
@@ -211,6 +229,8 @@ function renderEnvies(){
   const t = document.getElementById('env-tuile');
   if(!t || !state || !me || !me.id) return;
   envPresence();
+  const aEnvoyer = state.enviesAlerte && state.enviesAlerte[envAutreId()];
+  if(aEnvoyer && !aEnvoyer.envoye && aEnvoyer.ts <= Date.now() && !envMinuteur) envEnvoyerAlerte();
   const communes = envCommunes();
   const vus = envLireVus();
   const nouvelles = communes.filter(c => vus.indexOf(c) < 0);
