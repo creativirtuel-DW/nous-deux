@@ -30,6 +30,7 @@ let envListe = null;      // liste déchiffrée (en mémoire seulement tant que 
 let envCle = null;        // CryptoKey du mot de passe, oubliée à la fermeture
 let envSel = null;        // sel du coffre local
 let envEmpreintes = {};   // empreinte -> true, pour MES envies (calculée au déverrouillage)
+let envAttente = null;      // minuteur du pop-up différé
 let envSigCommunes = '';  // dernières envies communes connues (pour redessiner la liste ouverte)
 
 // ---------- stockage local ----------
@@ -133,7 +134,67 @@ async function envPublier(){
     it.es.forEach(e => envEmpreintes[e] = true);
   }
   const liste = Object.keys(envEmpreintes);
+  // Nouvelles envies communes créées par CE changement (ajout, ou nouvelle analyse du sens) ?
+  const e = (state && state.envies) || {};
+  const avant = new Set(Array.isArray(e[me.id]) ? e[me.id] : Object.values(e[me.id] || {}));
+  const autre = new Set(Array.isArray(e[envAutreId()]) ? e[envAutreId()] : Object.values(e[envAutreId()] || {}));
+  const neuves = liste.filter(h => autre.has(h) && !avant.has(h));
   if(roomRef) await roomRef.child('envies/' + me.id).set(liste.length ? liste : null);
+  if(neuves.length){
+    envEcrireVus(envLireVus().concat(neuves));   // moi, je la vois déjà illuminée
+    envProgrammerAlerte();
+  }
+}
+
+// ---------- alerte au partenaire, 1 minute après la détection ----------
+// rooms/$room/enviesAlerte/<partenaire> = { ts: heure prévue, envoye }
+//  - partenaire DANS l'appli : son téléphone affiche le pop-up à l'heure prévue ;
+//  - appli FERMÉE : une notification push part à l'heure prévue (envoyée par ce téléphone).
+const ENV_DELAI_ALERTE = 60000;
+let envMinuteur = null;
+
+function envProgrammerAlerte(){
+  if(!roomRef) return;
+  const ts = Date.now() + ENV_DELAI_ALERTE;
+  roomRef.child('enviesAlerte/' + envAutreId()).set({ ts, envoye: false });
+  clearTimeout(envMinuteur);
+  envMinuteur = setTimeout(envEnvoyerAlerte, ENV_DELAI_ALERTE);
+}
+
+function envEnvoyerAlerte(){
+  clearTimeout(envMinuteur); envMinuteur = null;
+  if(!roomRef) return;
+  const autre = envAutreId();
+  roomRef.child('enviesAlerte/' + autre).transaction(a => {
+    if(!a || a.envoye) return;          // déjà traitée (ou vue par l'autre)
+    a.envoye = true; return a;
+  }, (err, ok) => {
+    if(err || !ok) return;
+    const present = state && state.presence && state.presence[autre];
+    if(present) return;                 // il/elle est dans l'appli : le pop-up s'en charge
+    if(typeof notifyPartner === 'function')
+      notifyPartner('✨ Une envie en commun !',
+        'Toi et ' + (me.name || 'ton/ta partenaire') + ' avez une nouvelle envie en commun. Ouvre ta liste des envies pour la découvrir.',
+        'envies');
+  });
+}
+
+// Présence : ce téléphone a-t-il l'appli ouverte au premier plan ?
+let envPresenceOk = false;
+function envPresence(){
+  if(envPresenceOk || !roomRef || !me || !me.id) return;
+  envPresenceOk = true;
+  const ref = roomRef.child('presence/' + me.id);
+  const maj = () => {
+    if(document.visibilityState === 'visible'){ ref.set(Date.now()); ref.onDisconnect().remove(); }
+    else {
+      ref.remove();
+      // On quitte l'appli avant la minute : on n'attend pas, sinon la notification serait perdue.
+      if(envMinuteur) envEnvoyerAlerte();
+    }
+  };
+  document.addEventListener('visibilitychange', maj);
+  maj();
 }
 
 function envAutreId(){ return me && me.id === 'p1' ? 'p2' : 'p1'; }
@@ -149,6 +210,7 @@ function envCommunes(){
 function renderEnvies(){
   const t = document.getElementById('env-tuile');
   if(!t || !state || !me || !me.id) return;
+  envPresence();
   const communes = envCommunes();
   const vus = envLireVus();
   const nouvelles = communes.filter(c => vus.indexOf(c) < 0);
@@ -164,9 +226,17 @@ function renderEnvies(){
   if(envListe && document.getElementById('env-plein') && sig !== envSigCommunes) envDessiner();
   envSigCommunes = sig;
 
-  // Alerte : une (ou plusieurs) nouvelle(s) envie(s) commune(s).
-  if(nouvelles.length && accueilVisible() && !document.getElementById('env-alerte') && !document.getElementById('env-plein')){
+  // Alerte : une (ou plusieurs) nouvelle(s) envie(s) commune(s), affichée 1 minute
+  // après sa détection chez l'autre (heure prévue dans enviesAlerte/<moi>).
+  const al = state.enviesAlerte && state.enviesAlerte[me.id];
+  if(nouvelles.length && al && al.ts > Date.now()){
+    clearTimeout(envAttente);
+    envAttente = setTimeout(renderEnvies, al.ts - Date.now() + 300);
+    return;
+  }
+  if(nouvelles.length && !document.getElementById('env-alerte') && !document.getElementById('env-plein')){
     envEcrireVus(vus.concat(nouvelles));
+    if(al) roomRef.child('enviesAlerte/' + me.id).update({ envoye: true });   // vue dans l'appli : pas de notification
     envAlerte(nouvelles.length);
   }
 }
