@@ -1565,3 +1565,36 @@ main#views{ flex:1; min-height:0; position:relative; }
 .pi-rep-txt{ font-family:'Cormorant Garamond', Georgia, serif; font-style:italic; font-size:21px; line-height:1.3; margin-bottom:10px; }
 .pi-rep .pi-btn{ margin:0; padding:12px; font-size:15px; }
 .pi-attente{ font-size:13px; opacity:.85; margin:-8px 0 16px; }
+
+/* ====== ANNONCE « MODE HOT DÉBLOQUÉ » (mode-couple.js, 18/11/2026) ====== */
+#mc-plein.hot{ padding:0; overflow:hidden; background: radial-gradient(120% 70% at 50% 110%, #FF6A2B 0%, rgba(255,106,43,0) 55%), radial-gradient(90% 60% at 50% -10%, #9B0F3F 0%, rgba(155,15,63,0) 60%), linear-gradient(180deg, #3A0516 0%, #6E0B2E 45%, #A3122A 100%); }
+.hot-annonce{ position:relative; width:100%; height:100%; display:flex; align-items:center; justify-content:center; overflow-y:auto; }
+.hot-rayons{ position:absolute; left:50%; top:30%; width:170vmax; height:170vmax; margin:-85vmax 0 0 -85vmax; pointer-events:none; opacity:.22;
+  background: repeating-conic-gradient(from 0deg, rgba(255,214,140,.9) 0deg 7deg, transparent 7deg 22deg);
+  -webkit-mask: radial-gradient(circle, #000 0%, transparent 60%); mask: radial-gradient(circle, #000 0%, transparent 60%);
+  animation: hotTourne 18s linear infinite, hotApparait 1.2s ease both; }
+@keyframes hotTourne{ to{ transform: rotate(360deg); } }
+@keyframes hotApparait{ from{ opacity:0; transform: scale(.4); } }
+.hot-pluie{ position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+.hot-pluie span{ position:absolute; bottom:-40px; font-size:26px; opacity:0; animation: hotMonte var(--d, 3s) ease-in infinite; }
+@keyframes hotMonte{ 0%{ transform: translateY(0) scale(.6) rotate(-10deg); opacity:0; } 15%{ opacity:1; } 100%{ transform: translateY(-110vh) scale(1.2) rotate(15deg); opacity:0; } }
+.hot-corps{ position:relative; width:100%; max-width:400px; box-sizing:border-box; text-align:center; color:#fff;
+  padding: calc(env(safe-area-inset-top,0px) + 30px) 24px calc(env(safe-area-inset-bottom,0px) + 26px); }
+.hot-flamme{ font-size:92px; line-height:1; filter: drop-shadow(0 0 26px rgba(255,190,90,.95)); animation: hotFlamme .9s cubic-bezier(.3,1.6,.5,1) both, spBat 1.3s ease 1s infinite; }
+@keyframes hotFlamme{ from{ transform: scale(0) rotate(-30deg); opacity:0; } }
+.hot-sur{ display:inline-block; margin:14px 0 4px; padding:6px 14px; border-radius:20px; background: rgba(0,0,0,.3); border:1px solid rgba(255,220,160,.5);
+  font-size:13px; font-weight:800; letter-spacing:.5px; color:#FFE29A; animation: hotGlisse .6s ease .35s both; }
+.hot-titre{ font-family:'Cormorant Garamond', Georgia, serif; font-style:italic; font-weight:600; font-size:46px; line-height:1.02; margin:8px 0 18px;
+  background: linear-gradient(90deg, #FFE29A, #FFB04D, #FF6A6A, #FFE29A); background-size:250% 100%; -webkit-background-clip:text; background-clip:text; color:transparent;
+  text-shadow: 0 0 30px rgba(255,120,80,.35); animation: hotGlisse .7s ease .5s both, hotBrille 3s linear 1.2s infinite; }
+@keyframes hotBrille{ to{ background-position: -250% 0; } }
+@keyframes hotGlisse{ from{ opacity:0; transform: translateY(18px); } }
+.hot-point{ display:flex; gap:12px; align-items:flex-start; text-align:left; margin:0 0 12px; padding:13px 14px; border-radius:18px;
+  background: rgba(255,255,255,.1); border:1px solid rgba(255,200,170,.35); animation: hotGlisse .6s ease both; }
+.hot-point:nth-of-type(1){ animation-delay:.8s; } .hot-point:nth-of-type(2){ animation-delay:1.05s; }
+.hot-point span{ font-size:26px; line-height:1.1; }
+.hot-point p{ margin:0; font-size:14px; line-height:1.5; color: rgba(255,240,230,.92); }
+.hot-point b{ color:#FFE29A; }
+.hot-btn{ width:100%; margin-top:10px; padding:15px; border:none; border-radius:16px; font-family:inherit; font-size:16px; font-weight:800; color:#4A0718; cursor:pointer;
+  background: linear-gradient(90deg, #FFE29A, #FFB04D); box-shadow: 0 10px 26px -8px rgba(255,176,77,.9); animation: hotGlisse .6s ease 1.3s both; }
+.hot-btn.ghost{ background: rgba(255,255,255,.12); color:#fff; box-shadow:none; border:1px solid rgba(255,255,255,.3); animation-delay:1.4s; }
