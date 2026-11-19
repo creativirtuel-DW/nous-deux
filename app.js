@@ -201,6 +201,7 @@ function startApp(){
   $('#room-label').textContent = roomCode;
 
   syncPushSubscription();
+  if(typeof suiviDemarrer === 'function') suiviDemarrer();   // suivi des usages (suivi.js)
   // Coffre déjà ouvert sur cet appareil ? On reprend la phrase sans rien demander.
   coffreReprendre().then(() => render());
 
@@ -244,6 +245,7 @@ function render(){
   renderEnvies();
   renderCoffreJour();
   renderPlaisirs();
+  if(typeof renderSuivi === 'function') renderSuivi();
   renderBattleCards();
   renderRewards();
   renderHistory();
