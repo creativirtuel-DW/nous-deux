@@ -1653,4 +1653,5 @@ main#views{ flex:1; min-height:0; position:relative; }
 /* suivi v3 : temps par joueur par défaut, détail déroulé au clic */
 .sv-temps{ font-size:22px; font-weight:800; color: var(--cream); line-height:1.1; margin-top:2px; }
 .sv-detail .sv-ligne{ grid-template-columns: 1fr 44px 64px; }
+.sv-heures{ grid-column: 1 / -1; font-size:11px; color: var(--muted); line-height:1.5; white-space:normal; font-variant-numeric: tabular-nums; }
 .sv-detail .sv-ev{ grid-template-columns:44px 1fr auto; }

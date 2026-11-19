@@ -187,7 +187,17 @@ function renderSuivi(){
     // Détail de la personne choisie uniquement
     const mes = ev.filter(e => e.pid === sel);
     const stats = {};
-    mes.forEach(e => { const st = stats[e.f] || (stats[e.f] = { n: 0, dur: 0 }); st.n++; st.dur += e.dur; });
+    mes.forEach(e => {
+      const st = stats[e.f] || (stats[e.f] = { n: 0, dur: 0, h: [] });
+      st.n++; st.dur += e.dur;
+      const d = new Date(e.ts); st.h.push(d.getHours() * 60 + d.getMinutes());
+    });
+    // Heures (hh:mm) de chaque usage, rangées du matin au soir pour voir le moment de la journée.
+    const heures = l => {
+      const t = l.slice().sort((a, b) => a - b), MAXI = 24;
+      const txt = t.slice(0, MAXI).map(m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'));
+      return '<div class="sv-heures">🕒 ' + txt.join(' · ') + (t.length > MAXI ? ' · +' + (t.length - MAXI) : '') + '</div>';
+    };
     const fonctions = Object.keys(stats).filter(f => SUIVI_HORS_CLASSEMENT.indexOf(f) < 0).sort((a, b) => stats[b].n - stats[a].n);
     const jamais = Object.keys(SUIVI_NOMS).filter(f => SUIVI_HORS_CLASSEMENT.indexOf(f) < 0 && !stats[f]);
     const max = Math.max(1, ...fonctions.map(f => stats[f].n));
@@ -196,7 +206,8 @@ function renderSuivi(){
     if(fonctions.length){
       h += '<div class="sv-table"><div class="sv-ligne sv-tete"><span>Fonction</span><span>Fois</span><span>Temps</span></div>'
         + fonctions.map(f => '<div class="sv-ligne"><span>' + SUIVI_NOMS[f] + '<i style="width:' + Math.round(stats[f].n / max * 100) + '%"></i></span>'
-          + '<span>' + stats[f].n + '</span><span>' + (stats[f].dur ? suiviDuree(stats[f].dur) : '–') + '</span></div>').join('') + '</div>';
+          + '<span>' + stats[f].n + '</span><span>' + (stats[f].dur ? suiviDuree(stats[f].dur) : '–') + '</span>'
+          + heures(stats[f].h) + '</div>').join('') + '</div>';
     } else {
       h += '<p class="sv-note">Aucun usage sur cette période.</p>';
     }
