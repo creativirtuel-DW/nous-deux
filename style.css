@@ -1650,3 +1650,7 @@ main#views{ flex:1; min-height:0; position:relative; }
 .sv-detail.sv-p2{ border-left-color:#8E8CFF; }
 .sv-detail-tete{ display:flex; justify-content:space-between; align-items:center; font-size:14px; }
 .sv-detail h4:first-of-type{ margin-top:12px; }
+/* suivi v3 : temps par joueur par défaut, détail déroulé au clic */
+.sv-temps{ font-size:22px; font-weight:800; color: var(--cream); line-height:1.1; margin-top:2px; }
+.sv-detail .sv-ligne{ grid-template-columns: 1fr 44px 64px; }
+.sv-detail .sv-ev{ grid-template-columns:44px 1fr auto; }

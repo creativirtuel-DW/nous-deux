@@ -161,71 +161,64 @@ function renderSuivi(){
   const depuis = Date.now() - suiviPeriode * 86400000;
   const ev = suiviEvenements().filter(e => e.ts >= depuis);
 
-  // Comptes par fonction et par joueur
-  const stats = {};
-  ev.forEach(e => {
-    const st = stats[e.f] || (stats[e.f] = { p1: 0, p2: 0, dur: 0 });
-    st[e.pid]++; st.dur += e.dur;
-  });
-  const fonctions = Object.keys(stats).filter(f => SUIVI_HORS_CLASSEMENT.indexOf(f) < 0)
-    .sort((a, b) => (stats[b].p1 + stats[b].p2) - (stats[a].p1 + stats[a].p2));
-  const sel = suiviJoueur;   // joueur dont on montre le détail (null = aucun)
-  const jamais = sel ? Object.keys(SUIVI_NOMS).filter(f => SUIVI_HORS_CLASSEMENT.indexOf(f) < 0 && !(stats[f] && stats[f][sel])) : [];
+  const sel = suiviJoueur;   // joueur dont on déroule le détail (null = aucun)
 
-  // Sessions : ouvertures de l'appli et temps total passé
+  // Temps passé et ouvertures de l'appli, pour chacun
   const sess = pid => {
     const l = ev.filter(e => e.pid === pid);
     return { n: l.filter(e => e.f === 'appli').length, dur: l.reduce((t, e) => t + e.dur, 0) };
   };
-  const s1 = sess('p1'), s2 = sess('p2');
-  const n1 = escapeHtml(suiviNom('p1')), n2 = escapeHtml(suiviNom('p2'));
-  const max = Math.max(1, ...fonctions.map(f => stats[f].p1 + stats[f].p2));
+  const carte = pid => {
+    const s = sess(pid), nom = escapeHtml(suiviNom(pid));
+    return '<button type="button" class="sv-pers sv-' + pid + (sel === pid ? ' actif' : '') + '" data-sv-p="' + pid + '">'
+      + '<b>' + nom + '</b><strong class="sv-temps">' + suiviDuree(s.dur) + '</strong>'
+      + '<span>sur l’appli · ' + s.n + ' ouverture' + (s.n > 1 ? 's' : '') + '</span>'
+      + '<small>' + (sel === pid ? 'Masquer le détail ▴' : 'Voir le détail ▾') + '</small></button>';
+  };
 
   let h = '<section class="sv-bloc"><h3>📊 Analyse des usages</h3>'
     + '<p class="sv-note">Seules les fonctions ouvertes sont notées, jamais ce qui est écrit. Conservé ' + SUIVI_JOURS + ' jours.</p>'
     + '<div class="sv-periodes">' + [1, 7, 30, 60].map(j => '<button type="button" class="sv-chip' + (j === suiviPeriode ? ' actif' : '') + '" data-sv-j="' + j + '">' + (j === 1 ? '24 h' : j + ' j') + '</button>').join('') + '</div>'
-    + '<div class="sv-sessions">'
-    + '<button type="button" class="sv-pers sv-p1' + (sel === 'p1' ? ' actif' : '') + '" data-sv-p="p1"><b>' + n1 + '</b><span>' + s1.n + ' ouverture' + (s1.n > 1 ? 's' : '') + ' · ' + suiviDuree(s1.dur) + '</span><small>' + (sel === 'p1' ? 'Détail affiché ▾' : 'Voir le détail ›') + '</small></button>'
-    + '<button type="button" class="sv-pers sv-p2' + (sel === 'p2' ? ' actif' : '') + '" data-sv-p="p2"><b>' + n2 + '</b><span>' + s2.n + ' ouverture' + (s2.n > 1 ? 's' : '') + ' · ' + suiviDuree(s2.dur) + '</span><small>' + (sel === 'p2' ? 'Détail affiché ▾' : 'Voir le détail ›') + '</small></button></div>';
+    + '<div class="sv-sessions">' + carte('p1') + carte('p2') + '</div>';
 
-  if(fonctions.length){
-    h += '<div class="sv-table"><div class="sv-ligne sv-tete"><span>Fonction</span><span>' + n1 + '</span><span>' + n2 + '</span><span>Temps</span></div>'
-      + fonctions.map(f => {
-          const st = stats[f], tot = st.p1 + st.p2;
-          return '<div class="sv-ligne"><span>' + SUIVI_NOMS[f] + '<i style="width:' + Math.round(tot / max * 100) + '%"></i></span>'
-            + '<span>' + (st.p1 || '–') + '</span><span>' + (st.p2 || '–') + '</span><span>' + (st.dur ? suiviDuree(st.dur) : '–') + '</span></div>';
-        }).join('') + '</div>';
-  } else {
-    h += '<p class="sv-note">Aucun usage enregistré sur cette période.</p>';
-  }
-  // Détail : seulement pour la personne choisie (touche son prénom)
   if(!sel){
-    h += '<p class="sv-astuce">👆 Touche un prénom pour voir le détail de ses usages.</p>';
+    h += '<p class="sv-astuce">👆 Touche un prénom pour dérouler le détail de ses usages.</p>';
   } else {
+    // Détail de la personne choisie uniquement
+    const mes = ev.filter(e => e.pid === sel);
+    const stats = {};
+    mes.forEach(e => { const st = stats[e.f] || (stats[e.f] = { n: 0, dur: 0 }); st.n++; st.dur += e.dur; });
+    const fonctions = Object.keys(stats).filter(f => SUIVI_HORS_CLASSEMENT.indexOf(f) < 0).sort((a, b) => stats[b].n - stats[a].n);
+    const jamais = Object.keys(SUIVI_NOMS).filter(f => SUIVI_HORS_CLASSEMENT.indexOf(f) < 0 && !stats[f]);
+    const max = Math.max(1, ...fonctions.map(f => stats[f].n));
     const ns = escapeHtml(suiviNom(sel));
     h += '<div class="sv-detail sv-' + sel + '"><div class="sv-detail-tete"><b>Détail de ' + ns + '</b><button type="button" class="qdj-lien" data-sv-p="' + sel + '">Fermer ✕</button></div>';
-    if(jamais.length){
-      h += '<h4>😴 ' + ns + ' n’a jamais ouvert</h4><div class="sv-jamais">' + jamais.map(f => '<span>' + SUIVI_NOMS[f] + '</span>').join('') + '</div>';
+    if(fonctions.length){
+      h += '<div class="sv-table"><div class="sv-ligne sv-tete"><span>Fonction</span><span>Fois</span><span>Temps</span></div>'
+        + fonctions.map(f => '<div class="sv-ligne"><span>' + SUIVI_NOMS[f] + '<i style="width:' + Math.round(stats[f].n / max * 100) + '%"></i></span>'
+          + '<span>' + stats[f].n + '</span><span>' + (stats[f].dur ? suiviDuree(stats[f].dur) : '–') + '</span></div>').join('') + '</div>';
+    } else {
+      h += '<p class="sv-note">Aucun usage sur cette période.</p>';
     }
-  }
-
-  // Fil des derniers usages de la personne choisie
-  const fil = sel ? ev.filter(e => e.pid === sel).sort((a, b) => b.ts - a.ts).slice(0, 80) : [];
-  if(sel && !fil.length) h += '<p class="sv-note">Aucun usage sur cette période.</p>';
-  if(fil.length){
-    h += '<h4>🕒 Ses derniers usages</h4><div class="sv-fil">';
-    let jour = '';
-    fil.forEach(e => {
-      const d = new Date(e.ts);
-      const j = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
-      if(j !== jour){ jour = j; h += '<div class="sv-jour">' + j + '</div>'; }
-      h += '<div class="sv-ev sv-' + e.pid + '"><span>' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) + '</span>'
-        + '<b>' + escapeHtml(suiviNom(e.pid)) + '</b><em>' + (SUIVI_NOMS[e.f] || e.f) + '</em>'
-        + (e.dur >= 5000 && e.f !== 'quitte' ? '<small>' + suiviDuree(e.dur) + '</small>' : '') + '</div>';
-    });
+    if(jamais.length){
+      h += '<h4>😴 Jamais ouvert</h4><div class="sv-jamais">' + jamais.map(f => '<span>' + SUIVI_NOMS[f] + '</span>').join('') + '</div>';
+    }
+    const fil = mes.slice().sort((a, b) => b.ts - a.ts).slice(0, 80);
+    if(fil.length){
+      h += '<h4>🕒 Derniers usages</h4><div class="sv-fil">';
+      let jour = '';
+      fil.forEach(e => {
+        const d = new Date(e.ts);
+        const jr = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+        if(jr !== jour){ jour = jr; h += '<div class="sv-jour">' + jr + '</div>'; }
+        h += '<div class="sv-ev sv-' + e.pid + '"><span>' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) + '</span>'
+          + '<em>' + (SUIVI_NOMS[e.f] || e.f) + '</em>'
+          + (e.dur >= 5000 && e.f !== 'quitte' ? '<small>' + suiviDuree(e.dur) + '</small>' : '<small></small>') + '</div>';
+      });
+      h += '</div>';
+    }
     h += '</div>';
   }
-  if(sel) h += '</div>';
   h += '</section>';
   if(box.innerHTML !== h){
     box.innerHTML = h;
