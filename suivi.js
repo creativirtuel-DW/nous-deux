@@ -66,6 +66,7 @@ const SUIVI_CIBLES = [
 ];
 
 let suiviPeriode = 7;          // jours affichés dans l'analyse
+let suiviJoueur = null;        // 'p1' | 'p2' : détail affiché pour cette personne (clic sur son prénom)
 let suiviMinuteur = null;
 
 function suiviPret(){ return typeof roomRef !== 'undefined' && roomRef && me && me.id && roomCode; }
@@ -168,7 +169,8 @@ function renderSuivi(){
   });
   const fonctions = Object.keys(stats).filter(f => SUIVI_HORS_CLASSEMENT.indexOf(f) < 0)
     .sort((a, b) => (stats[b].p1 + stats[b].p2) - (stats[a].p1 + stats[a].p2));
-  const jamais = Object.keys(SUIVI_NOMS).filter(f => SUIVI_HORS_CLASSEMENT.indexOf(f) < 0 && !stats[f]);
+  const sel = suiviJoueur;   // joueur dont on montre le détail (null = aucun)
+  const jamais = sel ? Object.keys(SUIVI_NOMS).filter(f => SUIVI_HORS_CLASSEMENT.indexOf(f) < 0 && !(stats[f] && stats[f][sel])) : [];
 
   // Sessions : ouvertures de l'appli et temps total passé
   const sess = pid => {
@@ -182,8 +184,9 @@ function renderSuivi(){
   let h = '<section class="sv-bloc"><h3>📊 Analyse des usages</h3>'
     + '<p class="sv-note">Seules les fonctions ouvertes sont notées, jamais ce qui est écrit. Conservé ' + SUIVI_JOURS + ' jours.</p>'
     + '<div class="sv-periodes">' + [1, 7, 30, 60].map(j => '<button type="button" class="sv-chip' + (j === suiviPeriode ? ' actif' : '') + '" data-sv-j="' + j + '">' + (j === 1 ? '24 h' : j + ' j') + '</button>').join('') + '</div>'
-    + '<div class="sv-sessions"><div><b>' + n1 + '</b><span>' + s1.n + ' ouverture' + (s1.n > 1 ? 's' : '') + ' · ' + suiviDuree(s1.dur) + '</span></div>'
-    + '<div><b>' + n2 + '</b><span>' + s2.n + ' ouverture' + (s2.n > 1 ? 's' : '') + ' · ' + suiviDuree(s2.dur) + '</span></div></div>';
+    + '<div class="sv-sessions">'
+    + '<button type="button" class="sv-pers sv-p1' + (sel === 'p1' ? ' actif' : '') + '" data-sv-p="p1"><b>' + n1 + '</b><span>' + s1.n + ' ouverture' + (s1.n > 1 ? 's' : '') + ' · ' + suiviDuree(s1.dur) + '</span><small>' + (sel === 'p1' ? 'Détail affiché ▾' : 'Voir le détail ›') + '</small></button>'
+    + '<button type="button" class="sv-pers sv-p2' + (sel === 'p2' ? ' actif' : '') + '" data-sv-p="p2"><b>' + n2 + '</b><span>' + s2.n + ' ouverture' + (s2.n > 1 ? 's' : '') + ' · ' + suiviDuree(s2.dur) + '</span><small>' + (sel === 'p2' ? 'Détail affiché ▾' : 'Voir le détail ›') + '</small></button></div>';
 
   if(fonctions.length){
     h += '<div class="sv-table"><div class="sv-ligne sv-tete"><span>Fonction</span><span>' + n1 + '</span><span>' + n2 + '</span><span>Temps</span></div>'
@@ -195,14 +198,22 @@ function renderSuivi(){
   } else {
     h += '<p class="sv-note">Aucun usage enregistré sur cette période.</p>';
   }
-  if(jamais.length){
-    h += '<h4>😴 Jamais ouvert sur la période</h4><div class="sv-jamais">' + jamais.map(f => '<span>' + SUIVI_NOMS[f] + '</span>').join('') + '</div>';
+  // Détail : seulement pour la personne choisie (touche son prénom)
+  if(!sel){
+    h += '<p class="sv-astuce">👆 Touche un prénom pour voir le détail de ses usages.</p>';
+  } else {
+    const ns = escapeHtml(suiviNom(sel));
+    h += '<div class="sv-detail sv-' + sel + '"><div class="sv-detail-tete"><b>Détail de ' + ns + '</b><button type="button" class="qdj-lien" data-sv-p="' + sel + '">Fermer ✕</button></div>';
+    if(jamais.length){
+      h += '<h4>😴 ' + ns + ' n’a jamais ouvert</h4><div class="sv-jamais">' + jamais.map(f => '<span>' + SUIVI_NOMS[f] + '</span>').join('') + '</div>';
+    }
   }
 
-  // Fil des derniers usages
-  const fil = ev.slice().sort((a, b) => b.ts - a.ts).slice(0, 80);
+  // Fil des derniers usages de la personne choisie
+  const fil = sel ? ev.filter(e => e.pid === sel).sort((a, b) => b.ts - a.ts).slice(0, 80) : [];
+  if(sel && !fil.length) h += '<p class="sv-note">Aucun usage sur cette période.</p>';
   if(fil.length){
-    h += '<h4>🕒 Derniers usages</h4><div class="sv-fil">';
+    h += '<h4>🕒 Ses derniers usages</h4><div class="sv-fil">';
     let jour = '';
     fil.forEach(e => {
       const d = new Date(e.ts);
@@ -214,10 +225,14 @@ function renderSuivi(){
     });
     h += '</div>';
   }
+  if(sel) h += '</div>';
   h += '</section>';
   if(box.innerHTML !== h){
     box.innerHTML = h;
     box.querySelectorAll('[data-sv-j]').forEach(b => b.onclick = () => { suiviPeriode = +b.dataset.svJ; renderSuivi(); });
+    box.querySelectorAll('[data-sv-p]').forEach(b => b.onclick = () => {
+      suiviJoueur = suiviJoueur === b.dataset.svP ? null : b.dataset.svP; renderSuivi();
+    });
   }
 }
 
