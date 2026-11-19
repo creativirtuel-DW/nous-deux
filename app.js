@@ -320,7 +320,9 @@ function renderPendingCard(){
       : '';
     // Carte photo : tant qu'elle n'est pas ouverte, on ne peut pas valider —
     // sinon on validerait sans avoir rien vu.
-    const photoBlock = p.photo
+    const photoBlock = p.sms
+      ? smsNoteValidation(state.players[p.by])
+      : p.photo
       ? (p.photoData
           ? `<div class="pc-ouvrir-zone" id="pc-zone-${key}">
                <button class="btn-primary pc-ouvrir">📸 Ouvrir la photo (${Math.round(PC_VUE_MS/1000)} s)</button>
@@ -414,6 +416,7 @@ function construireCarteMine(key, p){
         <span class="pending-who">+${p.pts} en attente…</span>
       </div>
       <p class="pending-text">${escapeHtml(p.text)}</p>
+      ${p.sms ? `<div class="sms-recu">📱 Photo envoyée par SMS : ${escapeHtml(state.players[partnerId]||'ton/ta partenaire')} doit la valider.</div>` : ''}
       ${p.answer ? `<div class="pending-answer"><span class="pending-answer-label">Ta réponse :</span> ${escapeHtml(p.answer)}</div>` : ''}
       ${p.comment ? `<div class="pending-answer"><span class="pending-answer-label">Ton commentaire :</span> ${escapeHtml(p.comment)}</div>` : ''}
       <div class="pending-actions">
@@ -445,6 +448,7 @@ function construireCarteMine(key, p){
           ${skipOrPenaltyBtn}
           <button class="btn-primary pending-submit">Envoyer pour validation</button>
         </div>
+        ${smsDemandePhoto(p.text) ? smsBouton('data-carte-sms') : ''}
       `;
       if(limitReached){
         row.querySelector('.pending-penalty').addEventListener('click', () => payPenalty(key));
@@ -475,6 +479,7 @@ function construireCarteMine(key, p){
           ${skipOrPenaltyBtn}
           <button class="btn-primary pending-photo">📸 Prendre la photo</button>
         </div>
+        ${smsBouton('data-carte-sms')}
       `;
       if(limitReached){
         row.querySelector('.pending-penalty').addEventListener('click', () => payPenalty(key));
@@ -508,6 +513,7 @@ function construireCarteMine(key, p){
           ${skipOrPenaltyBtn}
           <button class="btn-primary pending-ok">OK, c'est fait !</button>
         </div>
+        ${smsDemandePhoto(p.text) ? smsBouton('data-carte-sms') : ''}
       `;
       if(!p.pdGage){
         if(limitReached){
@@ -523,6 +529,8 @@ function construireCarteMine(key, p){
     }
   }
 
+  const sms = row.querySelector('[data-carte-sms]');
+  if(sms) sms.addEventListener('click', () => envoyerCarteParSms(key));
   return row;
 }
 
@@ -748,6 +756,19 @@ function submitAnswer(key, answerText){
     ['skipCounts/'+me.id+'/'+pending.cat]: 0
   });
   notifyPartner('✍️ Une carte à valider', me.name + ' a répondu à une carte.', 'valider');
+}
+
+// Photo envoyée par SMS : la carte passe en attente de validation chez l'autre.
+function envoyerCarteParSms(key){
+  const pending = state.pendingCards && state.pendingCards[key];
+  if(!pending || pending.by !== me.id) return;
+  roomRef.update({
+    ['pendingCards/'+key+'/status']: 'review',
+    ['pendingCards/'+key+'/sms']: Date.now(),
+    ['skipCounts/'+me.id+'/'+pending.cat]: 0
+  });
+  notifyPartner('📱 Une photo par SMS', me.name + ' t' + String.fromCharCode(39) + 'a envoyé sa photo par SMS : regarde tes messages et valide la carte.', 'valider');
+  smsOuvrir(pending.text);
 }
 
 function markDone(key, comment){

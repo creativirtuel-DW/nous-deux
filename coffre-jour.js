@@ -271,6 +271,7 @@ function cjDessiner(forcer){
   page.innerHTML = h;
   const b = page.querySelector('#cj-ouvrir'); if(b) b.onclick = cjOuvrirCoffre;
   const f = page.querySelector('[data-cj-gage-fait]'); if(f) f.onclick = cjGageFait;
+  const sm = page.querySelector('[data-cj-sms]'); if(sm) sm.onclick = () => { const r = cjDuJour(); smsOuvrir(cjTexte((r && r.texte) || '')); };
   const env = page.querySelector('[data-cj-envoyer]'); if(env) env.onclick = cjEnvoyerBons;
   page.querySelectorAll('[data-cj-offert]').forEach(x => x.onclick = () => cjCadeauOffert(x.dataset.cjOffert));
 }
@@ -281,7 +282,7 @@ function cjCarte(r){
   if(r.type === 'bon') return '<div class="cj-carte bon">' + cjCarteBon(r.montant, true)
     + '<small>Conserve-le dans ton appli : tu pourras envoyer tes bons à ' + escapeHtml(cjNomAutre()) + ' une fois que tu auras atteint <b>' + CJ_SEUIL_EUROS + ' €</b>. Il/elle devra alors t’offrir un cadeau d’un montant de ' + CJ_SEUIL_EUROS + ' € minimum.</small></div>';
   return '<div class="cj-carte gage"><div class="cj-carte-ic">😈</div><b>Gage du jour</b><span>' + escapeHtml(r.texte) + '</span>'
-    + (r.fait ? '<small>✓ Gage réalisé</small>' : '<small>À réaliser avant ce soir.</small><button type="button" class="btn-ghost" data-cj-gage-fait>C’est fait ✓</button>') + '</div>';
+    + (r.fait ? '<small>✓ Gage réalisé</small>' : '<small>À réaliser avant ce soir.</small>' + (smsDemandePhoto(r.texte) ? smsBouton('data-cj-sms') : '') + '<button type="button" class="btn-ghost" data-cj-gage-fait>C’est fait ✓</button>') + '</div>';
 }
 
 function cjCarteBon(montant, grande){

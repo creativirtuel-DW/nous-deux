@@ -79,9 +79,9 @@ function piBlocValider(){
   const l = piAValider();
   if(!l.length) return '';
   return '<section class="pi-valider"><h3>✍️ ' + escapeHtml(piNomAutre()) + ' t’a répondu</h3>'
-    + l.map(r => '<div class="pi-rep"><div class="pi-rep-q">💬 ' + escapeHtml(r.q || '') + '</div>'
-      + '<div class="pi-rep-txt">« ' + escapeHtml(r.rep || '') + ' »</div>'
-      + '<button type="button" class="pi-btn" data-pi-valider="' + r.k + '">✓ Je valide sa réponse</button></div>').join('')
+    + l.map(r => '<div class="pi-rep"><div class="pi-rep-q">' + (r.sms ? '🔥 ' : '💬 ') + escapeHtml(r.q || '') + '</div>'
+      + (r.sms ? '<div class="pi-rep-txt pi-rep-sms">📱 Photo envoyée par SMS : regarde tes messages.</div>' : '<div class="pi-rep-txt">« ' + escapeHtml(r.rep || '') + ' »</div>')
+      + '<button type="button" class="pi-btn" data-pi-valider="' + r.k + '">' + (r.sms ? '✓ Photo reçue, je valide' : '✓ Je valide sa réponse') + '</button></div>').join('')
     + '</section>';
 }
 
@@ -123,10 +123,22 @@ function piDessiner(){
     + '<p class="pi-carte-texte">' + escapeHtml(piCarte.t) + '</p>'
     + '<div class="pi-carte-pied">Plaisirs Intimes</div></div>'
     + (q ? '<textarea class="pi-champ" maxlength="600" rows="4" placeholder="Écris ta réponse… ' + escapeHtml(piNomAutre()) + ' la lira et la validera."></textarea>' : '')
-    + '<button type="button" class="pi-btn" data-pi-fait>' + (q ? '📨 Envoyer ma réponse · question suivante' : '✓ Défi réalisé · défi suivant') + '</button>'
+    + (!q && smsDemandePhoto(piCarte.t)
+        ? '<button type="button" class="pi-btn sms-pi" data-pi-sms>📱 Envoyer directement par SMS</button><p class="pi-sms-note">' + escapeHtml(piNomAutre()) + ' validera ton défi une fois la photo reçue.</p>'
+        : '<button type="button" class="pi-btn" data-pi-fait>' + (q ? '📨 Envoyer ma réponse · question suivante' : '✓ Défi réalisé · défi suivant') + '</button>')
     + '<button type="button" class="pi-btn ghost" data-pi-passer>' + (q ? 'Passer cette question' : 'Passer ce défi') + ' <small>' + piTextePasses() + '</small></button>'
     + '<button type="button" class="pi-btn ghost" data-pi-retour>Changer de jeu</button>';
-  c.querySelector('[data-pi-fait]').onclick = () => {
+  const smsB = c.querySelector('[data-pi-sms]');
+  if(smsB) smsB.onclick = () => {
+    const t = piCarte.t;
+    roomRef.child('plaisirsReponses').push({ de: me.id, pour: piAutreId(), qid: piCarte.id, q: t, rep: '📱 Photo envoyée par SMS', sms: true, ts: Date.now(), valide: null });
+    if(typeof notifyPartner === 'function')
+      notifyPartner('🌶️ ' + me.name + ' t’a envoyé une photo par SMS', 'Regarde tes messages, puis valide son défi dans Plaisirs Intimes.', 'plaisirs');
+    piCarte.fait = true; piTirer(piCarte.mode);
+    smsOuvrir(t);
+  };
+  const faitB = c.querySelector('[data-pi-fait]');
+  if(faitB) faitB.onclick = () => {
     if(q){
       const champ = c.querySelector('.pi-champ');
       if(!piEnvoyerReponse(champ.value)){

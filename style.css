@@ -1628,3 +1628,14 @@ main#views{ flex:1; min-height:0; position:relative; }
 .sv-ev span{ color: var(--muted); }
 .sv-ev em{ font-style:normal; color: var(--cream); }
 .sv-ev small{ color: var(--muted-2); }
+
+/* ====== ENVOI PAR SMS (sms-photo.js) ====== */
+.sms-btn{ display:block; width:100%; margin-top:10px; padding:13px; border-radius:999px; border:1px solid rgba(52,199,89,.55); background: rgba(52,199,89,.14);
+  color:#7BE495; font-family:inherit; font-size:15px; font-weight:800; cursor:pointer; }
+.sms-btn:active{ transform: scale(.98); }
+.sms-recu{ margin:10px 0; padding:10px 12px; border-radius:14px; background: rgba(52,199,89,.12); border:1px solid rgba(52,199,89,.4); font-size:13.5px; line-height:1.45; color: var(--cream); }
+.sms-tel{ width:100%; box-sizing:border-box; margin:4px 0 6px; padding:13px 14px; border-radius:14px; border:1px solid var(--line-2); background: rgba(0,0,0,.25); color: var(--cream); font-family:inherit; font-size:17px; text-align:center; }
+.sms-note{ font-size:12px !important; }
+.pi-btn.sms-pi{ background: linear-gradient(90deg, #7BE495, #34C759); color:#08361A; }
+.pi-sms-note{ font-size:12.5px; opacity:.85; margin:-4px 0 12px; }
+.pi-rep-sms{ font-family:inherit !important; font-style:normal !important; font-size:15px !important; }
