@@ -121,6 +121,64 @@ function notifyPartner(title, body, tag){
   }catch(e){}
 }
 
+// ---------- RAPPEL AU/À LA PARTENAIRE ----------
+// Bouton « Envoyer un rappel » sur ce qui attend l'autre (Battle, carte,
+// pensée du jour). Le dernier envoi est rangé dans rooms/$room/rappels/<clé>
+// pour que les deux téléphones respectent le même délai entre deux rappels.
+const RAPPEL_DELAI_MS = 30 * 60 * 1000;
+const RAPPEL_TEXTES = {
+  battle:   ['⚔️ Battle en attente',   'Vous avez une battle en attente ! Pensez à aller voir pour y répondre !'],
+  question: ['💬 Question en attente', 'Vous avez une question en attente ! Pensez à aller voir pour y répondre !'],
+  defi:     ['🔥 Carte en attente',    'Vous avez une carte en attente ! Pensez à aller voir pour la jouer !'],
+  valider:  ['✍️ Carte à valider',     'Vous avez une carte à valider ! Pensez à aller voir pour y répondre !'],
+  pensee:   ['💭 Pensée en attente',   'Vous avez une pensée du jour en attente ! Pensez à aller voir pour y répondre !']
+};
+
+function rappelDernier(cle){
+  const r = state && state.rappels && state.rappels[cle];
+  return (r && r.ts) || 0;
+}
+
+function rappelHeure(ts){
+  const d = new Date(ts);
+  return d.getHours() + 'h' + String(d.getMinutes()).padStart(2, '0');
+}
+
+// HTML du bouton ; le clic est géré une fois pour toutes plus bas.
+function rappelHTML(cle, type){
+  const nom = escapeHtml((state.players && state.players[partnerId]) || 'Ton/ta partenaire');
+  if(!(state.pushSubs && state.pushSubs[partnerId] && state.pushSubs[partnerId].endpoint)){
+    return '<button class="btn-ghost rappel-btn off" disabled>🔕 ' + nom + ' n’a pas activé les notifications</button>';
+  }
+  const dernier = rappelDernier(cle);
+  if(dernier && Date.now() - dernier < RAPPEL_DELAI_MS){
+    return '<button class="btn-ghost rappel-btn envoye" data-rappel="' + cle + '" data-rappel-type="' + type + '">'
+      + '✓ Rappel envoyé à ' + rappelHeure(dernier) + ' · nouveau possible à ' + rappelHeure(dernier + RAPPEL_DELAI_MS) + '</button>';
+  }
+  return '<button class="btn-ghost rappel-btn" data-rappel="' + cle + '" data-rappel-type="' + type + '">🔔 Envoyer un rappel à ' + nom + '</button>';
+}
+
+function rappelEnvoyer(cle, type){
+  if(!roomRef || !RAPPEL_TEXTES[type]) return;
+  if(Date.now() - rappelDernier(cle) < RAPPEL_DELAI_MS) return;
+  const t = RAPPEL_TEXTES[type];
+  notifyPartner(t[0], t[1], 'rappel-' + type);
+  // On note l'envoi et on fait le ménage des vieux rappels (plus de 3 jours).
+  const updates = { [cle]: { ts: Date.now(), by: me.id } };
+  const tous = (state && state.rappels) || {};
+  Object.keys(tous).forEach(k => {
+    if(k !== cle && (!tous[k] || Date.now() - (tous[k].ts || 0) > 3 * 86400000)) updates[k] = null;
+  });
+  roomRef.child('rappels').update(updates);
+}
+
+document.addEventListener('click', e => {
+  const b = e.target.closest && e.target.closest('[data-rappel]');
+  if(!b || b.disabled) return;
+  e.stopPropagation();
+  rappelEnvoyer(b.dataset.rappel, b.dataset.rappelType);
+}, true);
+
 // ---------- BANDEAU DANS L'APP ----------
 function renderPushBanner(){
   const el = $('#push-banner');

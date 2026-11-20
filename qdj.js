@@ -233,7 +233,8 @@ function renderQDJ(){
   plein.style.display = '';
   if(qdjAideVisible) qdjAfficherAide();
 
-  const signature = [jour, q.id, !!moi, !!lui, moi && moi.t, lui && lui.t, serie, qdjEdition, admin, !!e.credite].join('|');
+  const signature = [jour, q.id, !!moi, !!lui, moi && moi.t, lui && lui.t, serie, qdjEdition, admin, !!e.credite,
+    rappelDernier('qdj_' + jour), !!(state.pushSubs && state.pushSubs[partnerId])].join('|');
   if(signature === qdjSignature) return;
   qdjSignature = signature;
 
@@ -260,7 +261,8 @@ function renderQDJ(){
       + (bonus ? '' : ' · bonus dans ' + (QDJ_BONUS_TOUS - (n % QDJ_BONUS_TOUS)) + ' j') + '</p>';
   }else if(moi && !qdjEdition){
     // ---- en attente de l'autre ----
-    html += '<button class="qdj-lien" id="qdj-modifier">Modifier ma réponse</button>';
+    html += '<button class="qdj-lien" id="qdj-modifier">Modifier ma réponse</button>'
+      + rappelHTML('qdj_' + jour, 'pensee');
   }else{
     // ---- à moi de répondre ----
     html += (lui ? '<div class="qdj-statut">✓ ' + escapeHtml(qdjNomAutre()) + ' a déjà répondu — à ton tour !</div>' : '')

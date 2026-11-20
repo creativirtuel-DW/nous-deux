@@ -395,7 +395,8 @@ function renderPendingCard(){
            <span class="pending-cat">${labelMap[p.cat]||'Carte'}</span>
            <span class="pending-who">chez ${escapeHtml(joueurs[p.by]||'')}</span>
          </div>
-         <div class="skip-note">⏳ ${escapeHtml(joueurs[p.by]||'Ton/ta partenaire')} a pioché cette carte et ne l'a pas encore jouée.</div>`;
+         <div class="skip-note">⏳ ${escapeHtml(joueurs[p.by]||'Ton/ta partenaire')} a pioché cette carte et ne l'a pas encore jouée.</div>
+         ${rappelHTML('carte_' + key, p.cat === 'question' ? 'question' : 'defi')}`;
     const retirer = row.querySelector('.pending-retirer');
     if(retirer) retirer.addEventListener('click', () => roomRef.child('pendingCards/' + key).remove());
     autreList.appendChild(row);
@@ -419,6 +420,7 @@ function construireCarteMine(key, p){
       ${p.sms ? `<div class="sms-recu">📱 Photo envoyée par SMS : ${escapeHtml(state.players[partnerId]||'ton/ta partenaire')} doit la valider.</div>` : ''}
       ${p.answer ? `<div class="pending-answer"><span class="pending-answer-label">Ta réponse :</span> ${escapeHtml(p.answer)}</div>` : ''}
       ${p.comment ? `<div class="pending-answer"><span class="pending-answer-label">Ton commentaire :</span> ${escapeHtml(p.comment)}</div>` : ''}
+      ${rappelHTML('carte_' + key, 'valider')}
       <div class="pending-actions">
         ${p.pdGage ? '' : `<button class="btn-ghost pending-cancel">Annuler (0 point)</button>`}
       </div>
