@@ -53,7 +53,7 @@ for nom, cat in onglets:
 def id_neuf(cat):
     pre = PREFIXE[cat]
     n = max([int(x[len(pre):]) for x in pris if x.startswith(pre) and x[len(pre):].isdigit()] or [0]) + 1
-    ident = "%s%03d" % (pre, n)
+    ident = "%s%02d" % (pre, n)
     pris.add(ident)
     return ident
 
