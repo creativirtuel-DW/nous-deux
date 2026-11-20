@@ -1110,6 +1110,8 @@ function setupRewardsView(){
       'battleVues': null,
       'synchro': null,
       'synchroVues': null,
+      'synchroJour': null,
+      'synchroStats': null,
       'osmose': 0,
       'gagesVus': null,
       'qdj': null
