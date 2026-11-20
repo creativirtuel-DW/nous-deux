@@ -1660,3 +1660,15 @@ main#views{ flex:1; min-height:0; position:relative; }
 .sv-detail .sv-ligne{ grid-template-columns: 1fr 44px 64px; }
 .sv-heures{ grid-column: 1 / -1; font-size:11px; color: var(--muted); line-height:1.5; white-space:normal; font-variant-numeric: tabular-nums; }
 .sv-detail .sv-ev{ grid-template-columns:44px 1fr auto; }
+
+/* ===== VERSION + INTIME d'une carte (intime.js) ===== */
+.it-case{ display:grid; grid-template-columns:auto 1fr; gap:6px 10px; align-items:center;
+  margin:0 0 12px; padding:11px 12px; border-radius:14px;
+  background: linear-gradient(135deg, rgba(255,107,107,0.14), rgba(232,35,74,0.10));
+  border:1px solid rgba(255,107,107,0.45); }
+.it-ic{ font-size:22px; animation: itFlamme 1.6s ease-in-out infinite; }
+.it-case p{ margin:0; font-size:13px; line-height:1.4; color: var(--cream); }
+.it-oui{ grid-column:1 / -1; border:0; border-radius:12px; padding:9px 12px; cursor:pointer;
+  font:700 13px/1 inherit; font-family:inherit; color:#fff; background: var(--grad); }
+.it-oui:active{ transform: scale(0.98); }
+@keyframes itFlamme{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.15); } }

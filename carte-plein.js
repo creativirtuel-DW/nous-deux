@@ -57,7 +57,7 @@ function renderCartePlein(){
     return;
   }
 
-  const signature = [cpCle, p.status, getSkipCount(me.id, p.cat), !!p.photoData].join('|');
+  const signature = [cpCle, p.status, getSkipCount(me.id, p.cat), !!p.photoData, p.text, p.pts].join('|');
   if(signature === cpSignature) return;
   cpSignature = signature;
 

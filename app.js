@@ -531,6 +531,12 @@ function construireCarteMine(key, p){
     }
   }
 
+  // Case « version + intime » (intime.js), sous le texte d'une carte à jouer.
+  if(p.status !== 'review' && typeof itHTML === 'function'){
+    const t = row.querySelector('.pending-text');
+    if(t) t.insertAdjacentHTML('afterend', itHTML(key, p));
+  }
+
   const sms = row.querySelector('[data-carte-sms]');
   if(sms) sms.addEventListener('click', () => envoyerCarteParSms(key));
   return row;
@@ -705,6 +711,7 @@ function drawCard(cat){
     text: card.text,
     pts: card.pts,
     photo: card.photo ? true : null,
+    adulte: card.adulte ? true : null,
     status: 'drafting', // en cours de réponse/réalisation par celui/celle qui a pioché
     answer: '',
     ts: Date.now()

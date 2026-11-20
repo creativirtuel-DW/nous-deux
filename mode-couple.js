@@ -118,7 +118,13 @@ function renderMcPlein(){
     });
     return;
   }
-  const contenu = '<div class="mc-plein-ic">🔥</div><h2>Mode HOT à débloquer</h2>'
+  const contenu = mcPleinOuvert === 'intime'
+    ? '<div class="mc-plein-ic">🔥</div><h2>Version intime déjà utilisée aujourd’hui</h2>'
+      + '<p>Débloquer le « Mode HOT » avec <b>' + MC_SEUIL + ' points</b> au minimum pour accéder à la version intime <b>sans limite</b>.</p>'
+      + '<div class="mc-jauge"><div class="mc-jauge-plein" style="width:' + pct + '%"></div></div>'
+      + '<div class="mc-plein-legende">Meilleur score : ' + total + ' / ' + MC_SEUIL + ' points · encore ' + reste + ' point' + (reste > 1 ? 's' : '') + '</div>'
+      + '<button class="mc-plein-btn" data-mc-fermer>Continuer à jouer</button>'
+    : '<div class="mc-plein-ic">🔥</div><h2>Mode HOT à débloquer</h2>'
       + '<p>Il se débloque dès que <b>l’un de vous deux</b> atteint <b>' + MC_SEUIL + ' points</b>. Au programme : des sujets plus intimes dans tous les jeux et un nouveau jeu, « Plaisirs Intimes ».</p>'
       + '<div class="mc-jauge"><div class="mc-jauge-plein" style="width:' + pct + '%"></div></div>'
       + '<div class="mc-plein-legende">Meilleur score : ' + total + ' / ' + MC_SEUIL + ' points · encore ' + reste + ' point' + (reste > 1 ? 's' : '') + '</div>'
