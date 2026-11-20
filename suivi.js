@@ -190,13 +190,22 @@ function renderSuivi(){
     mes.forEach(e => {
       const st = stats[e.f] || (stats[e.f] = { n: 0, dur: 0, h: [] });
       st.n++; st.dur += e.dur;
-      const d = new Date(e.ts); st.h.push(d.getHours() * 60 + d.getMinutes());
+      st.h.push(e.ts);
     });
-    // Heures (hh:mm) de chaque usage, rangées du matin au soir pour voir le moment de la journée.
+    // Une ligne par jour (le plus récent en haut) : « date : heures », heures du matin au soir.
     const heures = l => {
-      const t = l.slice().sort((a, b) => a - b), MAXI = 24;
-      const txt = t.slice(0, MAXI).map(m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'));
-      return '<div class="sv-heures">🕒 ' + txt.join(' · ') + (t.length > MAXI ? ' · +' + (t.length - MAXI) : '') + '</div>';
+      const jours = {}, MAXI = 12;
+      l.forEach(ts => {
+        const d = new Date(ts);
+        const cle = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        (jours[cle] || (jours[cle] = [])).push(d);
+      });
+      return Object.keys(jours).sort().reverse().map(cle => {
+        const t = jours[cle].sort((a, b) => a - b);
+        const date = t[0].toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+        const txt = t.slice(0, MAXI).map(d => String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'));
+        return '<div class="sv-heures">🕒 <b>' + date + '</b> : ' + txt.join(' · ') + (t.length > MAXI ? ' · +' + (t.length - MAXI) : '') + '</div>';
+      }).join('');
     };
     const fonctions = Object.keys(stats).filter(f => SUIVI_HORS_CLASSEMENT.indexOf(f) < 0).sort((a, b) => stats[b].n - stats[a].n);
     const jamais = Object.keys(SUIVI_NOMS).filter(f => SUIVI_HORS_CLASSEMENT.indexOf(f) < 0 && !stats[f]);
