@@ -18,7 +18,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
-<link rel="stylesheet" href="style.css?v=83">
+<link rel="stylesheet" href="style.css?v=84">
 </head>
 <body>
 
@@ -151,6 +151,10 @@
         <span class="dot"></span>
         <span id="room-label">—</span>
       </div>
+      <button type="button" id="cloche-btn" class="cloche-btn" aria-label="Notifications">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5a6 6 0 0 1 12 0c0 4.6 1.6 6.3 2.3 7H3.7c.7-.7 2.3-2.4 2.3-7z"/><path d="M10 20a2.2 2.2 0 0 0 4 0"/></svg>
+        <span class="cloche-n" style="display:none;">0</span>
+      </button>
       <div class="scores">
         <div class="score-pill" id="score-me">
           <span class="score-name" id="name-me">Moi</span>
@@ -247,6 +251,10 @@
               <span class="cat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5 17 14l1.6-1.6 2.4 2.4-4 4-2.4-2.4L16.2 15 5.7 4.5z"/><path d="M17.5 3.5 13 8"/><path d="M6.5 20.5 11 16"/><path d="M3 15.4l4 4"/></svg></span>
               <span>Battle</span>
             </button>
+            <button class="cat-btn cat-btn-synchro" data-cat="synchro">
+              <span class="cat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="5.6"/><circle cx="15" cy="12" r="5.6"/></svg></span>
+              <span>On est synchro !</span>
+            </button>
             <button class="cat-btn cat-btn-photo" data-cat="photo">
               <span class="cat-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5A2.5 2.5 0 0 1 5.5 6h1.7l1.1-2h5.4l1.1 2h3.7A2.5 2.5 0 0 1 21 8.5v9A2.5 2.5 0 0 1 18.5 20h-13A2.5 2.5 0 0 1 3 17.5v-9z"/><circle cx="12" cy="13" r="3.6"/></svg></span>
               <span>T’as la date ?</span>
@@ -289,6 +297,14 @@
               <button class="jds-back" id="photo-back">← Retour aux jeux</button>
             </div>
             <div id="photo-body"></div>
+          </div>
+
+          <!-- PANNEAU « ON EST SYNCHRO ! » (synchro.js) -->
+          <div class="jds-panel" id="synchro-panel" style="display:none;">
+            <div class="jds-topbar">
+              <button class="jds-back" id="synchro-back">← Retour aux jeux</button>
+            </div>
+            <div id="synchro-body"></div>
           </div>
 
           <!-- PANNEAU BATTLE -->
@@ -451,7 +467,7 @@
 <script src="battle-data.js?v=4"></script>
 <script src="gages-data.js?v=1"></script>
 <script src="sms-photo.js?v=2"></script>
-<script src="app.js?v=55"></script>
+<script src="app.js?v=56"></script>
 <script src="soiree.js?v=9"></script>
 <script src="photo-carte.js?v=1"></script>
 <script src="photo-defi.js?v=9"></script>
@@ -466,10 +482,14 @@
 <script src="coffre-jour.js?v=3"></script>
 <script src="plaisirs-data.js?v=2"></script>
 <script src="plaisirs.js?v=5"></script>
-<script src="suivi.js?v=5"></script>
+<script src="suivi.js?v=6"></script>
 <script src="qdj-data.js?v=1"></script>
 <script src="qdj.js?v=8"></script>
-<script src="push.js?v=5"></script>
+<script src="push.js?v=6"></script>
+<script src="cloche.js?v=1"></script>
 <script src="battle.js?v=10"></script>
+<script src="synchro-data.js?v=1"></script>
+<script src="synchro.js?v=1"></script>
+<div id="cloche-panel" class="cloche-panel" style="display:none;"></div>
 </body>
 </html>

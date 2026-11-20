@@ -259,6 +259,8 @@ function render(){
   pdCheckGageDeadline();
   renderPushBanner();
   renderBattle();
+  if(typeof renderSynchro === 'function') renderSynchro();
+  if(typeof renderCloche === 'function') renderCloche();
   renderOsmose();
   renderModeCouple();
   renderEvenement();
@@ -280,7 +282,7 @@ function render(){
 
 // Accueil (gros bouton « Jouer ») ou page des jeux (les 7 boutons) ?
 let jeuxOuvert = false;
-function panneauJeuOuvert(){ return jdsActive || photoActive || battleActive || soireeActive; }
+function panneauJeuOuvert(){ return jdsActive || photoActive || battleActive || soireeActive || (typeof synchroActive !== 'undefined' && synchroActive); }
 function ouvrirJeux(){ jeuxOuvert = true; render(); window.scrollTo(0, 0); }
 function fermerJeux(){ jeuxOuvert = false; render(); window.scrollTo(0, 0); }
 // Vrai quand l'accueil est affiché : ni page des jeux, ni panneau de jeu ouvert.
@@ -315,7 +317,7 @@ function renderPendingCard(){
   catPicker.style.display = jeuxOuvert ? 'grid' : 'none';
   turnBanner.style.display = jeuxOuvert ? '' : 'none';
   // le bouton "Jeu de société" n'est jamais bloqué par la file d'attente
-  $$('.cat-btn').forEach(b => { if(['jds','photo','battle','soiree'].indexOf(b.dataset.cat) === -1) b.classList.toggle('disabled', full); });
+  $$('.cat-btn').forEach(b => { if(['jds','photo','battle','soiree','synchro'].indexOf(b.dataset.cat) === -1) b.classList.toggle('disabled', full); });
   turnBanner.textContent = full
     ? `🚫 File pleine (${MAX_PENDING}/${MAX_PENDING}) — touche pour voir les cartes en attente`
     : `✦ Pioche une carte (${allPending.length}/${MAX_PENDING} en attente)`;
@@ -660,6 +662,7 @@ function setupPlayView(){
       if(btn.dataset.cat === 'jds'){ openJDS(); return; }
       if(btn.dataset.cat === 'photo'){ openPhoto(); return; }
       if(btn.dataset.cat === 'battle'){ openBattle(); return; }
+      if(btn.dataset.cat === 'synchro'){ openSynchro(); return; }
       if(btn.dataset.cat === 'soiree'){ openSoiree(); return; }
       drawCard(btn.dataset.cat);
     });
@@ -670,6 +673,8 @@ function setupPlayView(){
   if(pback) pback.addEventListener('click', closePhoto);
   const bback = $('#battle-back');
   if(bback) bback.addEventListener('click', closeBattle);
+  const syback = $('#synchro-back');
+  if(syback) syback.addEventListener('click', closeSynchro);
   const sback = $('#soiree-back');
   if(sback) sback.addEventListener('click', closeSoiree);
   // Les actions des boutons sont ré-attribuées dynamiquement à chaque rendu (cf. renderPendingCard)
@@ -1103,6 +1108,8 @@ function setupRewardsView(){
       'photoDefi': null,
       'battle': null,
       'battleVues': null,
+      'synchro': null,
+      'synchroVues': null,
       'osmose': 0,
       'gagesVus': null,
       'qdj': null
@@ -1323,7 +1330,7 @@ function renderHistory(){
   const wrap = $('#history-list');
   wrap.innerHTML = '';
 
-  const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Cap ou pas', distance:'🔥 Défi', photo:'📸 T’as la date ?', battle:'⚔️ Battle', soiree:'🌙 Soirée guidée', qdj:'💭 Une pensée par jour', coffre:'🧰 Coffre Surprise', plaisirs:'🌶️ Plaisirs Intimes' };
+  const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Cap ou pas', distance:'🔥 Défi', photo:'📸 T’as la date ?', battle:'⚔️ Battle', synchro:'💞 On est synchro !', soiree:'🌙 Soirée guidée', qdj:'💭 Une pensée par jour', coffre:'🧰 Coffre Surprise', plaisirs:'🌶️ Plaisirs Intimes' };
   const entries = state.history ? Object.values(state.history).sort((a,b)=> b.ts-a.ts).slice(0,50) : [];
 
   if(entries.length === 0){
@@ -1334,6 +1341,7 @@ function renderHistory(){
     row.className = 'hist-row';
     let ptsLabel, statusNote = '';
     if(h.cat === 'battle'){ ptsLabel = (h.osmose >= 0 ? '+' : '') + (h.osmose || 0) + ' 💗' + (h.pts ? ' · +' + h.pts + ' pts chacun' : ''); }
+    else if(h.cat === 'synchro'){ ptsLabel = (h.pts < 0 ? '−' + Math.abs(h.pts) : '+' + h.pts) + ' chacun'; }
     else if(h.validated === 'skipped'){ ptsLabel = '⏭ 0'; statusNote = ' (passée)'; }
     else if(h.validated === 'penalty'){ ptsLabel = h.pts; statusNote = ' (limite de passes — pénalité acceptée)'; }
     else if(h.validated){ ptsLabel = (h.pts < 0 ? '' : '+') + h.pts; }

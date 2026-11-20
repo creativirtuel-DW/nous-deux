@@ -1181,7 +1181,7 @@ main#views{ flex:1; min-height:0; position:relative; }
 
 /* Page des jeux : 7 boutons identiques, l'un sous l'autre. */
 .cat-picker{ grid-template-columns: 1fr; gap:10px; }
-.cat-picker .cat-btn, .cat-picker .cat-btn-jds, .cat-picker .cat-btn-photo, .cat-picker .cat-btn-soiree{
+.cat-picker .cat-btn, .cat-picker .cat-btn-jds, .cat-picker .cat-btn-photo, .cat-picker .cat-btn-soiree, .cat-picker .cat-btn-synchro{
   grid-column:auto; flex-direction:row; justify-content:flex-start; align-items:center; gap:14px;
   padding:13px 44px 13px 14px; border-radius:18px;
   background: linear-gradient(180deg, var(--surface-2), var(--surface)); border:1px solid var(--line-2);
@@ -1679,3 +1679,76 @@ main#views{ flex:1; min-height:0; position:relative; }
 /* La room en haut à gauche se touche pour changer de couple */
 .topbar-room{ cursor:pointer; -webkit-tap-highlight-color: transparent; }
 .topbar-room::after{ content:'▾'; font-size:10px; opacity:.7; margin-left:-3px; }
+
+/* ====== « ON EST SYNCHRO ! » (synchro.js) ====== */
+.cat-picker .cat-btn-synchro .cat-ic{ background: rgba(255,120,170,0.16); color:#FF8FB8; }
+.sy-nouveau{
+  position:absolute; top:-7px; right:12px; padding:3px 9px; border-radius:999px;
+  background: linear-gradient(135deg, #FFE29A, #FFB38A); color:#6E0B2E !important;
+  font-size:10.5px !important; font-weight:900 !important; letter-spacing:.02em; text-transform:uppercase;
+  box-shadow: 0 4px 12px -4px rgba(255,180,120,0.7); transform: rotate(4deg);
+  animation: syNouveau 1.8s ease-in-out infinite;
+}
+@keyframes syNouveau{ 0%,100%{ transform: rotate(4deg) scale(1); } 50%{ transform: rotate(4deg) scale(1.08); } }
+.sy-bulle{
+  position:absolute; top:-6px; left:-6px; min-width:22px; height:22px; padding:0 6px; box-sizing:border-box;
+  border-radius:11px; background:#E8234A; color:#fff !important; font-size:12px !important; font-weight:900 !important;
+  display:flex; align-items:center; justify-content:center; box-shadow: 0 0 0 2px var(--bg, #14131A); z-index:2;
+}
+.jouer-btn{ position:relative; }
+.sy-carte{ margin-bottom:14px; }
+.sy-carte .btn-primary{ margin-top:12px; }
+.sy-carte .btn-ghost{ margin-top:8px; }
+.sy-a-moi{ border-color: rgba(255,120,170,0.55) !important; box-shadow: 0 0 0 1px rgba(255,120,170,0.25), 0 10px 26px -14px rgba(255,120,170,0.6); }
+.sy-titre{ margin:20px 0 8px; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.07em; color: var(--muted); }
+.sy-attente .rappel-btn{ margin-top:10px; }
+.sy-retirer{ margin-top:6px; background:none; border:0; color: var(--muted); font-size:12px; text-decoration:underline; cursor:pointer; padding:4px 0; }
+.sy-gain{ margin-top:6px; font-size:12.5px; font-weight:800; }
+.sy-gain.plus{ color:#7EE2A8; }
+.sy-gain.moins{ color: var(--coral); }
+#synchro-body .bt-detail{ margin-bottom:10px; }
+
+/* ====== CLOCHE DES NOTIFICATIONS (cloche.js) ====== */
+.topbar{ position:relative; }
+.cloche-btn{
+  position:absolute; right:14px; top: calc(env(safe-area-inset-top, 0px) + 6px);
+  width:36px; height:36px; padding:0; border:0; border-radius:50%; background:transparent;
+  color: var(--muted); display:flex; align-items:center; justify-content:center; cursor:pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cloche-btn svg{ width:22px; height:22px; }
+.cloche-btn.a-lire{ color: var(--cream); }
+.cloche-btn.a-lire svg{ animation: clocheSonne 4s ease-in-out infinite; transform-origin: 50% 8%; }
+@keyframes clocheSonne{ 0%,86%,100%{ transform: rotate(0); } 89%{ transform: rotate(14deg); } 92%{ transform: rotate(-12deg); } 95%{ transform: rotate(8deg); } 98%{ transform: rotate(-4deg); } }
+.cloche-n{
+  position:absolute; top:2px; right:1px; min-width:18px; height:18px; padding:0 5px; box-sizing:border-box;
+  border-radius:9px; background:#E8234A; color:#fff; font-size:10.5px; font-weight:900; line-height:18px; text-align:center;
+  box-shadow: 0 0 0 2px var(--bg, #14131A);
+}
+.cloche-panel{ position:fixed; inset:0; z-index:8500; }
+.cloche-voile{ position:absolute; inset:0; background: rgba(8,6,10,.62); animation: clocheFondu .2s ease both; }
+@keyframes clocheFondu{ from{ opacity:0; } to{ opacity:1; } }
+.cloche-feuille{
+  position:absolute; left:0; right:0; top:0; max-width:430px; margin:0 auto; box-sizing:border-box;
+  max-height:82vh; display:flex; flex-direction:column;
+  padding: calc(env(safe-area-inset-top, 0px) + 16px) 16px 16px;
+  background: var(--surface); border-radius:0 0 24px 24px; border-bottom:1px solid var(--line-2);
+  box-shadow: 0 20px 50px -20px rgba(0,0,0,.8); animation: clocheDescend .28s cubic-bezier(.2,.8,.2,1) both;
+}
+@keyframes clocheDescend{ from{ transform: translateY(-30px); opacity:0; } to{ transform:none; opacity:1; } }
+.cloche-tete{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.cloche-tete h3{ margin:0; font-size:18px; font-weight:800; }
+.cloche-fermer{ position:static !important; }
+.cloche-liste{ overflow-y:auto; -webkit-overflow-scrolling:touch; display:flex; flex-direction:column; gap:8px; }
+.cloche-item{
+  text-align:left; display:flex; flex-direction:column; gap:3px; width:100%; box-sizing:border-box;
+  background: var(--elev); border:1px solid var(--line); border-radius:14px; padding:11px 13px;
+  color: var(--cream); font-family:inherit; cursor:pointer; position:relative;
+}
+.cloche-item.nouvelle{ border-color: rgba(255,107,107,.5); background: linear-gradient(135deg, rgba(255,107,107,.13), var(--elev)); }
+.cloche-item.nouvelle::after{ content:''; position:absolute; top:13px; right:12px; width:8px; height:8px; border-radius:50%; background:#E8234A; }
+.cloche-item-t{ font-weight:700; font-size:14px; padding-right:16px; }
+.cloche-item-b{ font-size:12.5px; color: var(--muted); line-height:1.4; }
+.cloche-item-q{ font-size:11px; color: var(--muted-2, var(--muted)); margin-top:2px; }
+.cloche-vide{ margin:18px 0 10px; text-align:center; line-height:1.6; }
+.cloche-effacer{ margin-top:12px; }
