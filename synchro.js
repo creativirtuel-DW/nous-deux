@@ -16,7 +16,7 @@
 
 const SYNCHRO_GAIN = 10;
 const SYNCHRO_PERTE = 5;
-const SYNCHRO_MAX_ATTENTE = 3;        // cartes que je peux avoir en attente chez l'autre
+const SYNCHRO_MAX_ATTENTE = 5;        // cartes que je peux avoir en attente chez l'autre
 const SYNCHRO_RESULTATS_GARDES = 10;  // résultats conservés dans la base
 const SYNCHRO_PAR_JOUR = 5;           // questions que chacun peut LANCER par jour (répondre reste illimité)
 const SYNCHRO_THEMES = { couple: '💑 Couple', quotidien: '🏠 Quotidien enfants', intime: '🔥 Intime', projets: '🌍 Projets' };
