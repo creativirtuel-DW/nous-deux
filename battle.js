@@ -371,6 +371,7 @@ function renderBattle(){
           <h3 class="jds-title">Battle envoyée</h3>
           <p class="jds-sub">${escapeHtml(partnerName)} n'a pas encore répondu. Tes réponses restent cachées jusque-là.</p>
         </div>
+        ${rappelHTML('battle_' + b.ts, 'battle')}
         <button class="btn-ghost danger-btn" id="bt-cancel">Annuler cette Battle</button>
       `;
       $('#bt-cancel').addEventListener('click', battleAnnuler);
