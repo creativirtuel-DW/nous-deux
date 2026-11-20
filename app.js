@@ -131,7 +131,21 @@ window.addEventListener('DOMContentLoaded', () => {
     $('#input-name').value = saved.name;
     $('#input-room').value = saved.room;
   }
-  $('#btn-join').addEventListener('click', joinRoom);
+  $('#btn-join').addEventListener('click', () => joinRoom());
+  // Dernière room connue : on s'y reconnecte directement, sans montrer le
+  // formulaire — sauf si on vient de toucher la room en haut à gauche pour en changer.
+  let changer = false;
+  try{ changer = sessionStorage.getItem('nousdeux_changer_room') === '1'; sessionStorage.removeItem('nousdeux_changer_room'); }catch(e){}
+  // Connexion automatique ratée (pas de réseau, room pleine…) : dès qu'une
+  // erreur s'affiche, le formulaire réapparaît avec elle.
+  new MutationObserver(() => {
+    if($('#login-error').textContent) $('#screen-login').classList.remove('auto-connexion');
+  }).observe($('#login-error'), { childList:true, characterData:true, subtree:true });
+  if(saved && saved.name && saved.room && !changer){
+    $('#screen-login').classList.add('auto-connexion');
+    joinRoom(true);
+  }
+  $('.topbar-room').addEventListener('click', changerDeRoom);
   setupTabs();
   setupPlayView();
   setupContentView();
@@ -142,11 +156,20 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#btn-admin-lock-rewards').addEventListener('click', handleAdminLockClick);
 });
 
-function joinRoom(){
+// Toucher la room en haut à gauche : on revient au formulaire (prérempli)
+// pour taper un autre code. Rechargement propre, sans l'animation d'ouverture.
+function changerDeRoom(){
+  if(!confirm('Changer de couple ?\n\nTu vas revenir à l’écran du code. Pour revenir ici, il suffira de retaper « ' + roomCode + ' » avec ton prénom.')) return;
+  try{ sessionStorage.setItem('nousdeux_changer_room', '1'); }catch(e){}
+  location.reload();
+}
+
+function joinRoom(auto){
   const name = $('#input-name').value.trim();
   const room = $('#input-room').value.trim().toUpperCase().replace(/\s+/g,'-');
   const errEl = $('#login-error');
   errEl.textContent = '';
+  if(auto !== true) $('#screen-login').classList.remove('auto-connexion');
 
   if(!name){ errEl.textContent = "Indique ton prénom."; return; }
   if(!room){ errEl.textContent = "Indique un code de couple."; return; }
@@ -196,7 +219,7 @@ function joinRoom(){
 
 function startApp(){
   saveLocalIdentity({ name: me.name, room: roomCode });
-  $('#screen-login').classList.remove('active');
+  $('#screen-login').classList.remove('active', 'auto-connexion');
   $('#screen-main').classList.add('active');
   $('#room-label').textContent = roomCode;
 
