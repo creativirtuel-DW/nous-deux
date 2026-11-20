@@ -100,6 +100,8 @@ function askPushPermission(){
 // Prévient le/la partenaire. Sans abonnement enregistré de son côté,
 // on ne fait rien : le jeu doit continuer même sans notifications.
 function notifyPartner(title, body, tag){
+  // Rangée aussi sous la cloche (cloche.js), même sans notifications push.
+  if(typeof clocheEnregistrer === 'function') clocheEnregistrer(title, body, tag);
   try{
     if(!state || !state.pushSubs) return;
     const sub = state.pushSubs[partnerId];
@@ -128,6 +130,7 @@ function notifyPartner(title, body, tag){
 const RAPPEL_DELAI_MS = 30 * 60 * 1000;
 const RAPPEL_TEXTES = {
   battle:   ['⚔️ Battle en attente',   'Vous avez une battle en attente ! Pensez à aller voir pour y répondre !'],
+  synchro:  ['💞 On est synchro ?',    'Vous avez une question « On est synchro ! » en attente ! Pensez à aller voir pour y répondre !'],
   question: ['💬 Question en attente', 'Vous avez une question en attente ! Pensez à aller voir pour y répondre !'],
   defi:     ['🔥 Carte en attente',    'Vous avez une carte en attente ! Pensez à aller voir pour la jouer !'],
   valider:  ['✍️ Carte à valider',     'Vous avez une carte à valider ! Pensez à aller voir pour y répondre !'],
