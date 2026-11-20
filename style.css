@@ -1672,3 +1672,10 @@ main#views{ flex:1; min-height:0; position:relative; }
   font:700 13px/1 inherit; font-family:inherit; color:#fff; background: var(--grad); }
 .it-oui:active{ transform: scale(0.98); }
 @keyframes itFlamme{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.15); } }
+
+/* ===== CONNEXION AUTOMATIQUE à la dernière room (app.js) ===== */
+#screen-login.auto-connexion .login-card{ display:none; }
+#screen-login.auto-connexion .brand::after{ content:'Connexion…'; display:block; margin-top:18px; font-size:13px; color: var(--muted); }
+/* La room en haut à gauche se touche pour changer de couple */
+.topbar-room{ cursor:pointer; -webkit-tap-highlight-color: transparent; }
+.topbar-room::after{ content:'▾'; font-size:10px; opacity:.7; margin-left:-3px; }
