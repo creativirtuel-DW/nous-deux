@@ -1752,3 +1752,13 @@ main#views{ flex:1; min-height:0; position:relative; }
 .cloche-item-q{ font-size:11px; color: var(--muted-2, var(--muted)); margin-top:2px; }
 .cloche-vide{ margin:18px 0 10px; text-align:center; line-height:1.6; }
 .cloche-effacer{ margin-top:12px; }
+.sy-reste{ text-align:center; margin:8px 0 0; }
+.sy-stats{ display:flex; flex-direction:column; gap:8px; }
+.sy-stat{ background: var(--surface); border:1px dashed var(--line-2); border-radius:12px; padding:10px 12px; display:flex; flex-direction:column; gap:3px; font-size:12px; color: var(--muted); }
+.sy-stat b{ color: var(--cream); font-size:13px; }
+.sy-alerte{ color:#FFB38A; font-weight:700; }
+.sy-epuise{ opacity:.45; filter: grayscale(.5); }
+.sy-popup{ position:fixed; inset:0; z-index:9200; display:flex; align-items:center; justify-content:center; padding:0 26px; background: rgba(8,6,10,.7); animation: clocheFondu .2s ease both; }
+.sy-popup-carte{ width:100%; max-width:340px; box-sizing:border-box; text-align:center; background: linear-gradient(160deg, var(--surface-2), var(--surface)); border:1px solid rgba(255,120,170,.4); border-radius:22px; padding:24px 20px 18px; box-shadow: 0 24px 60px -20px rgba(0,0,0,.85); animation: clocheDescend .3s cubic-bezier(.2,.8,.2,1) both; }
+.sy-popup-ic{ font-size:38px; margin-bottom:6px; }
+.sy-popup-carte p{ margin:0 0 18px; font-size:16px; line-height:1.45; color: var(--cream); }
