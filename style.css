@@ -1866,3 +1866,18 @@ main#views{ flex:1; min-height:0; position:relative; }
 .photo-choix-appli small{ font-size:11.5px; color: var(--muted); text-align:center; line-height:1.35; }
 .photo-choix-ou{ display:flex; align-items:center; gap:10px; margin:12px 0 0; color: var(--muted); font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; }
 .photo-choix-ou::before, .photo-choix-ou::after{ content:''; flex:1; height:1px; background: var(--line-2); }
+
+/* ====== DEV MOD : effet des notifications (suivi.js) ====== */
+.sv-effet{ display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin:6px 0 10px; }
+.sv-effet > div{ background: var(--surface); border:1px solid var(--line-2); border-radius:12px; padding:9px 10px; display:flex; flex-direction:column; gap:2px; }
+.sv-effet > div:first-child{ grid-column: 1 / -1; }
+.sv-effet b{ font-size:17px; color: var(--cream); }
+.sv-effet span{ font-size:11.5px; color: var(--muted); line-height:1.3; }
+.sv-notifs{ max-height:340px; overflow-y:auto; }
+.sv-notif{ display:flex; flex-direction:column; gap:2px; padding:8px 10px; border-left:3px solid var(--line-2); margin-bottom:6px; background: rgba(255,255,255,.02); border-radius:0 10px 10px 0; }
+.sv-notif.ok{ border-left-color:#34C759; }
+.sv-notif span{ font-size:11px; color: var(--muted); }
+.sv-notif em{ font-style:normal; font-size:13px; color: var(--cream); }
+.sv-notif small{ font-size:11.5px; color: var(--muted); }
+.sv-notif.ok small{ color:#7BE495; }
+.sv-sans-push{ font-style:normal; font-size:11px; color: var(--muted); }

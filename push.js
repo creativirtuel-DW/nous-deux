@@ -107,6 +107,11 @@ function badgePartenaire(){
 function notifyPartner(title, body, tag){
   // Rangée aussi sous la cloche (cloche.js), même sans notifications push.
   if(typeof clocheEnregistrer === 'function') clocheEnregistrer(title, body, tag);
+  // Historique du dev mod (suivi.js) : la notification est notée chez celui/celle qui la reçoit.
+  try{
+    const abonne = !!(state && state.pushSubs && state.pushSubs[partnerId] && state.pushSubs[partnerId].endpoint);
+    if(typeof suiviNotifRecue === 'function') suiviNotifRecue(partnerId, title, tag, abonne);
+  }catch(e){}
   try{
     if(!state || !state.pushSubs) return;
     const sub = state.pushSubs[partnerId];
@@ -117,7 +122,7 @@ function notifyPartner(title, body, tag){
       method: 'POST',
       keepalive: true,   // l'envoi survit à la mise en veille de l'appli
       headers: { 'Content-Type': 'text/plain' },   // requête « simple » : pas de pré-vol CORS, compatible keepalive
-      body: JSON.stringify({ sub: sub, payload: { title: title, body: body, tag: tag || 'nous-deux', url: './index.html', badge: badgePartenaire() } })
+      body: JSON.stringify({ sub: sub, payload: { title: title, body: body, tag: tag || 'nous-deux', url: './index.html', badge: badgePartenaire(), src: 'app' } })
     })
     .then(r => r.json())
     .then(res => {

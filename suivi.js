@@ -9,12 +9,21 @@
  * quand l'appli passe en arrière-plan) pour ne pas redessiner l'appli à
  * chaque clic. Nettoyage automatique au-delà de SUIVI_JOURS jours.
  *
+ * Notifications (21/11/2026) : chaque notification reçue est notée chez celui
+ * ou celle qui la reçoit — { f:'notif', ts, t: titre, tag, push } —, par
+ * l'expéditeur (notifyPartner) ou, pour les rappels du serveur, par le
+ * téléphone qui les reçoit (sw.js → cache → suiviRangerNotifsServeur).
+ * Elles n'entrent PAS dans le calcul des durées. L'analyse « Effet des
+ * notifications » regarde si l'appli est ouverte dans les SUIVI_EFFET_MIN
+ * minutes et combien de temps on y joue ensuite.
+ *
  * Analyse (onglet Historique du dev mod, #suivi-analyse) : par période,
  * nombre d'utilisations par joueur, temps passé (jusqu'à l'action suivante,
  * plafonné à 15 min), fonctions jamais utilisées, fil des derniers usages.
  */
 const SUIVI_JOURS = 60;
 const SUIVI_PLAFOND = 15 * 60 * 1000;
+const SUIVI_EFFET_MIN = 30;   // ouverture comptée « grâce à » la notification si elle suit dans ces minutes
 
 // clé -> libellé affiché
 const SUIVI_NOMS = {
@@ -45,10 +54,11 @@ const SUIVI_NOMS = {
   tab_parcours: '🗺️ Onglet Parcours',
   tab_paliers:  '🏆 Onglet Paliers',
   tab_cartes:   '✏️ Onglet Cartes',
-  tab_accueil:  '🏠 Onglet Accueil'
+  tab_accueil:  '🏠 Onglet Accueil',
+  notif:        '🔔 Notification reçue'
 };
 // Ce qui n'est pas une « fonction » à classer (bornes de session, navigation)
-const SUIVI_HORS_CLASSEMENT = ['appli', 'quitte', 'tab_accueil'];
+const SUIVI_HORS_CLASSEMENT = ['appli', 'quitte', 'tab_accueil', 'notif'];
 
 // sélecteur -> clé (le premier qui correspond gagne ; ordre = du plus précis au plus large)
 const SUIVI_CIBLES = [
@@ -102,6 +112,7 @@ function suiviEnvoyer(){
 function suiviDemarrer(){
   suivi('appli');
   suiviEnvoyer();
+  suiviRangerNotifsServeur();
   if(!suiviMinuteur) suiviMinuteur = setInterval(suiviEnvoyer, 60000);
 }
 
@@ -117,15 +128,36 @@ document.addEventListener('click', e => {
 document.addEventListener('visibilitychange', () => {
   if(!suiviPret()) return;
   if(document.visibilityState === 'hidden'){ suivi('quitte'); suiviEnvoyer(); }
-  else { suivi('appli'); }
+  else { suivi('appli'); suiviRangerNotifsServeur(); }
 });
+
+// Une notification reçue par `pid` (écrite tout de suite, une ligne par notification).
+function suiviNotifRecue(pid, titre, tag, push){
+  if(!suiviPret() || !pid) return;
+  roomRef.child('suivi/' + pid).push({ f: 'notif', ts: Date.now(), t: String(titre || '').slice(0, 70), tag: tag || '', push: !!push })
+    .catch(() => {});
+}
+
+// Rappels envoyés par le serveur (pensée du jour) : sw.js les a gardés dans
+// un cache du téléphone ; on les range dans l'historique puis on les efface.
+function suiviRangerNotifsServeur(){
+  if(!suiviPret() || !('caches' in window)) return;
+  caches.open('nd-notifs-recues').then(c => c.keys().then(cles => Promise.all(cles.map(req =>
+    c.match(req).then(r => r && r.json()).then(n => {
+      if(n && n.ts) roomRef.child('suivi/' + me.id).push({ f: 'notif', ts: n.ts, t: String(n.t || '').slice(0, 70), tag: n.tag || '', push: true, serveur: true });
+      return c.delete(req);
+    }).catch(() => c.delete(req))
+  )))).catch(() => {});
+}
 
 // ---------- analyse (dev mod) ----------
 function suiviEvenements(){
   const s = (state && state.suivi) || {};
   const tous = [];
   ['p1', 'p2'].forEach(pid => {
-    const l = Object.values(s[pid] || {}).filter(e => e && e.f && e.ts).sort((a, b) => a.ts - b.ts);
+    const tout = Object.values(s[pid] || {}).filter(e => e && e.f && e.ts);
+    tout.filter(e => e.f === 'notif').forEach(e => tous.push({ pid, f: 'notif', ts: e.ts, dur: 0, t: e.t || '', tag: e.tag || '', push: !!e.push }));
+    const l = tout.filter(e => e.f !== 'notif').sort((a, b) => a.ts - b.ts);
     l.forEach((e, i) => {
       const suiv = l[i + 1];
       let dur = 0;
@@ -224,6 +256,7 @@ function renderSuivi(){
     if(jamais.length){
       h += '<h4>😴 Jamais ouvert</h4><div class="sv-jamais">' + jamais.map(f => '<span>' + SUIVI_NOMS[f] + '</span>').join('') + '</div>';
     }
+    h += suiviEffetNotifs(mes, ns);
     const fil = mes.slice().sort((a, b) => b.ts - a.ts).slice(0, 80);
     if(fil.length){
       h += '<h4>🕒 Derniers usages</h4><div class="sv-fil">';
@@ -233,7 +266,7 @@ function renderSuivi(){
         const jr = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
         if(jr !== jour){ jour = jr; h += '<div class="sv-jour">' + jr + '</div>'; }
         h += '<div class="sv-ev sv-' + e.pid + '"><span>' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) + '</span>'
-          + '<em>' + (SUIVI_NOMS[e.f] || e.f) + '</em>'
+          + '<em>' + (e.f === 'notif' ? '🔔 ' + escapeHtml(e.t || 'Notification') + (e.push ? '' : ' <i class="sv-sans-push">(cloche seule)</i>') : (SUIVI_NOMS[e.f] || e.f)) + '</em>'
           + (e.dur >= 5000 && e.f !== 'quitte' ? '<small>' + suiviDuree(e.dur) + '</small>' : '<small></small>') + '</div>';
       });
       h += '</div>';
@@ -256,3 +289,49 @@ document.addEventListener('click', e => {
     setTimeout(() => { suiviPurger(); renderSuivi(); }, 50);
   }
 });
+
+// ---------- effet des notifications ----------
+// Pour chaque notification reçue : l'appli a-t-elle été ouverte (ou déjà
+// ouverte) dans les SUIVI_EFFET_MIN minutes ? Combien de temps de jeu ensuite
+// (jusqu'à « appli quittée ») ? Comparé au temps moyen des autres visites.
+function suiviEffetNotifs(mes, ns){
+  const notifs = mes.filter(e => e.f === 'notif').sort((a, b) => b.ts - a.ts);
+  if(!notifs.length) return '<h4>🔔 Effet des notifications</h4><p class="sv-note">Aucune notification reçue sur cette période.</p>';
+  const usages = mes.filter(e => e.f !== 'notif').sort((a, b) => a.ts - b.ts);
+  const fen = SUIVI_EFFET_MIN * 60000;
+  // Temps de jeu d'une visite commencée à l'indice i (jusqu'à « quitte »).
+  const visite = i => { let t = 0; for(let j = i; j < usages.length && usages[j].f !== 'quitte'; j++) t += usages[j].dur; return t; };
+  const lignes = notifs.map(n => {
+    const i = usages.findIndex(u => u.ts >= n.ts && u.ts - n.ts <= fen && u.f !== 'quitte');
+    if(i < 0) return { n, ouvert: false };
+    return { n, ouvert: true, delai: usages[i].ts - n.ts, jeu: visite(i), debut: usages[i].ts };
+  });
+  const suivies = lignes.filter(l => l.ouvert);
+  // Visites « spontanées » : ouvertures de l'appli sans notification dans la fenêtre précédente.
+  const spont = [];
+  usages.forEach((u, i) => {
+    if(u.f !== 'appli') return;
+    if(notifs.some(n => u.ts >= n.ts && u.ts - n.ts <= fen)) return;
+    spont.push(visite(i));
+  });
+  const moy = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
+  const med = a => { if(!a.length) return 0; const b = a.slice().sort((x, y) => x - y); return b[Math.floor(b.length / 2)]; };
+  const pct = Math.round(suivies.length / notifs.length * 100);
+  let h = '<h4>🔔 Effet des notifications</h4><div class="sv-effet">'
+    + '<div><b>' + notifs.length + '</b><span>notification' + (notifs.length > 1 ? 's' : '') + ' reçue' + (notifs.length > 1 ? 's' : '') + '</span></div>'
+    + '<div><b>' + pct + ' %</b><span>suivies d’une visite en moins de ' + SUIVI_EFFET_MIN + ' min</span></div>'
+    + '<div><b>' + (suivies.length ? suiviDuree(med(suivies.map(l => l.delai))) : '–') + '</b><span>délai médian avant d’ouvrir</span></div>'
+    + '<div><b>' + (suivies.length ? suiviDuree(moy(suivies.map(l => l.jeu))) : '–') + '</b><span>de jeu en moyenne après une notification</span></div>'
+    + '<div><b>' + (spont.length ? suiviDuree(moy(spont)) : '–') + '</b><span>par visite sans notification (pour comparer)</span></div>'
+    + '</div><div class="sv-fil sv-notifs">';
+  lignes.slice(0, 40).forEach(l => {
+    const d = new Date(l.n.ts);
+    const quand = d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' }) + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    h += '<div class="sv-notif' + (l.ouvert ? ' ok' : '') + '"><span>' + quand + '</span>'
+      + '<em>' + escapeHtml(l.n.t || 'Notification') + (l.n.push ? '' : ' <i class="sv-sans-push">(cloche seule, pas de push)</i>') + '</em>'
+      + '<small>' + (l.ouvert
+          ? (l.delai < 60000 ? 'appli ouverte tout de suite' : 'ouverte après ' + suiviDuree(l.delai)) + ' · ' + suiviDuree(l.jeu) + ' de jeu'
+          : 'pas d’ouverture dans les ' + SUIVI_EFFET_MIN + ' min') + '</small></div>';
+  });
+  return h + '</div>';
+}
