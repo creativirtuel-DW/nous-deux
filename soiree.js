@@ -397,14 +397,14 @@ function soireeVueParcours(d){
     : `<textarea class="soiree-input" id="soiree-reponse" rows="2" maxlength="${SOIREE_REPONSE_MAX}"
          placeholder="Écris ta réponse à ${escapeHtml(partenaire)} (facultatif)…">${escapeHtml(soireeBrouillon)}</textarea>`;
 
-  // Carte photo : la photo part par SMS (21/11/2026) ; « Le SMS est envoyé »
-  // vaut « c'est fait ».
+  // Carte photo : au choix, depuis l'appli ou par SMS (« Le SMS est envoyé »
+  // vaut « c'est fait »).
   const maPhoto = sPhoto(d, idx, me.id);
   const photoAttendue = carte.photo && !maPhoto && !moi;
   const actions = moi
     ? `<button class="btn-primary" disabled>${marque(moi)} ${moi === 'refus' ? 'Refusée' : 'Fait'} — en attente de ${escapeHtml(partenaire)}…</button>`
     : `${photoAttendue
-        ? `${smsConsigne()}${smsBouton('id="soiree-sms-ouvrir"')}<button class="btn-primary" id="soiree-fait">✓ Le SMS est envoyé</button>`
+        ? `${smsConsigne(true)}${smsChoixAppli('<button class="btn-primary" id="soiree-photo">📸 Envoyer depuis l’appli</button>')}${smsBouton('id="soiree-sms-ouvrir"')}<button class="btn-primary" id="soiree-fait">✓ Le SMS est envoyé</button>`
         : `<button class="btn-primary" id="soiree-fait">✅ C'est fait !</button>`}
        <button class="btn-ghost soiree-refus" id="soiree-refuse">❌ Je refuse (−${soireePoints(carte.pts)} points)</button>`;
 
@@ -415,7 +415,7 @@ function soireeVueParcours(d){
          <button class="btn-primary" id="soiree-photo-ouvrir">📸 Ouvrir sa photo (${Math.round(PC_VUE_MS/1000)} s)</button>
          <p class="pc-note">Une seule fois : elle disparaît ensuite.</p>
        </div>`
-    : (sienne.photo ? `<p class="pc-note">📱 ${escapeHtml(partenaire)} va t’envoyer sa photo par SMS : regarde tes messages.</p>` : '');
+    : (sienne.photo ? `<p class="pc-note">📸 ${escapeHtml(partenaire)} va t’envoyer une photo, ici ou par SMS.</p>` : '');
 
   return `
     <div class="soiree-entete">

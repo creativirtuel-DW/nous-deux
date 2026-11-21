@@ -1857,3 +1857,12 @@ main#views{ flex:1; min-height:0; position:relative; }
   animation: cjBandeau 2.2s ease-in-out infinite;
 }
 @keyframes cjBandeau{ 0%,100%{ transform: translateX(-50%) scale(1); } 50%{ transform: translateX(-50%) scale(1.07); } }
+
+/* Choix d'envoi de la photo : depuis l'appli, ou par SMS */
+.sms-consigne.choix{ border-style:solid; border-color: var(--line-2); background: rgba(255,255,255,.03); }
+.sms-consigne.choix b{ color: var(--peach); }
+.photo-choix-appli{ margin-top:10px; display:flex; flex-direction:column; gap:5px; }
+.photo-choix-appli .btn-primary{ width:100%; }
+.photo-choix-appli small{ font-size:11.5px; color: var(--muted); text-align:center; line-height:1.35; }
+.photo-choix-ou{ display:flex; align-items:center; gap:10px; margin:12px 0 0; color: var(--muted); font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; }
+.photo-choix-ou::before, .photo-choix-ou::after{ content:''; flex:1; height:1px; background: var(--line-2); }
