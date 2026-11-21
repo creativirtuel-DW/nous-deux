@@ -24,7 +24,13 @@ self.addEventListener('push', event => {
   const pastille = (typeof d.badge === 'number' && self.navigator && 'setAppBadge' in self.navigator)
     ? (d.badge > 0 ? self.navigator.setAppBadge(d.badge) : self.navigator.clearAppBadge()).catch(() => {})
     : Promise.resolve();
-  event.waitUntil(Promise.all([self.registration.showNotification(title, options), pastille]));
+  // Notification venue du serveur (rappel « Une pensée par jour ») : l'appli ne
+  // la connaît pas, on la garde ici pour l'historique du dev mod (suivi.js la
+  // relit et la range à la prochaine ouverture).
+  const journal = d.src === 'app' ? Promise.resolve() : caches.open('nd-notifs-recues').then(c =>
+    c.put(new Request('./__notif/' + Date.now() + '-' + Math.random().toString(36).slice(2, 7)),
+          new Response(JSON.stringify({ ts: Date.now(), t: title, tag: d.tag || '' })))).catch(() => {});
+  event.waitUntil(Promise.all([self.registration.showNotification(title, options), pastille, journal]));
 });
 
 self.addEventListener('notificationclick', event => {
