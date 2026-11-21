@@ -124,7 +124,7 @@ function piDessiner(){
     + '<div class="pi-carte-pied">Plaisirs Intimes</div></div>'
     + (q ? '<textarea class="pi-champ" maxlength="600" rows="4" placeholder="Écris ta réponse… ' + escapeHtml(piNomAutre()) + ' la lira et la validera."></textarea>' : '')
     + (!q && smsDemandePhoto(piCarte.t)
-        ? '<button type="button" class="pi-btn sms-pi" data-pi-sms>📱 Envoyer directement par SMS</button><p class="pi-sms-note">' + escapeHtml(piNomAutre()) + ' validera ton défi une fois la photo reçue.</p>'
+        ? smsConsigne() + smsBouton('data-pi-sms-ouvrir') + '<button type="button" class="pi-btn sms-pi" data-pi-sms>✓ Le SMS est envoyé · défi suivant</button><p class="pi-sms-note">' + escapeHtml(piNomAutre()) + ' validera ton défi une fois la photo reçue.</p>'
         : '<button type="button" class="pi-btn" data-pi-fait>' + (q ? '📨 Envoyer ma réponse · question suivante' : '✓ Défi réalisé · défi suivant') + '</button>')
     + '<button type="button" class="pi-btn ghost" data-pi-passer>' + (q ? 'Passer cette question' : 'Passer ce défi') + ' <small>' + piTextePasses() + '</small></button>'
     + '<button type="button" class="pi-btn ghost" data-pi-retour>Changer de jeu</button>';
@@ -135,8 +135,9 @@ function piDessiner(){
     if(typeof notifyPartner === 'function')
       notifyPartner('🌶️ ' + me.name + ' t’a envoyé une photo par SMS', 'Regarde tes messages, puis valide son défi dans Plaisirs Intimes.', 'plaisirs');
     piCarte.fait = true; piTirer(piCarte.mode);
-    smsOuvrir(t);
   };
+  const smsO = c.querySelector('[data-pi-sms-ouvrir]');
+  if(smsO) smsO.onclick = () => smsOuvrir(piCarte.t);
   const faitB = c.querySelector('[data-pi-fait]');
   if(faitB) faitB.onclick = () => {
     if(q){

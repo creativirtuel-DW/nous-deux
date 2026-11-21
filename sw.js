@@ -20,7 +20,11 @@ self.addEventListener('push', event => {
     renotify: true,
     data: { url: d.url || './index.html' }
   };
-  event.waitUntil(self.registration.showNotification(title, options));
+  // Pastille chiffrée sur l'icône de l'appli (iPhone 16.4+, appli installée).
+  const pastille = (typeof d.badge === 'number' && self.navigator && 'setAppBadge' in self.navigator)
+    ? (d.badge > 0 ? self.navigator.setAppBadge(d.badge) : self.navigator.clearAppBadge()).catch(() => {})
+    : Promise.resolve();
+  event.waitUntil(Promise.all([self.registration.showNotification(title, options), pastille]));
 });
 
 self.addEventListener('notificationclick', event => {

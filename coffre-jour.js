@@ -73,7 +73,9 @@ function renderCoffreJour(){
   if(!t || !state || !me || !me.id) return;
   t.style.display = accueilVisible() ? '' : 'none';
   const fait = !!cjDuJour();
-  const html = cjCoffreSvg(false) + '<span class="cj-tuile-txt">' + (fait ? 'À demain' : 'Coffre<br>Surprise') + '</span>';
+  // Pas encore ouvert aujourd'hui : petit bandeau pour donner envie (21/11/2026).
+  const html = (fait ? '' : '<span class="cj-bandeau">Découvre ton gain du jour !</span>')
+    + cjCoffreSvg(false) + '<span class="cj-tuile-txt">' + (fait ? 'À demain' : 'Coffre<br>Surprise') + '</span>';
   if(t.dataset.sign !== String(fait)){
     t.dataset.sign = String(fait);
     t.innerHTML = html;
@@ -282,7 +284,9 @@ function cjCarte(r){
   if(r.type === 'bon') return '<div class="cj-carte bon">' + cjCarteBon(r.montant, true)
     + '<small>Conserve-le dans ton appli : tu pourras envoyer tes bons à ' + escapeHtml(cjNomAutre()) + ' une fois que tu auras atteint <b>' + CJ_SEUIL_EUROS + ' €</b>. Il/elle devra alors t’offrir un cadeau d’un montant de ' + CJ_SEUIL_EUROS + ' € minimum.</small></div>';
   return '<div class="cj-carte gage"><div class="cj-carte-ic">😈</div><b>Gage du jour</b><span>' + escapeHtml(r.texte) + '</span>'
-    + (r.fait ? '<small>✓ Gage réalisé</small>' : '<small>À réaliser avant ce soir.</small>' + (smsDemandePhoto(r.texte) ? smsBouton('data-cj-sms') : '') + '<button type="button" class="btn-ghost" data-cj-gage-fait>C’est fait ✓</button>') + '</div>';
+    + (r.fait ? '<small>✓ Gage réalisé</small>' : '<small>À réaliser avant ce soir.</small>' + (smsDemandePhoto(r.texte)
+        ? smsConsigne() + smsBouton('data-cj-sms') + '<button type="button" class="btn-primary" data-cj-gage-fait>✓ Le SMS est envoyé</button>'
+        : '<button type="button" class="btn-ghost" data-cj-gage-fait>C’est fait ✓</button>')) + '</div>';
 }
 
 function cjCarteBon(montant, grande){

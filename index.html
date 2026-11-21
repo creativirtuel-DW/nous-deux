@@ -18,7 +18,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check-compat.js"></script>
-<link rel="stylesheet" href="style.css?v=86">
+<link rel="stylesheet" href="style.css?v=91">
 </head>
 <body>
 
@@ -315,22 +315,6 @@
             <div id="battle-body"></div>
           </div>
 
-          <div class="pending-section" id="pending-to-validate-section" style="display:none;">
-            <h3 class="pending-title">À toi de valider</h3>
-            <div id="pending-to-validate-list" class="pending-list"></div>
-          </div>
-
-          <div class="pending-section" id="pending-mine-section" style="display:none;">
-            <h3 class="pending-title">En attente de validation</h3>
-            <div id="pending-mine-list" class="pending-list"></div>
-          </div>
-
-          <!-- Le reste de la file : cartes piochées par l'autre et pas encore jouées,
-               et cartes d'un joueur qui n'est plus dans la room. -->
-          <div class="pending-section" id="pending-autre-section" style="display:none;">
-            <h3 class="pending-title">Aussi dans la file</h3>
-            <div id="pending-autre-list" class="pending-list"></div>
-          </div>
         </div>
       </div>
 
@@ -466,12 +450,12 @@
 <script src="cards-data.js?v=17"></script>
 <script src="battle-data.js?v=4"></script>
 <script src="gages-data.js?v=1"></script>
-<script src="sms-photo.js?v=2"></script>
-<script src="app.js?v=57"></script>
-<script src="soiree.js?v=9"></script>
+<script src="sms-photo.js?v=3"></script>
+<script src="app.js?v=60"></script>
+<script src="soiree.js?v=10"></script>
 <script src="photo-carte.js?v=1"></script>
-<script src="photo-defi.js?v=9"></script>
-<script src="evenement.js?v=3"></script>
+<script src="photo-defi.js?v=10"></script>
+<script src="evenement.js?v=4"></script>
 <script src="pense-toi.js?v=2"></script>
 <script src="carte-plein.js?v=4"></script>
 <script src="intime.js?v=1"></script>
@@ -479,17 +463,46 @@
 <script src="parcours.js?v=4"></script>
 <script src="envies-sens.js?v=2"></script>
 <script src="envies.js?v=10"></script>
-<script src="coffre-jour.js?v=3"></script>
+<script src="coffre-jour.js?v=5"></script>
 <script src="plaisirs-data.js?v=2"></script>
-<script src="plaisirs.js?v=5"></script>
+<script src="plaisirs.js?v=6"></script>
 <script src="suivi.js?v=6"></script>
 <script src="qdj-data.js?v=1"></script>
 <script src="qdj.js?v=8"></script>
-<script src="push.js?v=6"></script>
-<script src="cloche.js?v=1"></script>
-<script src="battle.js?v=10"></script>
+<script src="push.js?v=7"></script>
+<script src="cloche.js?v=3"></script>
+<script src="battle.js?v=11"></script>
 <script src="synchro-data.js?v=2"></script>
-<script src="synchro.js?v=4"></script>
-<div id="cloche-panel" class="cloche-panel" style="display:none;"></div>
+<script src="synchro.js?v=5"></script>
+<!-- Volet de la cloche (cloche.js) : les cartes en attente (à valider, à jouer,
+     chez l'autre) vivent ici, plus sur l'accueil ; puis la liste des notifications. -->
+<div id="cloche-panel" class="cloche-panel" style="display:none;">
+  <div class="cloche-voile" data-cloche-fermer></div>
+  <div class="cloche-feuille" role="dialog" aria-label="Notifications">
+    <div class="cloche-tete"><h3>Notifications</h3>
+      <button type="button" class="qdj-fermer cloche-fermer" aria-label="Fermer" data-cloche-fermer>✕</button></div>
+    <div class="cloche-defile" id="cloche-defile">
+      <div id="cloche-cartes" class="cloche-cartes">
+        <div class="pending-section" id="pending-to-validate-section" style="display:none;">
+          <h3 class="pending-title">À toi de valider</h3>
+          <div id="pending-to-validate-list" class="pending-list"></div>
+        </div>
+
+        <div class="pending-section" id="pending-mine-section" style="display:none;">
+          <h3 class="pending-title">En attente de validation</h3>
+          <div id="pending-mine-list" class="pending-list"></div>
+        </div>
+
+        <!-- Le reste de la file : cartes piochées par l'autre et pas encore jouées,
+             et cartes d'un joueur qui n'est plus dans la room. -->
+        <div class="pending-section" id="pending-autre-section" style="display:none;">
+          <h3 class="pending-title">Aussi dans la file</h3>
+          <div id="pending-autre-list" class="pending-list"></div>
+        </div>
+      </div>
+      <div id="cloche-notifs"></div>
+    </div>
+  </div>
+</div>
 </body>
 </html>

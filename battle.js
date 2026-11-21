@@ -250,7 +250,7 @@ function battleRepondre(reponses, mesTextes){
 
   roomRef.update(updates).then(() => {
     notifyPartner('⚔️ Battle terminée',
-      me.name + ' a répondu : ' + communes + '/5 en commun, ' + (delta >= 0 ? '+' : '') + delta + ' d’Osmose' + (gain ? ', +' + gain + ' pts chacun' : '') + '.', 'battle');
+      me.name + ' a répondu : ' + communes + '/5 en commun, ' + (delta >= 0 ? '+' : '') + delta + ' d’Osmose' + (gain ? ', +' + gain + ' pts chacun' : '') + '.', 'battle-resultat');
   });
 }
 

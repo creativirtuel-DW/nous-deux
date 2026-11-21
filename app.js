@@ -232,7 +232,7 @@ function startApp(){
   roomRef.on('value', snap => {
     state = snap.val();
     if(!state) return;
-    if(premiereFois){ premiereFois = false; pcPurgerArchives(); }
+    if(premiereFois){ premiereFois = false; pcPurgerArchives(); if(typeof rappelOuverture === 'function') rappelOuverture(); }
     render();
   });
 }
@@ -300,10 +300,6 @@ function renderPendingCard(){
     jeuxEntete.style.display = 'none';
     catPicker.style.display = 'none';
     turnBanner.style.display = 'none';
-    $('#pending-to-validate-section').style.display = 'none';
-    $('#pending-mine-section').style.display = 'none';
-    $('#pending-autre-section').style.display = 'none';
-    return;
   }
 
   const allPending = getPendingEntries();
@@ -312,20 +308,29 @@ function renderPendingCard(){
 
   const full = allPending.length >= MAX_PENDING;
 
-  jouerBtn.style.display = jeuxOuvert ? 'none' : '';
-  jeuxEntete.style.display = jeuxOuvert ? '' : 'none';
-  catPicker.style.display = jeuxOuvert ? 'grid' : 'none';
-  turnBanner.style.display = jeuxOuvert ? '' : 'none';
+  // Les cartes en attente ne sont plus sur l'accueil : elles vivent dans le
+  // volet de la cloche (cloche.js). On les construit quand même à chaque rendu.
+  if(!panneauJeuOuvert()){
+    jouerBtn.style.display = jeuxOuvert ? 'none' : '';
+    jeuxEntete.style.display = jeuxOuvert ? '' : 'none';
+    catPicker.style.display = jeuxOuvert ? 'grid' : 'none';
+    turnBanner.style.display = jeuxOuvert ? '' : 'none';
+  }
   // le bouton "Jeu de société" n'est jamais bloqué par la file d'attente
   $$('.cat-btn').forEach(b => { if(['jds','photo','battle','soiree','synchro'].indexOf(b.dataset.cat) === -1) b.classList.toggle('disabled', full); });
   turnBanner.textContent = full
-    ? `🚫 File pleine (${MAX_PENDING}/${MAX_PENDING}) — touche pour voir les cartes en attente`
+    ? `🚫 File pleine (${MAX_PENDING}/${MAX_PENDING}) — touche pour voir les cartes (dans les notifications)`
     : `✦ Pioche une carte (${allPending.length}/${MAX_PENDING} en attente)`;
   turnBanner.classList.toggle('turn-banner-lien', allPending.length > 0);
-  turnBanner.onclick = allPending.length ? () => {
-    const cible = [...document.querySelectorAll('.pending-section')].find(s => s.style.display !== 'none');
-    if(cible) cible.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  } : null;
+  turnBanner.onclick = allPending.length ? () => clocheOuvrir() : null;
+
+  // Pastilles rouges sur les tuiles de jeux et le bouton Jouer (cloche.js).
+  if(typeof renderPastillesJeux === 'function') renderPastillesJeux();
+
+  // Saisie en cours dans une carte du volet de la cloche : on ne reconstruit
+  // pas les listes, sinon le texte tapé serait effacé à la moindre mise à jour.
+  const actif = document.activeElement;
+  if(actif && /^(TEXTAREA|INPUT)$/.test(actif.tagName) && actif.closest('#cloche-cartes')) return;
 
   const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Cap ou pas' };
 
@@ -459,7 +464,40 @@ function construireCarteMine(key, p){
     const limitReached = skipsUsed >= SKIP_LIMIT;
     const skipNote = `<div class="skip-note">${limitReached ? '🚫 Limite de passes atteinte pour cette catégorie' : `Passes utilisées dans cette catégorie : ${skipsUsed}/${SKIP_LIMIT}`}</div>`;
 
-    if(p.cat === 'question'){
+    if(p.photo || smsDemandePhoto(p.text)){
+      // Carte photo : la photo part par SMS (décision du 21/11/2026). Le bouton
+      // « Le SMS est envoyé » confirme que la carte est réalisée.
+      const skipOrPenaltyBtn = p.pdGage
+        ? ''
+        : (limitReached
+          ? `<button class="btn-ghost pending-penalty">Accepter de perdre ${SKIP_PENALTY} points</button>`
+          : `<button class="btn-ghost pending-nope">Non, je passe</button>`);
+      row.innerHTML = `
+        <div class="pending-card-top">
+          <span class="pending-cat">📸 ${labelMap[p.cat]||'Carte'}</span>
+          <span class="pending-who">+${p.pts} si validé</span>
+        </div>
+        <p class="pending-text">${escapeHtml(p.text)}</p>
+        ${p.pdGage
+          ? `<div class="skip-note">🎯 Gage accepté à la place des ${PD_POINTS} points. ${escapeHtml(state.players[p.pdGage.author]||'')} doit le valider avant le ${pdGageDeadlineLabel(p.pdGage.deadline)} — sinon il s'annule et tu perds les ${PD_POINTS} points.</div>`
+          : skipNote}
+        ${smsConsigne()}
+        ${smsBouton('data-carte-sms-ouvrir')}
+        <div class="pending-actions">
+          ${skipOrPenaltyBtn}
+          <button class="btn-primary" data-carte-sms>✓ Le SMS est envoyé</button>
+        </div>
+      `;
+      if(!p.pdGage){
+        if(limitReached){
+          row.querySelector('.pending-penalty').addEventListener('click', () => payPenalty(key));
+        } else {
+          row.querySelector('.pending-nope').addEventListener('click', () => skipCard(key));
+        }
+      }
+      row.querySelector('[data-carte-sms-ouvrir]').addEventListener('click', () => smsOuvrir(p.text));
+
+    } else if(p.cat === 'question'){
       const skipOrPenaltyBtn = limitReached
         ? `<button class="btn-ghost pending-penalty">Accepter de perdre ${SKIP_PENALTY} points</button>`
         : `<button class="btn-ghost pending-cancel">Non, je passe</button>`;
@@ -475,7 +513,6 @@ function construireCarteMine(key, p){
           ${skipOrPenaltyBtn}
           <button class="btn-primary pending-submit">Envoyer pour validation</button>
         </div>
-        ${smsDemandePhoto(p.text) ? smsBouton('data-carte-sms') : ''}
       `;
       if(limitReached){
         row.querySelector('.pending-penalty').addEventListener('click', () => payPenalty(key));
@@ -488,32 +525,6 @@ function construireCarteMine(key, p){
         submitAnswer(key, text);
       });
 
-    } else if(p.photo){
-      // Carte photo : la réponse EST la photo. Pas de champ texte, pas de
-      // « c'est fait » possible tant qu'elle n'est pas prise.
-      const skipOrPenaltyBtn = limitReached
-        ? `<button class="btn-ghost pending-penalty">Accepter de perdre ${SKIP_PENALTY} points</button>`
-        : `<button class="btn-ghost pending-nope">Non, je passe</button>`;
-      row.innerHTML = `
-        <div class="pending-card-top">
-          <span class="pending-cat">📸 ${labelMap[p.cat]||'Carte'}</span>
-          <span class="pending-who">+${p.pts} si validé</span>
-        </div>
-        <p class="pending-text">${escapeHtml(p.text)}</p>
-        ${skipNote}
-        <p class="pc-note">Ta photo ne s'affichera que ${Math.round(PC_VUE_MS/1000)} secondes chez ${escapeHtml(state.players[partnerId]||'ton/ta partenaire')}, puis elle disparaîtra. Elle restera 12 h consultables en dev mod, puis sera effacée.</p>
-        <div class="pending-actions">
-          ${skipOrPenaltyBtn}
-          <button class="btn-primary pending-photo">📸 Prendre la photo</button>
-        </div>
-        ${smsBouton('data-carte-sms')}
-      `;
-      if(limitReached){
-        row.querySelector('.pending-penalty').addEventListener('click', () => payPenalty(key));
-      } else {
-        row.querySelector('.pending-nope').addEventListener('click', () => skipCard(key));
-      }
-      row.querySelector('.pending-photo').addEventListener('click', () => envoyerPhotoCarte(key, row));
 
     } else {
       // défi / gage : pas de texte de réponse, juste fait ou non
@@ -540,7 +551,6 @@ function construireCarteMine(key, p){
           ${skipOrPenaltyBtn}
           <button class="btn-primary pending-ok">OK, c'est fait !</button>
         </div>
-        ${smsDemandePhoto(p.text) ? smsBouton('data-carte-sms') : ''}
       `;
       if(!p.pdGage){
         if(limitReached){
@@ -795,7 +805,7 @@ function submitAnswer(key, answerText){
   notifyPartner('✍️ Une carte à valider', me.name + ' a répondu à une carte.', 'valider');
 }
 
-// Photo envoyée par SMS : la carte passe en attente de validation chez l'autre.
+// « Le SMS est envoyé » : la carte passe en attente de validation chez l'autre.
 function envoyerCarteParSms(key){
   const pending = state.pendingCards && state.pendingCards[key];
   if(!pending || pending.by !== me.id) return;
@@ -805,7 +815,6 @@ function envoyerCarteParSms(key){
     ['skipCounts/'+me.id+'/'+pending.cat]: 0
   });
   notifyPartner('📱 Une photo par SMS', me.name + ' t' + String.fromCharCode(39) + 'a envoyé sa photo par SMS : regarde tes messages et valide la carte.', 'valider');
-  smsOuvrir(pending.text);
 }
 
 function markDone(key, comment){

@@ -188,13 +188,13 @@ function pdSubmit(month, year){
       pts: PD_POINTS, validated: true, ts: Date.now(), gageKey: gk || null
     };
     roomRef.update(updates);
-    notifyPartner('🎯 T’as la date ? — date trouvée', me.name + ' a trouvé la bonne date et te prend ' + PD_POINTS + ' points.', 'photo');
+    notifyPartner('🎯 T’as la date ? — date trouvée', me.name + ' a trouvé la bonne date et te prend ' + PD_POINTS + ' points.', 'photo-resultat');
   }else{
     pdRef().update({
       status: 'lost', photo: null,
       answer: month === null ? null : { month: month, year: year }
     });
-    notifyPartner('💔 T’as la date ? — date ratée', me.name + ' s' + String.fromCharCode(39) + 'est trompé·e et choisit sa sanction…', 'photo');
+    notifyPartner('💔 T’as la date ? — date ratée', me.name + ' s' + String.fromCharCode(39) + 'est trompé·e et choisit sa sanction…', 'photo-resultat');
   }
 }
 
@@ -215,7 +215,7 @@ function pdChoosePoints(){
     gageKey: pdArchiveGage(d, 'points', updates) || null
   };
   roomRef.update(updates);
-  notifyPartner('➖ Points plutôt que gage', me.name + ' préfère perdre ' + PD_POINTS + ' points. Ton gage reste secret.', 'photo');
+  notifyPartner('➖ Points plutôt que gage', me.name + ' préfère perdre ' + PD_POINTS + ' points. Ton gage reste secret.', 'photo-resultat');
 }
 
 // Perdu, option 2 : le gage devient une carte à réaliser. Aucun point ne bouge.
@@ -237,7 +237,7 @@ function pdChooseGage(){
     comment: 'A choisi le gage', pts: 0, validated: false, ts: Date.now()
   };
   roomRef.update(updates);
-  notifyPartner('🎯 Ton gage est accepté !', me.name + ' préfère ton gage aux points. À toi de le valider sous 24 h.', 'photo');
+  notifyPartner('🎯 Ton gage est accepté !', me.name + ' préfère ton gage aux points. À toi de le valider sous 24 h.', 'photo-resultat');
 }
 
 function pdSelects(prefix, defM, defY){
