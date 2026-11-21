@@ -7,6 +7,11 @@
  * de l'utilisateur du 19/11/2026), avec un petit texte : la personne choisit
  * la conversation, joint sa photo et envoie elle-même.
  *
+ * Depuis le 21/11/2026, TOUTES les photos de cartes/défis/gages partent par
+ * SMS : plus de photo prise dans l'appli. Deux boutons : « 📱 Ouvrir Messages »
+ * (raccourci, ne valide rien) et « ✓ Le SMS est envoyé » (confirme que la
+ * carte est réalisée → validation chez l'autre).
+ *
  * Qui l'utilise :
  *   · app.js     — cartes de la pioche : la carte part « en attente de validation »
  *                  (pendingCards/<clé>/sms = ts) et le/la partenaire la valide ;
@@ -23,7 +28,7 @@ function smsNomAutre(){
 
 // Bouton à insérer dans une carte
 function smsBouton(attr){
-  return '<button type="button" class="sms-btn" ' + attr + '>📱 Envoyer directement par SMS</button>';
+  return '<button type="button" class="sms-btn" ' + attr + '>📱 Ouvrir Messages</button>';
 }
 
 // Ouvre Messages SANS destinataire : la personne choisit elle-même la
@@ -42,4 +47,9 @@ try{ Object.keys(localStorage).filter(k => k.indexOf('nousdeux_tel_partenaire_')
 // Mention affichée chez celui / celle qui valide.
 function smsNoteValidation(nom){
   return '<div class="sms-recu">📱 ' + escapeHtml(nom || '') + ' t’a envoyé la photo <b>par SMS</b> : regarde tes messages, puis valide.</div>';
+}
+
+// Consigne affichée sur une carte qui demande une photo.
+function smsConsigne(){
+  return '<div class="sms-consigne">📱 Envoie ta photo à <b>' + escapeHtml(smsNomAutre()) + '</b> par SMS, puis touche « Le SMS est envoyé » pour confirmer que c’est fait.</div>';
 }

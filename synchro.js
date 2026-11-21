@@ -146,11 +146,35 @@ function synchroRepondre(cle){
 
   delete synchroChoix[cle];
   synchroSignature = '';
+  synchroAnimer(ok, delta);
   roomRef.update(updates).then(() => {
     notifyPartner(ok ? '💞 Vous êtes synchro !' : '💔 Pas synchro…',
       ok ? me.name + ' a répondu pareil : +' + SYNCHRO_GAIN + ' pts chacun !'
-         : me.name + ' n’a pas répondu pareil : −' + SYNCHRO_PERTE + ' pts chacun.', 'synchro');
+         : me.name + ' n’a pas répondu pareil : −' + SYNCHRO_PERTE + ' pts chacun.', 'synchro-resultat');
   });
+}
+
+// Animation plein écran « Gagné ! » / « Perdu… » (≈ 2,4 s, un appui la ferme).
+function synchroAnimer(ok, delta, question){
+  const vieux = document.getElementById('sy-anim');
+  if(vieux) vieux.remove();
+  const el = document.createElement('div');
+  el.id = 'sy-anim';
+  el.className = 'sy-anim ' + (ok ? 'sy-gagne' : 'sy-perdu');
+  let coeurs = '';
+  if(ok) for(let i = 0; i < 12; i++){
+    coeurs += '<span class="sy-anim-c" style="left:' + (8 + Math.random() * 84).toFixed(0) + '%;animation-delay:' + (Math.random() * .7).toFixed(2) + 's;font-size:' + (14 + Math.random() * 16).toFixed(0) + 'px">♥</span>';
+  }
+  el.innerHTML = coeurs + '<div class="sy-anim-centre">'
+    + '<div class="sy-anim-ic">' + (ok ? '💞' : '💔') + '</div>'
+    + '<div class="sy-anim-mot">' + (ok ? 'Gagné !' : 'Perdu…') + '</div>'
+    + '<div class="sy-anim-pts">' + (delta >= 0 ? '+' : '−') + Math.abs(delta) + ' pts chacun</div>'
+    + (question ? '<div class="sy-anim-q">' + escapeHtml(question) + '</div>' : '')
+    + '</div>';
+  document.body.appendChild(el);
+  const fermer = () => { el.classList.add('sy-anim-sort'); setTimeout(() => el.remove(), 350); };
+  el.addEventListener('click', fermer);
+  setTimeout(fermer, question ? 3200 : 2400);
 }
 
 function synchroAnnuler(cle){

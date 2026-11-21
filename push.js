@@ -99,6 +99,11 @@ function askPushPermission(){
 // ---------- ENVOI ----------
 // Prévient le/la partenaire. Sans abonnement enregistré de son côté,
 // on ne fait rien : le jeu doit continuer même sans notifications.
+// Chiffre à afficher sur l'icône de l'appli chez le/la partenaire (cloche.js).
+function badgePartenaire(){
+  try{ return typeof clocheTotal === 'function' ? clocheTotal(partnerId) : undefined; }catch(e){ return undefined; }
+}
+
 function notifyPartner(title, body, tag){
   // Rangée aussi sous la cloche (cloche.js), même sans notifications push.
   if(typeof clocheEnregistrer === 'function') clocheEnregistrer(title, body, tag);
@@ -112,7 +117,7 @@ function notifyPartner(title, body, tag){
       method: 'POST',
       keepalive: true,   // l'envoi survit à la mise en veille de l'appli
       headers: { 'Content-Type': 'text/plain' },   // requête « simple » : pas de pré-vol CORS, compatible keepalive
-      body: JSON.stringify({ sub: sub, payload: { title: title, body: body, tag: tag || 'nous-deux', url: './index.html' } })
+      body: JSON.stringify({ sub: sub, payload: { title: title, body: body, tag: tag || 'nous-deux', url: './index.html', badge: badgePartenaire() } })
     })
     .then(r => r.json())
     .then(res => {
