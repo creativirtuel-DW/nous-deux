@@ -465,8 +465,8 @@ function construireCarteMine(key, p){
     const skipNote = `<div class="skip-note">${limitReached ? '🚫 Limite de passes atteinte pour cette catégorie' : `Passes utilisées dans cette catégorie : ${skipsUsed}/${SKIP_LIMIT}`}</div>`;
 
     if(p.photo || smsDemandePhoto(p.text)){
-      // Carte photo : la photo part par SMS (décision du 21/11/2026). Le bouton
-      // « Le SMS est envoyé » confirme que la carte est réalisée.
+      // Carte photo : au choix, depuis l'appli (photo vue quelques secondes) ou
+      // par SMS — « Le SMS est envoyé » confirme alors que la carte est réalisée.
       const skipOrPenaltyBtn = p.pdGage
         ? ''
         : (limitReached
@@ -481,7 +481,8 @@ function construireCarteMine(key, p){
         ${p.pdGage
           ? `<div class="skip-note">🎯 Gage accepté à la place des ${PD_POINTS} points. ${escapeHtml(state.players[p.pdGage.author]||'')} doit le valider avant le ${pdGageDeadlineLabel(p.pdGage.deadline)} — sinon il s'annule et tu perds les ${PD_POINTS} points.</div>`
           : skipNote}
-        ${smsConsigne()}
+        ${smsConsigne(true)}
+        ${smsChoixAppli('<button class="btn-primary pending-photo">📸 Envoyer depuis l’appli</button>')}
         ${smsBouton('data-carte-sms-ouvrir')}
         <div class="pending-actions">
           ${skipOrPenaltyBtn}
@@ -496,6 +497,7 @@ function construireCarteMine(key, p){
         }
       }
       row.querySelector('[data-carte-sms-ouvrir]').addEventListener('click', () => smsOuvrir(p.text));
+      row.querySelector('.pending-photo').addEventListener('click', () => envoyerPhotoCarte(key, row));
 
     } else if(p.cat === 'question'){
       const skipOrPenaltyBtn = limitReached
@@ -764,7 +766,7 @@ function envoyerPhotoCarte(key, row){
   const bouton = row.querySelector('.pending-photo');
 
   pcChoisirPhoto(dataUrl => {
-    if(!dataUrl){ if(bouton) bouton.textContent = '📸 Prendre la photo'; return; }
+    if(!dataUrl){ if(bouton) bouton.textContent = '📸 Envoyer depuis l’appli'; return; }
     if(bouton){ bouton.textContent = 'Envoi…'; bouton.disabled = true; }
     pcProteger(dataUrl, protegee => {
       roomRef.update({

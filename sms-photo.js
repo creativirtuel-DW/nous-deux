@@ -7,8 +7,9 @@
  * de l'utilisateur du 19/11/2026), avec un petit texte : la personne choisit
  * la conversation, joint sa photo et envoie elle-même.
  *
- * Depuis le 21/11/2026, TOUTES les photos de cartes/défis/gages partent par
- * SMS : plus de photo prise dans l'appli. Deux boutons : « 📱 Ouvrir Messages »
+ * Depuis le 21/11/2026, les photos de cartes/défis/gages peuvent partir par
+ * SMS. Là où l'appli savait déjà envoyer la photo (cartes de la pioche,
+ * Soirée guidée), la personne CHOISIT : depuis l'appli, ou par SMS. Deux boutons : « 📱 Ouvrir Messages »
  * (raccourci, ne valide rien) et « ✓ Le SMS est envoyé » (confirme que la
  * carte est réalisée → validation chez l'autre).
  *
@@ -50,6 +51,14 @@ function smsNoteValidation(nom){
 }
 
 // Consigne affichée sur une carte qui demande une photo.
-function smsConsigne(){
+function smsConsigne(avecAppli){
+  if(avecAppli) return '<div class="sms-consigne choix">📸 Choisis comment envoyer ta photo à <b>' + escapeHtml(smsNomAutre()) + '</b> :</div>';
   return '<div class="sms-consigne">📱 Envoie ta photo à <b>' + escapeHtml(smsNomAutre()) + '</b> par SMS, puis touche « Le SMS est envoyé » pour confirmer que c’est fait.</div>';
+}
+
+// Choix « depuis l'appli » (bouton fourni par l'appelant) puis séparateur « ou par SMS ».
+function smsChoixAppli(boutonAppli){
+  return '<div class="photo-choix-appli">' + boutonAppli
+    + '<small>Elle ne s’affichera que ' + Math.round((typeof PC_VUE_MS !== 'undefined' ? PC_VUE_MS : 5000) / 1000) + ' secondes chez ' + escapeHtml(smsNomAutre()) + ', puis disparaîtra.</small></div>'
+    + '<div class="photo-choix-ou"><span>ou par SMS</span></div>';
 }
