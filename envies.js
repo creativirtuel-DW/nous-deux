@@ -267,7 +267,13 @@ function renderEnvies(){
   const sous = !envLireStock() ? 'Secrète, rien qu’à toi'
     : communes.length ? communes.length + (communes.length > 1 ? ' envies communes ✨' : ' envie commune ✨')
     : 'Secrète · 🔒';
-  const html = '<span class="pt-tuile-ic">🌠</span><span class="pt-tuile-txt"><strong>Ma liste des envies</strong><small>' + sous + '</small></span>';
+  // Ma liste est vide alors que l'autre a rempli la sienne : bannière pour donner envie (21/11/2026).
+  const nbItems = pid => { const l = state.envies && state.envies[pid]; return Array.isArray(l) ? l.length : Object.keys(l || {}).length; };
+  const banniere = !nbItems(me.id) && nbItems(envAutreId()) > 0
+    ? '<span class="env-banniere">' + escapeHtml(envNomAutre()) + ' a déjà rempli sa liste, êtes-vous sur la même longueur d’onde ?</span>'
+    : '';
+  const html = banniere + '<span class="pt-tuile-ic">🌠</span><span class="pt-tuile-txt"><strong>Ma liste des envies</strong><small>' + sous + '</small></span>';
+  t.classList.toggle('env-a-remplir', !!banniere);
   if(t.innerHTML !== html) t.innerHTML = html;
   t.classList.toggle('env-brille', communes.length > 0);
 

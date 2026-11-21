@@ -1881,3 +1881,24 @@ main#views{ flex:1; min-height:0; position:relative; }
 .sv-notif small{ font-size:11.5px; color: var(--muted); }
 .sv-notif.ok small{ color:#7BE495; }
 .sv-sans-push{ font-style:normal; font-size:11px; color: var(--muted); }
+
+/* ====== ENVIES : bannière « Ton partenaire a déjà rempli sa liste » (envies.js) ====== */
+.env-tuile{ position:relative; }
+.env-banniere{
+  /* Post-it posé un peu de travers, plus étroit que la case */
+  position:absolute; top:-14px; right:8px; width:74%; z-index:2; box-sizing:border-box;
+  padding:9px 9px 8px; border-radius:2px 2px 10px 2px; text-align:center;
+  background: linear-gradient(160deg, #FFF3A6 0%, #FFE477 100%); color:#3A2A05;
+  font-size:10.5px; font-weight:800; line-height:1.28;
+  box-shadow: 0 8px 14px -6px rgba(0,0,0,.65), inset 0 -6px 10px -8px rgba(160,120,0,.45);
+  transform: rotate(-5deg); transform-origin: 70% 0;
+  animation: envPostit 3s ease-in-out infinite;
+}
+/* bout de scotch en haut du post-it */
+.env-banniere::before{
+  content:''; position:absolute; top:-6px; left:50%; width:34px; height:11px; margin-left:-17px;
+  background: rgba(255,255,255,.42); border-radius:1px; transform: rotate(3deg);
+  box-shadow: 0 1px 2px rgba(0,0,0,.15);
+}
+@keyframes envPostit{ 0%,100%{ transform: rotate(-5deg); } 50%{ transform: rotate(-3.5deg) translateY(-1px); } }
+.env-tuile.env-a-remplir{ justify-content:flex-end; padding-bottom:16px; }
