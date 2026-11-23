@@ -55,14 +55,22 @@ function pcChoisirPhoto(cb){
   input.click();
 }
 
-// Chiffre la photo si le coffre est ouvert ([[coffre.js]]), sinon l'envoie
-// telle quelle : le coffre reste optionnel.
+// Chiffre TOUJOURS la photo (23/11/2026) : si le code secret n'est pas encore
+// connu sur ce téléphone, on le demande (secret.js) ; sans code, rien ne part.
 function pcProteger(dataUrl, cb){
-  if(typeof coffrePret === 'function' && coffrePret()){
-    coffreChiffrer(dataUrl).then(cb, () => cb(dataUrl));
-    return;
+  const chiffrer = () => coffreChiffrer(dataUrl).then(cb, () => alert('Le chiffrement de la photo a échoué : elle n’a pas été envoyée.'));
+  if(typeof coffrePret === 'function' && coffrePret()){ chiffrer(); return; }
+  secretAssurer('Les photos sont chiffrées avant de partir.').then(chiffrer, () => {});
+}
+
+// Photo chiffrée et code pas encore connu ici : on le demande AVANT de lancer
+// l'affichage minuté (sinon la photo s'effacerait sans avoir été vue).
+function pcCodeAvant(valeur, suite){
+  if(typeof coffreEstChiffre === 'function' && coffreEstChiffre(valeur) && !coffrePret()){
+    secretAssurer('Cette photo est chiffrée.').then(suite, () => {});
+    return true;
   }
-  cb(dataUrl);
+  return false;
 }
 
 function pcLire(valeur, cb, siEchec){
@@ -79,13 +87,14 @@ function pcStopTicker(){ if(pcTicker){ clearInterval(pcTicker); pcTicker = null;
 // Peint la photo dans `conteneur` pendant PC_VUE_MS, puis appelle `apres`.
 function pcMontrer(conteneur, valeur, apres){
   if(!conteneur) return;
+  if(pcCodeAvant(valeur, () => pcMontrer(conteneur, valeur, apres))) return;
   conteneur.innerHTML = '<div class="pc-vue"><div class="pc-chrono"><span id="pc-count">'
     + Math.ceil(PC_VUE_MS / 1000) + '</span><small>s</small></div>'
     + '<div class="pc-photo-wrap"><img class="pc-photo" id="pc-photo-img" alt=""></div></div>';
 
   pcLire(valeur,
     clair => { const el = document.getElementById('pc-photo-img'); if(el) el.src = clair; },
-    () => { conteneur.innerHTML = '<p class="pd-verrou">🔒 Photo chiffrée — ouvre le coffre avec votre phrase secrète pour la voir.</p>'; });
+    () => { conteneur.innerHTML = '<p class="pd-verrou">🔒 Photo chiffrée — il faut le code secret pour la voir.</p>'; });
 
   pcFinVue = Date.now() + PC_VUE_MS;
   pcApresVue = apres;

@@ -1965,3 +1965,10 @@ main#views{ flex:1; min-height:0; position:relative; }
 
 .pii-obj img{ width:100%; height:100%; object-fit:contain; }
 .pii-sil{ filter: drop-shadow(0 0 1.5px rgba(255,240,210,.95)) drop-shadow(0 0 9px rgba(255,200,90,.4)); }   /* halo doré : l'homme rouge foncé se détache du fond rouge */
+
+/* ====== PLAISIRS INTIMES : « Jouer ensemble / à distance » (23/11/2026) ====== */
+.pi-lieu-q{ margin:-6px 0 12px; font-size:16px; font-weight:800; color:#FFE29A; text-align:center; }
+.pi-lieu-actuel{ align-self:center; margin:-8px auto 14px; padding:7px 14px; border-radius:999px; border:1px solid rgba(255,226,154,.55);
+  background: rgba(0,0,0,.25); color:#FFE29A; font-family:inherit; font-size:13px; font-weight:800; cursor:pointer; display:block; }
+
+.pi-chaud{ color:#FF1F3D !important; font-weight:900; text-shadow: 0 0 10px rgba(255,31,61,.45); }

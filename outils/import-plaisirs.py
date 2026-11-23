@@ -7,7 +7,8 @@ Régénère plaisirs-data.js à partir de Plaisirs-Intimes.xlsx.
 - ID vide + texte = nouvelle carte (id attribué automatiquement : q31, d31…)
 - Action = SUPPRIMER : la carte est retirée
 - Toute carte présente dans le classeur est considérée comme relue (date de validation).
-Ne jamais modifier un ID existant. Penser ensuite à monter plaisirs-data.js?v= dans index.html.
+Ne jamais modifier un ID existant. Colonne E « Lieu » : Ensemble / Distance / Les deux.
+Ensuite : outils/Chiffrer le contenu.bat (le contenu est publié chiffré), puis publier.
 """
 import datetime, re, openpyxl
 from plaisirs_commun import lire, ecrire, XLSX, FEUILLES
@@ -43,7 +44,9 @@ for onglet, cle, pref in FEUILLES:
         vus.add(ident)
         avant = connu.get(ident)
         v = avant.get("v") if avant and avant["t"] == texte and avant.get("v") else AUJ
-        res.append({"id": ident, "t": texte, "v": v})
+        lieu = val(5).lower()
+        l = "d" if lieu.startswith("dist") else "e" if lieu.startswith("ens") else "2" if lieu.startswith("les") or lieu.startswith("2") else ("2" if cle == "questions" else "e")
+        res.append({"id": ident, "t": texte, "v": v, "l": l})
     nouveau[cle] = res
 for s in soucis:
     print("⚠️", *s)

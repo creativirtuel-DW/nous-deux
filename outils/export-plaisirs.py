@@ -20,17 +20,19 @@ for onglet, cle, pref in FEUILLES:
     ws["A1"] = "🔥 Plaisirs Intimes — " + onglet
     ws["A1"].font = Font(size=14, bold=True, color="C8102E")
     ws["A2"] = ("Ajoute tes " + onglet.lower() + " sur une nouvelle ligne en laissant l'ID VIDE (il sera attribué tout seul). "
-                "Pour retirer une ligne : écris SUPPRIMER dans la colonne Action. Ne modifie jamais un ID existant.")
+                "Pour retirer une ligne : écris SUPPRIMER dans la colonne Action. Ne modifie jamais un ID existant. "
+                "Colonne Lieu : Ensemble, Distance ou Les deux (choix « Jouer ensemble / à distance » dans l'appli).")
     ws["A2"].alignment = Alignment(wrap_text=True)
-    ws.merge_cells("A2:D2")
+    ws.merge_cells("A2:E2")
     ws.row_dimensions[2].height = 45
-    for c, t in enumerate(["ID", "Texte", "Action", "État"], 1):
+    for c, t in enumerate(["ID", "Texte", "Action", "État", "Lieu"], 1):
         cel = ws.cell(row=4, column=c, value=t)
         cel.font = Font(bold=True, color="FFFFFF"); cel.fill = ROUGE
     r = 5
     for it in data[cle]:
         ws.cell(row=r, column=1, value=it["id"])
         ws.cell(row=r, column=2, value=it["t"]).alignment = Alignment(wrap_text=True, vertical="top")
+        ws.cell(row=r, column=5, value={"e": "Ensemble", "d": "Distance", "2": "Les deux"}.get(it.get("l"), "Les deux" if cle == "questions" else "Ensemble"))
         if not it.get("v"):
             e = ws.cell(row=r, column=4, value="À VALIDER"); e.fill = ORANGE
         r += 1
@@ -38,6 +40,7 @@ for onglet, cle, pref in FEUILLES:
     ws.column_dimensions["B"].width = 90
     ws.column_dimensions["C"].width = 12
     ws.column_dimensions["D"].width = 12
+    ws.column_dimensions["E"].width = 12
     ws.freeze_panes = "A5"
 wb.save(XLSX)
 print("Écrit :", XLSX, "-", len(data["questions"]), "questions,", len(data["defis"]), "défis")

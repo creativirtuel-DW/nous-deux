@@ -10,7 +10,7 @@
  *
  * Base : rooms/$room/pensees/<clé> = { by, nom, texte, photo, ts }
  * La pensée entière est effacée une fois lue (et sa photo vue, s'il y en a une).
- * La photo est chiffrée si le coffre est ouvert (pcProteger, photo-carte.js).
+ * La photo est toujours chiffrée avec le code secret (pcProteger, photo-carte.js).
  */
 
 const PT_VUE_MS = 5000;
@@ -148,6 +148,8 @@ function ptFermerRecue(){
 
 function ptVoirPhoto(){
   const cle = ptRecueCle;
+  const pp = cle && state && state.pensees && state.pensees[cle];
+  if(pp && pp.photo && pcCodeAvant(pp.photo, ptVoirPhoto)) return;
   const p = cle && state && state.pensees && state.pensees[cle];
   const zone = document.getElementById('pt-recu-photo');
   if(!p || !p.photo || !zone || ptVueEnCours) return;
@@ -156,7 +158,7 @@ function ptVoirPhoto(){
     + '</span><small>s</small></div><img id="pt-vue-img" alt=""></div>';
   pcLire(p.photo,
     clair => { const i = document.getElementById('pt-vue-img'); if(i) i.src = clair; },
-    () => { zone.innerHTML = '<p class="pd-verrou">🔒 Photo chiffrée — ouvre le coffre avec votre phrase secrète pour la voir.</p>'; });
+    () => { zone.innerHTML = '<p class="pd-verrou">🔒 Photo chiffrée — il faut le code secret pour la voir.</p>'; });
   const fin = Date.now() + PT_VUE_MS;
   const tic = setInterval(() => {
     const reste = fin - Date.now();

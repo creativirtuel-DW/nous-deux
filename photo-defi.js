@@ -62,7 +62,7 @@ function pdAfficherPhoto(valeur){
     clair => { const el = document.getElementById('pd-photo-img'); if(el) el.src = clair; },
     () => {
       const wrap = document.querySelector('.pd-photo-wrap');
-      if(wrap) wrap.innerHTML = '<p class="pd-verrou">🔒 Photo chiffrée — ouvre le coffre avec votre phrase secrète pour la voir.</p>';
+      if(wrap) wrap.innerHTML = '<p class="pd-verrou">🔒 Photo chiffrée — il faut le code secret pour la voir.</p>';
     }
   );
 }
@@ -101,16 +101,8 @@ function pdEcartMois(a, b){
 }
 
 function pdSend(dataUrl, month, year, gage, tire){
-  // Le coffre est ouvert : la photo part chiffrée, illisible dans la base.
-  // Fermé, on garde le comportement d'avant plutôt que de bloquer l'envoi.
-  if(coffrePret()){
-    coffreChiffrer(dataUrl).then(
-      chiffre => pdEnvoiBrut(chiffre, month, year, gage, tire),
-      () => pdEnvoiBrut(dataUrl, month, year, gage, tire)
-    );
-    return;
-  }
-  pdEnvoiBrut(dataUrl, month, year, gage, tire);
+  // La photo part TOUJOURS chiffrée avec le code secret (23/11/2026).
+  pcProteger(dataUrl, chiffre => pdEnvoiBrut(chiffre, month, year, gage, tire));
 }
 
 function pdEnvoiBrut(dataUrl, month, year, gage, tire){
@@ -161,6 +153,7 @@ function pdArchiveGage(d, motif, updates, reponse){
 function pdStartViewing(){
   const d = pdGet();
   if(!d || d.by === me.id || d.status !== 'sent') return;
+  if(pcCodeAvant(d.photo, pdStartViewing)) return;
   pdRef().update({ status: 'viewing', viewStart: Date.now() });
 }
 

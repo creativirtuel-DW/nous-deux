@@ -588,41 +588,29 @@ function construireCarteMine(key, p){
 function renderCoffre(){
   const bloc = $('#coffre-bloc');
   if(!bloc) return;
-
   if(!coffreDisponible()){
-    bloc.innerHTML = '<p class="coffre-txt">Ce navigateur ne sait pas chiffrer : les photos partiraient en clair.</p>';
+    bloc.innerHTML = '<p class="coffre-txt">Ce navigateur ne sait pas chiffrer : les photos ne peuvent pas être envoyées.</p>';
     return;
   }
-
+  // Depuis le 23/11/2026, le coffre s'ouvre avec le CODE SECRET du couple (secret.js),
+  // le même qui déchiffre le contenu de Plaisirs Intimes.
   if(coffrePret()){
     bloc.innerHTML = `
-      <p class="coffre-titre">🔐 Coffre ouvert sur cet appareil</p>
-      <p class="coffre-txt">Les photos sont chiffrées avant de partir : personne d'autre que vous deux ne peut les ouvrir, pas même depuis la base.</p>
-      <button class="btn-ghost" id="coffre-oublier">Oublier la phrase sur ce téléphone</button>`;
+      <p class="coffre-titre">🔐 Code secret enregistré sur ce téléphone</p>
+      <p class="coffre-txt">Les photos sont chiffrées avant de partir et le contenu HOT est déchiffré ici : personne d'autre que vous deux ne peut les lire, pas même depuis la base ou le site.</p>
+      <button class="btn-ghost" id="coffre-oublier">Oublier le code sur ce téléphone</button>`;
     $('#coffre-oublier').addEventListener('click', () => {
-      if(!confirm("Oublier la phrase sur ce téléphone ? Les photos déjà envoyées resteront illisibles ici tant que tu ne l'auras pas ressaisie.")) return;
-      coffreOublier();
+      if(!confirm("Oublier le code secret sur ce téléphone ? Il faudra le ressaisir pour voir les photos et le contenu HOT.")) return;
+      secretOublier();
       render();
     });
     return;
   }
-
   bloc.innerHTML = `
-    <p class="coffre-titre">🔒 Coffre fermé</p>
-    <p class="coffre-txt">Choisissez une phrase secrète, la même sur vos deux téléphones. Elle ne quitte jamais l'appareil : elle n'est écrite nulle part dans la base, et sans elle les photos restent illisibles — y compris pour nous si vous l'oubliez.</p>
-    <input type="password" id="coffre-phrase" class="coffre-input" placeholder="Votre phrase secrète" autocomplete="off">
-    <button class="btn-primary" id="coffre-ouvrir">Ouvrir le coffre</button>
-    <p class="coffre-erreur" id="coffre-erreur"></p>`;
-
-  const valider = () => {
-    const p = $('#coffre-phrase').value;
-    coffreOuvrir(p, true).then(
-      () => render(),
-      () => { $('#coffre-erreur').textContent = 'Il faut au moins 4 caractères.'; }
-    );
-  };
-  $('#coffre-ouvrir').addEventListener('click', valider);
-  $('#coffre-phrase').addEventListener('keydown', e => { if(e.key === 'Enter') valider(); });
+    <p class="coffre-titre">🔒 Code secret non saisi</p>
+    <p class="coffre-txt">Le code secret que vous avez choisi tous les deux chiffre vos photos et ouvre le contenu HOT. Il ne quitte jamais le téléphone.</p>
+    <button class="btn-primary" id="coffre-ouvrir">Saisir le code secret</button>`;
+  $('#coffre-ouvrir').addEventListener('click', () => secretAssurer().then(() => render(), () => {}));
 }
 
 function renderAdminLockButtons(){

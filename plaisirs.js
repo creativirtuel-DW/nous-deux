@@ -31,6 +31,9 @@ const PI_MALUS = 20;           // points perdus par passe au-delà
 
 let piOuvert = false;          // plein écran ouvert
 let piCarte = null;            // { mode, id, t } carte affichée
+let piLieu = null;             // 'e' = ensemble, 'd' = à distance — choisi à chaque ouverture (23/11/2026)
+// Une carte se joue-t-elle dans ce lieu ? l = 'e' (ensemble), 'd' (distance) ou '2' (les deux).
+function piCarteJouable(x){ const l = x.l || '2'; return l === '2' || l === piLieu; }
 
 function piDebloque(){ return PI_ACTIF && typeof mcDebloque === 'function' && mcDebloque(); }
 function piVisible(){ return piDebloque() || (typeof isAdminUnlocked === 'function' && isAdminUnlocked()); }
@@ -124,6 +127,7 @@ function piPresentation(){
     + '<div class="env-pop-ic">🔥</div>'
     + '<h2>Plaisirs Intimes</h2>'
     + '<p>Vous voici maintenant dans un <b>mode HOT</b> pour votre couple ! Vous y trouverez des questions et des défis à réaliser, ciblés sur votre vie sexuelle.</p>'
+    + '<p>Ce jeu n’a pas pour but de vous amener à faire l’amour, mais plutôt à <b>vous ouvrir à l’autre sans tabou</b>, et à faire <b class="pi-chaud">monter la température</b> entre vous !</p>'
     + '<p>Le tirage des cartes est aléatoire et le niveau HOT de la carte peut varier.</p>'
     + '<p>Vous pouvez passer une carte jusqu’à ' + PI_PASSES + ' fois par jour. Au-delà, vous perdrez des points…</p>'
     + '<p><b>Alors détendez-vous, oubliez les tabous, et amusez-vous en couple !</b></p>'
@@ -139,8 +143,13 @@ function piPresentation(){
 // ---------- plein écran ----------
 function piOuvrir(){
   if(!piVisible()) return;
+  // Contenu chiffré (secret.js) : il faut le code secret, demandé une seule fois par téléphone.
+  if(typeof secretContenu !== 'undefined' && !secretContenu){
+    secretAssurer('Le contenu de Plaisirs Intimes est chiffré.').then(piOuvrir, () => {});
+    return;
+  }
   if(piDebloque()){ piMarquerDecouvert(); renderHotBanniere(); }
-  piOuvert = true; piCarte = null;
+  piOuvert = true; piCarte = null; piLieu = null;
   const el = ptEcran('pi-plein');
   el.innerHTML = '<div class="pi-flammes" aria-hidden="true"></div>'
     + '<button type="button" class="qdj-fermer" aria-label="Fermer" data-pi-fermer>✕</button>'
@@ -166,9 +175,17 @@ function piDessiner(){
       + (piDebloque() ? '' : '<p class="pi-dev">🔧 Aperçu dev mod : ce mode est encore verrouillé pour vous deux.</p>')
       + piBlocValider()
       + (piEnAttente().length ? '<p class="pi-attente">⏳ ' + piEnAttente().length + (piEnAttente().length > 1 ? ' réponses attendent' : ' réponse attend') + ' la validation de ' + escapeHtml(piNomAutre()) + '</p>' : '')
-      + '<button type="button" class="pi-choix" data-pi-mode="questions"><span>💬</span><b>Question</b><small>Une question très explicite : réponds par écrit, sans tabou.</small></button>'
-      + '<button type="button" class="pi-choix defi" data-pi-mode="defis"><span>🔥</span><b>Défi</b><small>Un défi très HOT à réaliser, maintenant.</small></button>';
+      + (!piLieu
+        ? '<p class="pi-lieu-q">Comment jouez-vous ?</p>'
+          + '<button type="button" class="pi-choix pi-lieu" data-pi-lieu="e"><span>💑</span><b>Jouer ensemble</b><small>Vous êtes tous les deux au même endroit.</small></button>'
+          + '<button type="button" class="pi-choix pi-lieu defi" data-pi-lieu="d"><span>📱</span><b>Jouer à distance</b><small>Chacun de son côté : seules les cartes faisables à distance sortent.</small></button>'
+        : '<button type="button" class="pi-lieu-actuel" data-pi-lieu-changer>' + (piLieu === 'e' ? '💑 Ensemble' : '📱 À distance') + ' · changer</button>'
+          + '<button type="button" class="pi-choix" data-pi-mode="questions"><span>💬</span><b>Question</b><small>Une question très explicite : réponds par écrit, sans tabou.</small></button>'
+          + '<button type="button" class="pi-choix defi" data-pi-mode="defis"><span>🔥</span><b>Défi</b><small>' + (piLieu === 'd' ? 'Un défi HOT à relever chacun de son côté.' : 'Un défi très HOT à réaliser, maintenant.') + '</small></button>');
     c.querySelectorAll('[data-pi-mode]').forEach(b => b.onclick = () => piTirer(b.dataset.piMode));
+    c.querySelectorAll('[data-pi-lieu]').forEach(b => b.onclick = () => { piLieu = b.dataset.piLieu; piDessiner(); });
+    const changer = c.querySelector('[data-pi-lieu-changer]');
+    if(changer) changer.onclick = () => { piLieu = null; piDessiner(); };
     c.querySelectorAll('[data-pi-valider]').forEach(b => b.onclick = () => piValider(b.dataset.piValider));
     return;
   }
@@ -251,11 +268,14 @@ function piPasser(suite){
 function piTirer(mode){
   if(typeof PLAISIRS === 'undefined' || !PLAISIRS[mode] || !PLAISIRS[mode].length) return;
   const vus = (state.plaisirsVus && state.plaisirsVus[mode]) || {};
-  let dispo = PLAISIRS[mode].filter(x => !vus[x.id] && (!piCarte || x.id !== piCarte.id));
+  const jouables = PLAISIRS[mode].filter(piCarteJouable);
+  if(!jouables.length) return;
+  let dispo = jouables.filter(x => !vus[x.id] && (!piCarte || x.id !== piCarte.id));
   const ref = roomRef.child('plaisirsVus/' + mode);
   if(!dispo.length){                     // tout est sorti : on repart à zéro
     ref.remove();
-    dispo = PLAISIRS[mode].filter(x => !piCarte || x.id !== piCarte.id);
+    dispo = jouables.filter(x => !piCarte || x.id !== piCarte.id);
+    if(!dispo.length) dispo = jouables;
   }
   const x = dispo[Math.floor(Math.random() * dispo.length)];
   ref.child(x.id).set(true);
