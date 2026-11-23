@@ -35,6 +35,7 @@ const SUIVI_NOMS = {
   pensetoi:     '💌 Je pense à toi',
   envies:       '🌠 Ma liste des envies',
   evenement:    '🎄 Bannière événement',
+  hot_banniere: '🔥 Bannière Mode HOT débloqué',
   question:     '💬 Question',
   defi:         '🔥 Défi',
   gage:         '😈 Cap ou pas',
@@ -70,7 +71,7 @@ const SUIVI_CIBLES = [
   ['.cat-btn[data-cat="battle"]', 'battle'], ['.cat-btn[data-cat="synchro"]', 'synchro'], ['.cat-btn[data-cat="photo"]', 'photo'], ['.cat-btn[data-cat="jds"]', 'jds'],
   ['.cat-btn[data-cat="soiree"]', 'soiree'],
   ['#jouer-btn', 'jouer'], ['#qdj-bloc', 'qdj'], ['#cj-tuile', 'coffre'], ['#pt-tuile', 'pensetoi'], ['#env-tuile', 'envies'],
-  ['#evt-banniere', 'evenement'],
+  ['#evt-banniere', 'evenement'], ['#hot-banniere', 'hot_banniere'],
   ['#pending-to-validate-list button, #pending-mine-list button, #pending-autre-list button', 'attente'],
   ['.tab[data-view="view-parcours"]', 'tab_parcours'], ['.tab[data-view="view-rewards"]', 'tab_paliers'],
   ['.tab[data-view="view-content"]', 'tab_cartes'], ['.tab[data-view="view-play"]', 'tab_accueil']

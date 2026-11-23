@@ -3,7 +3,8 @@
  * ===============================================================================
  * S'ouvre EN MÊME TEMPS que le Mode HOT (mode-couple.js) : quand l'un ou
  * l'autre atteint MC_SEUIL (300) points — harmonisé le 18/11/2026.
- * Une case « HOT » apparaît alors sur l'accueil ; elle ouvre un mode aux
+ * Une case « HOT » apparaît alors dans la page des jeux (« Jouer ») — elle
+ * était sur l'accueil jusqu'au 23/11/2026 — ; elle ouvre un mode aux
  * couleurs chaudes avec deux choix : Question (très explicite) ou Défi (très HOT).
  *
  * PI_ACTIF = false couperait le jeu pour tout le monde (sauf aperçu dev mod).
@@ -34,17 +35,44 @@ let piCarte = null;            // { mode, id, t } carte affichée
 function piDebloque(){ return PI_ACTIF && typeof mcDebloque === 'function' && mcDebloque(); }
 function piVisible(){ return piDebloque() || (typeof isAdminUnlocked === 'function' && isAdminUnlocked()); }
 
-// ---------- case de l'accueil ----------
+// « Débloqué ! » : tant que ce téléphone n'a jamais ouvert Plaisirs Intimes,
+// une bannière sur l'accueil et un ruban sur la case invitent à le découvrir.
+function piCleDecouvert(){ return 'nousdeux_pi_decouvert_' + roomCode + '_' + me.id; }
+function piDecouvert(){ try{ return localStorage.getItem(piCleDecouvert()) === '1'; }catch(e){ return false; } }
+function piMarquerDecouvert(){ try{ localStorage.setItem(piCleDecouvert(), '1'); }catch(e){} }
+
+// Bannière de l'accueil : un appui ouvre la page des jeux, où est la case HOT.
+function renderHotBanniere(){
+  const b = document.getElementById('hot-banniere');
+  if(!b) return;
+  const vis = piDebloque() && !piDecouvert() && accueilVisible();
+  b.style.display = vis ? '' : 'none';
+  if(!vis) return;
+  const html = '<span class="hot-ban-ic">🔥</span>'
+    + '<span class="hot-ban-txt"><strong>Mode HOT débloqué !</strong><small>Nouveau jeu : Plaisirs Intimes</small></span>'
+    + '<span class="hot-ban-go">Découvrir ›</span>';
+  if(b.innerHTML !== html) b.innerHTML = html;
+}
+document.addEventListener('click', e => {
+  if(e.target.closest && e.target.closest('#hot-banniere')){
+    ouvrirJeux();
+    setTimeout(() => { const t = document.getElementById('pi-tuile'); if(t) t.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 60);
+  }
+});
+
+// ---------- case de la page des jeux ----------
 function renderPlaisirs(){
+  renderHotBanniere();
   const t = document.getElementById('pi-tuile');
   if(!t || !state || !me || !me.id) return;
   if(piOuvert && !piCarte) piDessiner();
-  const vis = piVisible() && accueilVisible();
+  const vis = piVisible() && jeuxOuvert && !panneauJeuOuvert();
   t.style.display = vis ? '' : 'none';
   if(!vis) return;
   const dev = !piDebloque();
   const n = piAValider().length;
-  const html = '<span class="pi-tuile-hot">HOT</span>'
+  const nouveau = !dev && !piDecouvert();
+  const html = (nouveau ? '<span class="pi-ruban">Débloqué !</span>' : '') + '<span class="pi-tuile-hot">HOT</span>'
     + '<span class="pi-tuile-txt"><strong>Plaisirs Intimes</strong><small>'
     + (n ? '✍️ ' + n + (n > 1 ? ' réponses' : ' réponse') + ' à valider' : dev ? 'Aperçu dev mod · verrouillé pour vous deux' : 'Questions & défis très chauds… 🔥') + '</small></span>'
     + '<span class="pi-tuile-ic">🌶️</span>' + (n ? '<span class="pi-badge">' + n + '</span>' : '');
@@ -85,9 +113,33 @@ function piBlocValider(){
     + '</section>';
 }
 
+// ---------- pop-up de présentation (23/11/2026) ----------
+// S'affiche à chaque ouverture du jeu, tant que « Ne plus afficher » n'est pas coché (par téléphone).
+function piCleAide(){ return 'nousdeux_pi_aide_masquee_' + roomCode + '_' + me.id; }
+function piAideMasquee(){ try{ return localStorage.getItem(piCleAide()) === '1'; }catch(e){ return false; } }
+function piPresentation(){
+  const el = ptEcran('pi-aide');
+  el.className = 'env-voile';
+  el.innerHTML = '<div class="env-pop pi-pop">'
+    + '<div class="env-pop-ic">🔥</div>'
+    + '<h2>Plaisirs Intimes</h2>'
+    + '<p>Vous voici maintenant dans un <b>mode HOT</b> pour votre couple ! Vous y trouverez des questions et des défis à réaliser, ciblés sur votre vie sexuelle.</p>'
+    + '<p>Le tirage des cartes est aléatoire et le niveau HOT de la carte peut varier.</p>'
+    + '<p>Vous pouvez passer une carte jusqu’à ' + PI_PASSES + ' fois par jour. Au-delà, vous perdrez des points…</p>'
+    + '<p><b>Alors détendez-vous, oubliez les tabous, et amusez-vous en couple !</b></p>'
+    + '<label class="qdj-aide-case env-aide-case"><input type="checkbox" id="pi-aide-masquer"' + (piAideMasquee() ? ' checked' : '') + '> Ne plus afficher</label>'
+    + '<button type="button" class="btn-primary" data-pi-aide-ok>C’est parti</button>'
+    + '</div>';
+  el.querySelector('[data-pi-aide-ok]').onclick = () => {
+    try{ localStorage.setItem(piCleAide(), el.querySelector('#pi-aide-masquer').checked ? '1' : '0'); }catch(e){}
+    el.remove();
+  };
+}
+
 // ---------- plein écran ----------
 function piOuvrir(){
   if(!piVisible()) return;
+  if(piDebloque()){ piMarquerDecouvert(); renderHotBanniere(); }
   piOuvert = true; piCarte = null;
   const el = ptEcran('pi-plein');
   el.innerHTML = '<div class="pi-flammes" aria-hidden="true"></div>'
@@ -95,6 +147,9 @@ function piOuvrir(){
     + '<div class="pi-corps" id="pi-corps"></div>';
   el.querySelector('[data-pi-fermer]').onclick = piFermer;
   piDessiner();
+  // Cinématique d'ouverture (pi-intro.js), puis la présentation si elle n'est pas masquée.
+  const apres = () => { if(!piAideMasquee()) piPresentation(); };
+  if(typeof piIntro === 'function') piIntro(apres); else apres();
 }
 function piFermer(){
   piOuvert = false; piCarte = null;
