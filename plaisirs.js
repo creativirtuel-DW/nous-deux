@@ -140,10 +140,74 @@ function piPresentation(){
   };
 }
 
+// ---------- code personnel (23/11/2026) ----------
+// Chaque téléphone protège l'entrée de Plaisirs Intimes par SON propre code, créé
+// à la 1re entrée puis demandé à chaque entrée. Seule une empreinte (SHA-256) est
+// gardée sur le téléphone, jamais le code ni rien dans la base.
+// Code oublié : il se réinitialise avec le code du dev mod.
+let piPinOuvert = false;          // code tapé pour CETTE entrée dans le jeu
+function piPinCle(){ return 'nousdeux_pi_pin_' + roomCode + '_' + me.id; }
+function piPinLire(){ try{ return localStorage.getItem(piPinCle()) || ''; }catch(e){ return ''; } }
+async function piPinEmpreinte(code){
+  const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('nous-deux/pin/' + roomCode + '/' + me.id + '/' + code));
+  return Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+function piDemanderPin(){
+  return new Promise((ok, ko) => {
+    const creation = !piPinLire();
+    const el = document.createElement('div');
+    el.id = 'pi-pin';
+    el.className = 'env-voile secret-voile';
+    el.innerHTML = '<div class="env-pop pi-pop secret-pop">'
+      + '<div class="env-pop-ic">🔥</div><h2>Plaisirs Intimes</h2>'
+      + (creation
+        ? '<p>Choisis ton <b>code personnel</b> : il protégera l’entrée de ce jeu sur <b>ton</b> téléphone. Il te sera demandé à chaque fois.</p>'
+          + '<input type="password" inputmode="numeric" class="coffre-input secret-champ" data-pin1 autocomplete="off" placeholder="Ton code (4 caractères ou plus)">'
+          + '<input type="password" inputmode="numeric" class="coffre-input secret-champ" data-pin2 autocomplete="off" placeholder="Retape-le">'
+        : '<p>Entre ton code personnel.</p>'
+          + '<input type="password" inputmode="numeric" class="coffre-input secret-champ" data-pin1 autocomplete="off" placeholder="Ton code">')
+      + '<p class="coffre-erreur secret-erreur"></p>'
+      + '<button type="button" class="btn-primary" data-pin-ok>' + (creation ? 'Créer mon code' : 'Entrer') + '</button>'
+      + (creation ? '' : '<button type="button" class="btn-ghost pi-pin-oubli" data-pin-oubli>Code oublié ?</button>')
+      + '<button type="button" class="btn-ghost" data-pin-annuler>Annuler</button></div>';
+    document.body.appendChild(el);
+    const c1 = el.querySelector('[data-pin1]'), c2 = el.querySelector('[data-pin2]');
+    const erreur = el.querySelector('.secret-erreur');
+    setTimeout(() => c1.focus(), 50);
+    const fermer = () => el.remove();
+    const valider = async () => {
+      const code = c1.value.trim();
+      if(creation){
+        if(code.length < 4){ erreur.textContent = 'Au moins 4 caractères.'; return; }
+        if(code !== c2.value.trim()){ erreur.textContent = 'Les deux codes ne sont pas identiques.'; c2.select(); return; }
+        try{ localStorage.setItem(piPinCle(), await piPinEmpreinte(code)); }catch(e){}
+      } else if(await piPinEmpreinte(code) !== piPinLire()){
+        erreur.textContent = 'Code incorrect.'; c1.select(); return;
+      }
+      piPinOuvert = true; fermer(); ok();
+    };
+    el.querySelector('[data-pin-ok]').onclick = valider;
+    el.querySelectorAll('.secret-champ').forEach(c => c.addEventListener('keydown', e => { if(e.key === 'Enter') valider(); }));
+    el.querySelector('[data-pin-annuler]').onclick = () => { fermer(); ko(new Error('annulé')); };
+    const oubli = el.querySelector('[data-pin-oubli]');
+    if(oubli) oubli.onclick = () => {
+      const admin = state && state.adminPin;
+      const saisi = prompt('Pour réinitialiser ton code personnel, entre le code du dev mod :');
+      if(saisi === null) return;
+      if(!admin || saisi.trim() !== String(admin)){ erreur.textContent = 'Code du dev mod incorrect.'; return; }
+      try{ localStorage.removeItem(piPinCle()); }catch(e){}
+      fermer();
+      piDemanderPin().then(ok, ko);
+    };
+  });
+}
+
 // ---------- plein écran ----------
 function piOuvrir(){
   if(!piVisible()) return;
-  // Contenu chiffré (secret.js) : il faut le code secret, demandé une seule fois par téléphone.
+  // 1. Le code personnel de ce téléphone, à chaque entrée dans le jeu.
+  if(!piPinOuvert){ piDemanderPin().then(piOuvrir, () => {}); return; }
+  // 2. Le contenu chiffré (secret.js) : clé récupérée toute seule dans la base.
   if(typeof secretContenu !== 'undefined' && !secretContenu){
     secretAssurer('Le contenu de Plaisirs Intimes est chiffré.').then(piOuvrir, () => {});
     return;
@@ -161,7 +225,7 @@ function piOuvrir(){
   if(typeof piIntro === 'function') piIntro(apres); else apres();
 }
 function piFermer(){
-  piOuvert = false; piCarte = null;
+  piOuvert = false; piCarte = null; piPinOuvert = false;   // le code sera redemandé à la prochaine entrée
   const el = document.getElementById('pi-plein'); if(el) el.remove();
 }
 

@@ -596,21 +596,30 @@ function renderCoffre(){
   // le même qui déchiffre le contenu de Plaisirs Intimes.
   if(coffrePret()){
     bloc.innerHTML = `
-      <p class="coffre-titre">🔐 Code secret enregistré sur ce téléphone</p>
+      <p class="coffre-titre">🔐 Code secret actif sur ce téléphone</p>
       <p class="coffre-txt">Les photos sont chiffrées avant de partir et le contenu HOT est déchiffré ici : personne d'autre que vous deux ne peut les lire, pas même depuis la base ou le site.</p>
-      <button class="btn-ghost" id="coffre-oublier">Oublier le code sur ce téléphone</button>`;
-    $('#coffre-oublier').addEventListener('click', () => {
-      if(!confirm("Oublier le code secret sur ce téléphone ? Il faudra le ressaisir pour voir les photos et le contenu HOT.")) return;
+      ${isAdminUnlocked() ? '<button class="btn-ghost" id="coffre-oublier">Retirer le code de votre espace (dev mod)</button>' : ''}`;
+    const oubl = $('#coffre-oublier');
+    if(oubl) oubl.addEventListener('click', () => {
+      if(!confirm("Retirer le code secret de votre espace ? Le contenu HOT et les photos ne s'ouvriront plus sur vos téléphones tant qu'il n'aura pas été redéposé.")) return;
+      roomRef.child('codeSecret').remove();
       secretOublier();
       render();
     });
     return;
   }
+  // Le code est déposé dans la room (dev mod) : on l'active tout seul dès qu'il est là.
+  if(state && state.codeSecret){
+    bloc.innerHTML = '<p class="coffre-titre">🔐 Activation du code secret…</p>';
+    secretAssurer().then(() => render(), () => {});
+    return;
+  }
   bloc.innerHTML = `
-    <p class="coffre-titre">🔒 Code secret non saisi</p>
-    <p class="coffre-txt">Le code secret que vous avez choisi tous les deux chiffre vos photos et ouvre le contenu HOT. Il ne quitte jamais le téléphone.</p>
-    <button class="btn-primary" id="coffre-ouvrir">Saisir le code secret</button>`;
-  $('#coffre-ouvrir').addEventListener('click', () => secretAssurer().then(() => render(), () => {}));
+    <p class="coffre-titre">🔒 Code secret pas encore déposé</p>
+    <p class="coffre-txt">Le code de chiffrement choisi au PC doit être déposé une seule fois, depuis le dev mod. Ensuite, vos deux téléphones l'utilisent tout seuls pour chiffrer les photos et ouvrir le contenu HOT.</p>
+    ${isAdminUnlocked() ? '<button class="btn-primary" id="coffre-ouvrir">Déposer le code secret</button>' : '<p class="coffre-txt"><b>Ouvre le dev mod pour le déposer.</b></p>'}`;
+  const dep = $('#coffre-ouvrir');
+  if(dep) dep.addEventListener('click', () => secretAssurer().then(() => render(), () => {}));
 }
 
 function renderAdminLockButtons(){

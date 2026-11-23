@@ -55,13 +55,24 @@ function secretOuvrirCoffre(code){
   return coffreOuvrir(code, true).catch(() => {});
 }
 
-// Le code est connu et bon sur cet appareil ? Sinon on le demande.
-// Rend une promesse résolue quand tout est prêt (rejetée si la personne annule).
+// Le code est-il prêt sur cet appareil ? Depuis le 23/11/2026 (choix de l'utilisateur),
+// PERSONNE n'a à le taper : il est déposé UNE fois dans la room (rooms/$room/codeSecret,
+// depuis le dev mod) et chaque téléphone le récupère tout seul. La protection repose
+// donc sur le code du couple. Seul le dev mod peut encore le saisir (dépôt initial).
+// Rend une promesse résolue quand tout est prêt, rejetée sinon.
 function secretAssurer(raison){
   if(secretContenu && (typeof coffrePret !== 'function' || coffrePret())) return Promise.resolve();
-  const code = secretLireCode();
-  const essai = code ? secretEssayer(code).then(ok => ok ? secretOuvrirCoffre(code).then(() => true) : false) : Promise.resolve(false);
-  return essai.then(ok => ok ? undefined : secretDemander(raison));
+  const candidats = [secretLireCode(), (typeof state !== 'undefined' && state && state.codeSecret) || ''].filter(Boolean);
+  const essayer = i => i >= candidats.length ? Promise.resolve(false)
+    : secretEssayer(candidats[i]).then(ok => ok
+        ? (secretEcrireCode(candidats[i]), secretOuvrirCoffre(candidats[i]).then(() => true))
+        : essayer(i + 1));
+  return essayer(0).then(ok => {
+    if(ok) return undefined;
+    if(typeof isAdminUnlocked === 'function' && isAdminUnlocked()) return secretDemander(raison);
+    alert('Le contenu protégé n’est pas encore activé sur votre espace : il faut d’abord déposer le code secret depuis le dev mod (onglet Cartes › Code secret).');
+    return Promise.reject(new Error('code absent'));
+  });
 }
 
 // Fenêtre de saisie du code.
@@ -72,8 +83,8 @@ function secretDemander(raison){
     el.id = 'secret-pop';
     el.className = 'env-voile secret-voile';
     el.innerHTML = '<div class="env-pop secret-pop">'
-      + '<div class="env-pop-ic">🔐</div><h2>Code secret</h2>'
-      + '<p>' + (raison || 'Ce contenu est chiffré.') + ' Entre le code secret que vous avez choisi tous les deux : il sera mémorisé sur ce téléphone.</p>'
+      + '<div class="env-pop-ic">🔐</div><h2>Code secret (dev mod)</h2>'
+      + '<p>Entre une seule fois le code de chiffrement choisi au PC : il sera déposé dans votre espace et vos deux téléphones l’utiliseront ensuite tout seuls, sans jamais le redemander.</p>'
       + '<input type="password" class="coffre-input secret-champ" autocomplete="off" placeholder="Code secret">'
       + '<p class="coffre-erreur secret-erreur"></p>'
       + '<button type="button" class="btn-primary" data-secret-ok>Valider</button>'
@@ -91,6 +102,8 @@ function secretDemander(raison){
       const bon = await secretEssayer(code).catch(() => false);
       if(!bon){ bouton.disabled = false; bouton.textContent = 'Valider'; erreur.textContent = 'Code incorrect.'; champ.select(); return; }
       secretEcrireCode(code);
+      // Dépôt dans la room : les autres téléphones le récupéreront sans rien taper.
+      try{ if(typeof roomRef !== 'undefined' && roomRef) await roomRef.child('codeSecret').set(code); }catch(e){}
       await secretOuvrirCoffre(code);
       fermer();
       if(typeof render === 'function') render();
