@@ -1933,12 +1933,12 @@ main#views{ flex:1; min-height:0; position:relative; }
 
 .stage > .pi-tuile{ margin:0 0 12px; }
 .pi-ruban{
-  position:absolute; top:14px; right:-34px; z-index:2; width:130px; padding:4px 0; text-align:center;
-  background:#FFE29A; color:#6E0B2E; font-size:11px; font-weight:900; letter-spacing:.06em; text-transform:uppercase;
+  position:absolute; top:22px; right:-42px; z-index:2; width:170px; padding:4px 0; text-align:center;
+  background:#FFE29A; color:#6E0B2E; font-size:9.5px; font-weight:900; letter-spacing:.05em; text-transform:uppercase;
   transform: rotate(35deg); box-shadow: 0 3px 8px rgba(0,0,0,.35);
 }
 .pi-tuile .pi-ruban ~ .pi-badge{ right:auto; left:10px; }
-.pi-tuile .pi-ruban ~ .pi-tuile-ic{ margin-right:30px; }
+.pi-tuile .pi-ruban ~ .pi-tuile-ic{ margin-right:38px; }
 
 /* ====== PLAISIRS INTIMES : cinématique d'ouverture (pi-intro.js) ====== */
 #pi-intro{ position:fixed; inset:0; z-index:9400; overflow:hidden; cursor:pointer;
@@ -1972,3 +1972,14 @@ main#views{ flex:1; min-height:0; position:relative; }
   background: rgba(0,0,0,.25); color:#FFE29A; font-family:inherit; font-size:13px; font-weight:800; cursor:pointer; display:block; }
 
 .pi-chaud{ color:#FF1F3D !important; font-weight:900; text-shadow: 0 0 10px rgba(255,31,61,.45); }
+
+/* ====== « Mode HOT débloqué » sur le bouton Jouer de l'accueil (plaisirs.js) ====== */
+.hot-ruban-jouer{
+  position:absolute; top:-11px; left:18px; z-index:3; padding:5px 12px; border-radius:999px; white-space:nowrap;
+  background: linear-gradient(100deg, #FFE29A, #FFB04D); color:#6E0B2E; font-size:12px; font-weight:900; letter-spacing:.02em;
+  box-shadow: 0 6px 14px -4px rgba(255,120,40,.8), 0 0 0 2px var(--bg, #14131A);
+  animation: hotRuban 2s ease-in-out infinite;
+}
+@keyframes hotRuban{ 0%,100%{ transform: scale(1) rotate(-2deg); } 50%{ transform: scale(1.06) rotate(-2deg); } }
+
+.pi-etiquette{ position:relative; top:auto; left:auto; z-index:3; display:inline-block; align-self:flex-start; margin:0 0 -28px 18px; }   /* .stage a 16px d’écart entre éléments */

@@ -44,8 +44,26 @@ function piCleDecouvert(){ return 'nousdeux_pi_decouvert_' + roomCode + '_' + me
 function piDecouvert(){ try{ return localStorage.getItem(piCleDecouvert()) === '1'; }catch(e){ return false; } }
 function piMarquerDecouvert(){ try{ localStorage.setItem(piCleDecouvert(), '1'); }catch(e){} }
 
+// « Mode HOT débloqué » reste affiché (bouton Jouer + case Plaisirs Intimes) pendant
+// 7 jours après le déblocage, et de toute façon tant que ce téléphone n'a jamais ouvert le jeu.
+const HOT_NOUVEAU_JOURS = 7;
+function hotNouveau(){
+  if(!piDebloque()) return false;
+  const ts = state && state.modeCouple && state.modeCouple.debloque;
+  const recent = typeof ts === 'number' && Date.now() - ts < HOT_NOUVEAU_JOURS * 86400000;
+  return recent || !piDecouvert();
+}
+
 // Bannière de l'accueil : un appui ouvre la page des jeux, où est la case HOT.
 function renderHotBanniere(){
+  // Ruban sur le gros bouton « Jouer » de l'accueil.
+  const jouer = document.getElementById('jouer-btn');
+  if(jouer){
+    let r = jouer.querySelector(':scope > .hot-ruban-jouer');
+    if(hotNouveau()){
+      if(!r){ r = document.createElement('span'); r.className = 'hot-ruban-jouer'; r.textContent = '🔥 Mode HOT débloqué !'; jouer.appendChild(r); }
+    } else if(r) r.remove();
+  }
   const b = document.getElementById('hot-banniere');
   if(!b) return;
   const vis = piDebloque() && !piDecouvert() && accueilVisible();
@@ -71,11 +89,18 @@ function renderPlaisirs(){
   if(piOuvert && !piCarte) piDessiner();
   const vis = piVisible() && jeuxOuvert && !panneauJeuOuvert();
   t.style.display = vis ? '' : 'none';
+  const etiqV = document.getElementById('pi-etiquette'); if(etiqV) etiqV.style.display = vis ? '' : 'none';
   if(!vis) return;
   const dev = !piDebloque();
   const n = piAValider().length;
-  const nouveau = !dev && !piDecouvert();
-  const html = (nouveau ? '<span class="pi-ruban">Débloqué !</span>' : '') + '<span class="pi-tuile-hot">HOT</span>'
+  const nouveau = !dev && hotNouveau();
+  // Étiquette « Mode HOT débloqué » à cheval sur le haut de la case (la case coupe ce qui dépasse :
+  // l'étiquette est donc posée juste avant elle).
+  let etiq = document.getElementById('pi-etiquette');
+  if(nouveau){
+    if(!etiq){ etiq = document.createElement('span'); etiq.id = 'pi-etiquette'; etiq.className = 'hot-ruban-jouer pi-etiquette'; etiq.textContent = '🔥 Mode HOT débloqué !'; t.parentNode.insertBefore(etiq, t); }
+  } else if(etiq) etiq.remove();
+  const html = '<span class="pi-tuile-hot">HOT</span>'
     + '<span class="pi-tuile-txt"><strong>Plaisirs Intimes</strong><small>'
     + (n ? '✍️ ' + n + (n > 1 ? ' réponses' : ' réponse') + ' à valider' : dev ? 'Aperçu dev mod · verrouillé pour vous deux' : 'Questions & défis très chauds… 🔥') + '</small></span>'
     + '<span class="pi-tuile-ic">🌶️</span>' + (n ? '<span class="pi-badge">' + n + '</span>' : '');
