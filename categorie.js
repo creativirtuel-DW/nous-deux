@@ -1,7 +1,8 @@
 /**
  * Nous Deux — page d'un jeu de cartes (pour l'instant : Défi)
  * ===========================================================
- * Demande du 23/11/2026 : toucher « Défi » ne pioche plus directement. On
+ * Demande du 23/11/2026 : toucher « Défi » (puis aussi « Question » et
+ * « Cap ou pas ») ne pioche plus directement. On
  * arrive sur une page qui regroupe tout ce qui concerne ce jeu :
  *   · le bouton « Nouveau défi » (la pioche, comme avant : la carte s'ouvre
  *     en plein écran) ;
@@ -11,14 +12,17 @@
  * Les cartes restent aussi dans la cloche. Pour donner la même page à
  * Question ou à Cap ou pas, il suffit d'ajouter leur clé dans CAT_PAGES.
  */
-const CAT_PAGES = ['defi'];
+const CAT_PAGES = ['question', 'defi', 'gage'];   // 23/11/2026 : les trois jeux de cartes
 
 const CAT_INFOS = {
-  defi:     { ic: '🔥', titre: 'Défi', nouveau: 'Nouveau défi', un: 'défi', des: 'défis',
+  defi:     { ic: '🔥', titre: 'Défi', nouveau: 'Nouveau défi', un: 'défi', des: 'défis', ce: 'ce défi', ces: 'ces défis',
+              fait: 'a réalisé', pasFait: 'ne l’a pas encore réalisé', aucun: 'Aucun défi en cours',
               sous: 'Pioche un défi, réalise-le, et ton/ta partenaire le valide pour te donner les points.' },
-  question: { ic: '💬', titre: 'Question', nouveau: 'Nouvelle question', un: 'question', des: 'questions',
+  question: { ic: '💬', titre: 'Question', nouveau: 'Nouvelle question', un: 'question', des: 'questions', ce: 'cette question', ces: 'ces questions',
+              fait: 'a répondu à', pasFait: 'n’y a pas encore répondu', aucun: 'Aucune question en cours',
               sous: 'Pioche une question, réponds-y, et ton/ta partenaire valide ta réponse.' },
-  gage:     { ic: '😈', titre: 'Cap ou pas', nouveau: 'Nouvelle carte', un: 'carte', des: 'cartes',
+  gage:     { ic: '😈', titre: 'Cap ou pas', nouveau: 'Nouvelle carte', un: 'carte', des: 'cartes', ce: 'cette carte', ces: 'ces cartes',
+              fait: 'a relevé', pasFait: 'ne l’a pas encore relevée', aucun: 'Aucune carte en cours',
               sous: 'Cap ou pas cap ? Pioche une carte et relève le défi.' }
 };
 
@@ -63,7 +67,7 @@ function renderCatPage(){
     ${pleine ? `<p class="cat-note">🚫 File pleine (${MAX_PENDING}/${MAX_PENDING}) : valide ou termine une carte pour en piocher une nouvelle.</p>` : ''}
     <div class="cat-section" id="cat-avalider" ${aValider.length ? '' : 'style="display:none;"'}>
       <h3 class="pending-title">À toi de valider <span class="cat-compte">${aValider.length}</span></h3>
-      <p class="cat-note">${escapeHtml(nomAutre)} a réalisé ${aValider.length > 1 ? 'ces ' + info.des : 'ce ' + info.un} : à toi de dire si c’est validé.</p>
+      <p class="cat-note">${escapeHtml(nomAutre)} ${info.fait} ${aValider.length > 1 ? info.ces : info.ce} : à toi de dire si c’est validé.</p>
       <div class="pending-list"></div>
     </div>
     <div class="cat-section" id="cat-miens" ${miens.length ? '' : 'style="display:none;"'}>
@@ -75,7 +79,7 @@ function renderCatPage(){
       <div class="pending-list"></div>
     </div>
     ${!aValider.length && !miens.length && !chezAutre.length
-      ? `<p class="empty-state cat-vide">Aucun ${info.un} en cours.<br>Touche « ${info.nouveau} » pour commencer !</p>` : ''}
+      ? `<p class="empty-state cat-vide">${info.aucun}.<br>Touche « ${info.nouveau} » pour commencer !</p>` : ''}
   `;
 
   const nouveau = $('#cat-nouveau');
@@ -97,7 +101,7 @@ function renderCatPage(){
     row.className = 'pending-card waiting';
     row.innerHTML = `<div class="pending-card-top"><span class="pending-cat">${info.ic} ${info.titre}</span>
         <span class="pending-who">chez ${escapeHtml(nomAutre)}</span></div>
-      <div class="skip-note">⏳ ${escapeHtml(nomAutre)} a pioché ${'ce ' + info.un} et ne l’a pas encore réalisé.</div>
+      <div class="skip-note">⏳ ${escapeHtml(nomAutre)} a pioché ${info.ce} et ${info.pasFait}.</div>
       ${rappelHTML('carte_' + key, cat === 'question' ? 'question' : 'defi')}`;
     liste('cat-autre').appendChild(row);
   });
