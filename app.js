@@ -592,15 +592,23 @@ function renderCoffre(){
     bloc.innerHTML = '<p class="coffre-txt">Ce navigateur ne sait pas chiffrer : les photos ne peuvent pas être envoyées.</p>';
     return;
   }
-  // Depuis le 23/11/2026, le coffre s'ouvre avec le CODE SECRET du couple (secret.js),
-  // le même qui déchiffre le contenu de Plaisirs Intimes.
-  if(coffrePret()){
+  // Le code de chiffrement (secret.js) est déposé UNE fois dans la room depuis le dev mod ;
+  // ensuite chaque téléphone le récupère tout seul.
+  const depose = !!(state && state.codeSecret);
+  const admin = isAdminUnlocked();
+
+  if(depose){
+    if(!secretContenu){
+      bloc.innerHTML = '<p class="coffre-titre">🔐 Activation du code secret…</p>';
+      secretAssurer().then(() => render(), () => {});
+      return;
+    }
     bloc.innerHTML = `
-      <p class="coffre-titre">🔐 Code secret actif sur ce téléphone</p>
-      <p class="coffre-txt">Les photos sont chiffrées avant de partir et le contenu HOT est déchiffré ici : personne d'autre que vous deux ne peut les lire, pas même depuis la base ou le site.</p>
-      ${isAdminUnlocked() ? '<button class="btn-ghost" id="coffre-oublier">Retirer le code de votre espace (dev mod)</button>' : ''}`;
-    const oubl = $('#coffre-oublier');
-    if(oubl) oubl.addEventListener('click', () => {
+      <p class="coffre-titre">🔐 Code secret déposé dans votre espace</p>
+      <p class="coffre-txt">Vos deux téléphones l'utilisent tout seuls : les photos partent chiffrées et le contenu HOT s'ouvre, sans jamais le redemander.</p>
+      ${admin ? '<button class="btn-ghost" id="coffre-retirer">Retirer le code de votre espace (dev mod)</button>' : ''}`;
+    const ret = $('#coffre-retirer');
+    if(ret) ret.addEventListener('click', () => {
       if(!confirm("Retirer le code secret de votre espace ? Le contenu HOT et les photos ne s'ouvriront plus sur vos téléphones tant qu'il n'aura pas été redéposé.")) return;
       roomRef.child('codeSecret').remove();
       secretOublier();
@@ -608,18 +616,32 @@ function renderCoffre(){
     });
     return;
   }
-  // Le code est déposé dans la room (dev mod) : on l'active tout seul dès qu'il est là.
-  if(state && state.codeSecret){
-    bloc.innerHTML = '<p class="coffre-titre">🔐 Activation du code secret…</p>';
-    secretAssurer().then(() => render(), () => {});
-    return;
-  }
+
+  // Pas encore déposé.
+  const local = secretLireCode();
   bloc.innerHTML = `
-    <p class="coffre-titre">🔒 Code secret pas encore déposé</p>
-    <p class="coffre-txt">Le code de chiffrement choisi au PC doit être déposé une seule fois, depuis le dev mod. Ensuite, vos deux téléphones l'utilisent tout seuls pour chiffrer les photos et ouvrir le contenu HOT.</p>
-    ${isAdminUnlocked() ? '<button class="btn-primary" id="coffre-ouvrir">Déposer le code secret</button>' : '<p class="coffre-txt"><b>Ouvre le dev mod pour le déposer.</b></p>'}`;
-  const dep = $('#coffre-ouvrir');
-  if(dep) dep.addEventListener('click', () => secretAssurer().then(() => render(), () => {}));
+    <p class="coffre-titre">🔒 Code secret pas encore déposé dans votre espace</p>
+    <p class="coffre-txt">Le code de chiffrement doit être déposé une seule fois, par l'un de vous deux, depuis le dev mod. Ensuite, vos deux téléphones l'utilisent tout seuls.</p>
+    ${!admin ? '<p class="coffre-txt"><b>Ouvre le dev mod pour le déposer.</b></p>'
+      : local ? '<button class="btn-primary" id="coffre-deposer-local">Déposer le code de ce téléphone</button><p class="coffre-txt coffre-note">Ce téléphone connaît déjà le code : un appui suffit, rien à retaper.</p>'
+      : '<button class="btn-primary" id="coffre-deposer">Déposer le code secret</button>'}
+    <p class="coffre-erreur" id="coffre-erreur"></p>`;
+  const depLocal = $('#coffre-deposer-local');
+  if(depLocal) depLocal.addEventListener('click', async () => {
+    depLocal.disabled = true; depLocal.textContent = 'Vérification…';
+    const bon = await secretEssayer(local).catch(() => false);
+    if(!bon){
+      // Code mémorisé périmé : on l'oublie et on demande le bon.
+      secretOublier();
+      secretDemander().then(() => render(), () => render());
+      return;
+    }
+    await roomRef.child('codeSecret').set(local);
+    await secretOuvrirCoffre(local);
+    render();
+  });
+  const dep = $('#coffre-deposer');
+  if(dep) dep.addEventListener('click', () => secretDemander().then(() => render(), () => {}));
 }
 
 function renderAdminLockButtons(){
