@@ -1983,3 +1983,9 @@ main#views{ flex:1; min-height:0; position:relative; }
 @keyframes hotRuban{ 0%,100%{ transform: scale(1) rotate(-2deg); } 50%{ transform: scale(1.06) rotate(-2deg); } }
 
 .pi-etiquette{ position:relative; top:auto; left:auto; z-index:3; display:inline-block; align-self:flex-start; margin:0 0 -28px 18px; }   /* .stage a 16px d’écart entre éléments */
+
+/* ====== PLAISIRS INTIMES : limite de 5 cartes en attente (23/11/2026) ====== */
+.pi-limite{ margin:6px 0 14px; padding:18px 16px; border-radius:18px; text-align:center; background: rgba(0,0,0,.3); border:1px solid rgba(255,226,154,.55); }
+.pi-limite-ic{ font-size:34px; margin-bottom:6px; }
+.pi-limite p{ margin:0 0 8px; font-size:15.5px; font-weight:800; line-height:1.45; color:#FFE29A; }
+.pi-limite small{ font-size:12.5px; opacity:.85; }

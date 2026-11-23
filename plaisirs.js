@@ -27,7 +27,10 @@
 const PI_ACTIF = true;
 const PI_SEUIL = MC_SEUIL;     // même seuil que le Mode HOT (300)
 const PI_PASSES = 5;           // passes gratuites par jour
-const PI_MALUS = 20;           // points perdus par passe au-delà
+const PI_MALUS = 20;
+const PI_MAX_ATTENTE = 5;      // cartes envoyées par personne en attente de validation (23/11/2026)
+function piLimiteAtteinte(){ return piEnAttente().length >= PI_MAX_ATTENTE; }
+const PI_MSG_LIMITE = PI_MAX_ATTENTE + ' cartes sont envoyées : ton/ta partenaire doit y répondre, ou les valider, pour que tu puisses en envoyer d’autres !';           // points perdus par passe au-delà
 
 let piOuvert = false;          // plein écran ouvert
 let piCarte = null;            // { mode, id, t } carte affichée
@@ -135,9 +138,11 @@ function piBlocValider(){
   const l = piAValider();
   if(!l.length) return '';
   return '<section class="pi-valider"><h3>✍️ ' + escapeHtml(piNomAutre()) + ' t’a répondu</h3>'
-    + l.map(r => '<div class="pi-rep"><div class="pi-rep-q">' + (r.sms ? '🔥 ' : '💬 ') + escapeHtml(r.q || '') + '</div>'
-      + (r.sms ? '<div class="pi-rep-txt pi-rep-sms">📱 Photo envoyée par SMS : regarde tes messages.</div>' : '<div class="pi-rep-txt">« ' + escapeHtml(r.rep || '') + ' »</div>')
-      + '<button type="button" class="pi-btn" data-pi-valider="' + r.k + '">' + (r.sms ? '✓ Photo reçue, je valide' : '✓ Je valide sa réponse') + '</button></div>').join('')
+    + l.map(r => '<div class="pi-rep"><div class="pi-rep-q">' + (r.sms || r.defi ? '🔥 ' : '💬 ') + escapeHtml(r.q || '') + '</div>'
+      + (r.sms ? '<div class="pi-rep-txt pi-rep-sms">📱 Photo envoyée par SMS : regarde tes messages.</div>'
+        : r.defi ? '<div class="pi-rep-txt pi-rep-sms">🔥 ' + escapeHtml(piNomAutre()) + ' dit avoir relevé ce défi.</div>'
+        : '<div class="pi-rep-txt">« ' + escapeHtml(r.rep || '') + ' »</div>')
+      + '<button type="button" class="pi-btn" data-pi-valider="' + r.k + '">' + (r.sms ? '✓ Photo reçue, je valide' : r.defi ? '✓ Je valide son défi' : '✓ Je valide sa réponse') + '</button></div>').join('')
     + '</section>';
 }
 
@@ -263,8 +268,11 @@ function piDessiner(){
       + '<p class="pi-sous">Rien que vous deux. Choisis ton jeu…</p>'
       + (piDebloque() ? '' : '<p class="pi-dev">🔧 Aperçu dev mod : ce mode est encore verrouillé pour vous deux.</p>')
       + piBlocValider()
-      + (piEnAttente().length ? '<p class="pi-attente">⏳ ' + piEnAttente().length + (piEnAttente().length > 1 ? ' réponses attendent' : ' réponse attend') + ' la validation de ' + escapeHtml(piNomAutre()) + '</p>' : '')
-      + (!piLieu
+      + (piLimiteAtteinte()
+        ? '<div class="pi-limite"><div class="pi-limite-ic">⏳</div><p>' + PI_MSG_LIMITE + '</p>'
+          + '<small>' + piEnAttente().length + ' / ' + PI_MAX_ATTENTE + ' en attente chez ' + escapeHtml(piNomAutre()) + '</small></div>'
+        : (piEnAttente().length ? '<p class="pi-attente">⏳ ' + piEnAttente().length + ' / ' + PI_MAX_ATTENTE + (piEnAttente().length > 1 ? ' cartes envoyées attendent' : ' carte envoyée attend') + ' la validation de ' + escapeHtml(piNomAutre()) + '</p>' : ''))
+      + (piLimiteAtteinte() ? '' : !piLieu
         ? '<p class="pi-lieu-q">Comment jouez-vous ?</p>'
           + '<button type="button" class="pi-choix pi-lieu" data-pi-lieu="e"><span>💑</span><b>Jouer ensemble</b><small>Vous êtes tous les deux au même endroit.</small></button>'
           + '<button type="button" class="pi-choix pi-lieu defi" data-pi-lieu="d"><span>📱</span><b>Jouer à distance</b><small>Chacun de son côté : seules les cartes faisables à distance sortent.</small></button>'
@@ -308,6 +316,11 @@ function piDessiner(){
         setTimeout(() => champ.classList.remove('vide'), 900);
         return;
       }
+    }
+    else {
+      roomRef.child('plaisirsReponses').push({ de: me.id, pour: piAutreId(), qid: piCarte.id, q: piCarte.t, rep: '🔥 Défi réalisé', defi: true, ts: Date.now(), valide: null });
+      if(typeof notifyPartner === 'function')
+        notifyPartner('🌶️ ' + me.name + ' a relevé un défi HOT', 'Ouvre Plaisirs Intimes pour le valider.', 'plaisirs');
     }
     piCarte.fait = true; piTirer(piCarte.mode);
   };
@@ -356,6 +369,8 @@ function piPasser(suite){
 
 function piTirer(mode){
   if(typeof PLAISIRS === 'undefined' || !PLAISIRS[mode] || !PLAISIRS[mode].length) return;
+  // Limite : 5 cartes envoyées en attente de validation par personne.
+  if(piLimiteAtteinte()){ piCarte = null; piDessiner(); return; }
   const vus = (state.plaisirsVus && state.plaisirsVus[mode]) || {};
   const jouables = PLAISIRS[mode].filter(piCarteJouable);
   if(!jouables.length) return;
