@@ -4,51 +4,71 @@ Régénère plaisirs-data.js à partir de Plaisirs-Intimes.xlsx.
 
     python outils/import-plaisirs.py
 
-- ID vide + texte = nouvelle carte (id attribué automatiquement : q31, d31…)
-- Action = SUPPRIMER : la carte est retirée
-- Toute carte présente dans le classeur est considérée comme relue (date de validation).
-Ne jamais modifier un ID existant. Colonne E « Lieu » : Ensemble / Distance / Les deux.
+Format (23/11/2026) : onglets « Ensemble » et « À distance », colonnes
+ID | Type (Question / Défi) | Texte | Action | État.
+- Une carte présente dans les DEUX onglets (même ID, ou même texte sans ID) = jouable partout (l = '2').
+- Présente dans un seul onglet = l = 'e' (Ensemble) ou 'd' (À distance).
+- ID vide + texte = nouvelle carte (id attribué : q42, d36…).
+- Action = SUPPRIMER : la carte est retirée de CET onglet (des deux = supprimée).
+- Toute carte présente est considérée comme relue (date de validation).
+Ne jamais modifier un ID existant.
 Ensuite : outils/Chiffrer le contenu.bat (le contenu est publié chiffré), puis publier.
 """
 import datetime, re, openpyxl
-from plaisirs_commun import lire, ecrire, XLSX, FEUILLES
+from plaisirs_commun import lire, ecrire, XLSX, ONGLETS, TYPES
 
 AUJ = datetime.date.today().isoformat()
 ancien = lire()
+connu = {x["id"]: x for cle in ("questions", "defis") for x in ancien.get(cle, [])}
 wb = openpyxl.load_workbook(XLSX, data_only=True)
-nouveau, soucis = {}, []
-for onglet, cle, pref in FEUILLES:
-    connu = {x["id"]: x for x in ancien.get(cle, [])}
-    num = max([int(re.sub(r"\D", "", i) or 0) for i in connu] + [0])
+soucis = []
+cartes = {}        # clé de carte (id, ou « nouveau:<type>:<texte> ») -> {cle, id, t, lieux:set}
+ordre = []
+
+for onglet, lieu in ONGLETS:
     ws = wb[onglet]
-    # numérotation : tenir compte aussi des ID tapés à la main dans le classeur
-    for r in range(5, ws.max_row + 1):
-        i = str(ws.cell(row=r, column=1).value or "").strip()
-        if re.fullmatch(pref + r"\d+", i):
-            num = max(num, int(i[len(pref):]))
-    res, vus = [], set()
     for r in range(5, ws.max_row + 1):
         val = lambda c: (str(ws.cell(row=r, column=c).value).strip() if ws.cell(row=r, column=c).value is not None else "")
-        ident, texte, action = val(1), val(2), val(3).upper()
+        ident, typ, texte, action = val(1), val(2).lower(), val(3), val(4).upper()
         if not ident and not texte:
             continue
         if action.startswith("SUPPR"):
             continue
         if not texte:
             soucis.append((onglet, r, "texte vide")); continue
-        # Les doublons de texte sont VOULUS : ils augmentent la chance de tirer la carte.
-        if not ident:
-            num += 1; ident = pref + str(num).zfill(2)
-        if ident in vus:
-            soucis.append((onglet, r, "ID en double : " + ident)); continue
-        vus.add(ident)
-        avant = connu.get(ident)
-        v = avant.get("v") if avant and avant["t"] == texte and avant.get("v") else AUJ
-        lieu = val(5).lower()
-        l = "d" if lieu.startswith("dist") else "e" if lieu.startswith("ens") else "2" if lieu.startswith("les") or lieu.startswith("2") else ("2" if cle == "questions" else "e")
-        res.append({"id": ident, "t": texte, "v": v, "l": l})
-    nouveau[cle] = res
+        if typ not in TYPES:
+            soucis.append((onglet, r, "Type inconnu (Question ou Défi) : " + val(2))); continue
+        cle, pref = TYPES[typ]
+        if ident and not re.fullmatch(pref + r"\d+", ident):
+            soucis.append((onglet, r, "ID « " + ident + " » ne correspond pas au type " + val(2))); continue
+        k = ident or ("nouveau:" + cle + ":" + texte.lower())
+        if k in cartes:
+            if cartes[k]["t"] != texte:
+                soucis.append((onglet, r, "texte différent entre les deux onglets pour " + (ident or texte[:40]) + " — celui d'« Ensemble » est gardé"))
+            cartes[k]["lieux"].add(lieu)
+        else:
+            cartes[k] = {"cle": cle, "id": ident, "t": texte, "lieux": {lieu}}
+            ordre.append(k)
+
+nouveau = {"questions": [], "defis": []}
+for cle, pref in (("questions", "q"), ("defis", "d")):
+    num = max([int(i[1:]) for i in connu if i.startswith(pref) and i[1:].isdigit()]
+              + [int(c["id"][1:]) for c in cartes.values() if c["id"].startswith(pref) and c["id"][1:].isdigit()] + [0])
+    for k in ordre:
+        c = cartes[k]
+        if c["cle"] != cle:
+            continue
+        if not c["id"]:
+            num += 1; c["id"] = pref + str(num).zfill(2)
+        avant = connu.get(c["id"])
+        v = avant.get("v") if avant and avant["t"] == c["t"] and avant.get("v") else AUJ
+        l = "2" if len(c["lieux"]) == 2 else next(iter(c["lieux"]))
+        nouveau[cle].append({"id": c["id"], "t": c["t"], "v": v, "l": l})
+
 for s in soucis:
     print("⚠️", *s)
 ecrire(nouveau)
-print("plaisirs-data.js :", len(nouveau["questions"]), "questions,", len(nouveau["defis"]), "défis")
+for cle in ("questions", "defis"):
+    L = nouveau[cle]
+    print(f"{cle} : {len(L)} (ensemble seulement {sum(x['l'] == 'e' for x in L)}, "
+          f"distance seulement {sum(x['l'] == 'd' for x in L)}, les deux {sum(x['l'] == '2' for x in L)})")

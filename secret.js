@@ -14,7 +14,7 @@
 const SECRET_LS = 'nousdeux_code_secret';
 const SECRET_SEL = 'nous-deux/contenu';
 const SECRET_TOURS = 210000;
-const SECRET_VERSION = '1';            // à incrémenter si le contenu chiffré change (cache)
+const SECRET_VERSION = '2';            // à incrémenter si le contenu chiffré change (cache)
 
 let secretCle = null;                  // CryptoKey du contenu
 let secretContenu = null;              // { verif, plaisirs }
