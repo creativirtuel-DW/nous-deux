@@ -1962,3 +1962,6 @@ main#views{ flex:1; min-height:0; position:relative; }
   text-shadow: 0 0 18px rgba(255,154,61,.85), 0 2px 0 rgba(0,0,0,.3); animation: syBoum .6s .8s cubic-bezier(.3,1.7,.5,1) both; }
 .pii-sous{ font-size:13px; font-weight:900; letter-spacing:.35em; text-transform:uppercase; color:#fff; margin-top:6px; opacity:.85; animation: clocheFondu .5s 1.2s ease both; }
 .pii-passer{ position:absolute; bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); left:0; right:0; text-align:center; font-size:12px; color: rgba(255,255,255,.6); }
+
+.pii-obj img{ width:100%; height:100%; object-fit:contain; }
+.pii-sil{ filter: drop-shadow(0 0 1.5px rgba(255,240,210,.95)) drop-shadow(0 0 9px rgba(255,200,90,.4)); }   /* halo doré : l'homme rouge foncé se détache du fond rouge */
