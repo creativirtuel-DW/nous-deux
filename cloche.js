@@ -241,7 +241,8 @@ document.addEventListener('click', e => {
   // les cartes en attente au lieu de piocher. (Les autres tuiles ouvrent leur
   // jeu, où l'action attend déjà.)
   const pastille = e.target.closest && e.target.closest('.cat-btn > .jeu-n');
-  if(pastille && ['question', 'defi', 'gage'].indexOf(pastille.parentNode.dataset.cat) !== -1){
+  if(pastille && ['question', 'defi', 'gage'].indexOf(pastille.parentNode.dataset.cat) !== -1
+     && !(typeof CAT_PAGES !== 'undefined' && CAT_PAGES.indexOf(pastille.parentNode.dataset.cat) !== -1)){
     e.stopPropagation(); e.preventDefault();
     clocheOuvrir();
     return;

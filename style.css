@@ -1902,3 +1902,13 @@ main#views{ flex:1; min-height:0; position:relative; }
 }
 @keyframes envPostit{ 0%,100%{ transform: rotate(-5deg); } 50%{ transform: rotate(-3.5deg) translateY(-1px); } }
 .env-tuile.env-a-remplir{ justify-content:flex-end; padding-bottom:16px; }
+
+/* ====== PAGE D'UN JEU DE CARTES : Défi (categorie.js) ====== */
+.cat-nouveau{ width:100%; padding:18px; font-size:17px; margin-top:4px; }
+.cat-nouveau:disabled{ opacity:.45; }
+.cat-section{ margin-top:8px; }
+.cat-section .pending-title{ display:flex; align-items:center; gap:8px; }
+.cat-compte{ min-width:22px; height:22px; padding:0 6px; box-sizing:border-box; border-radius:11px; background: rgba(255,160,122,.16);
+  color: var(--peach); font-size:12px; font-weight:800; line-height:22px; text-align:center; }
+.cat-note{ font-size:12.5px; color: var(--muted); margin:-4px 0 10px; line-height:1.4; }
+.cat-vide{ margin-top:10px; text-align:center; line-height:1.6; }

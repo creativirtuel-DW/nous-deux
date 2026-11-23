@@ -245,18 +245,7 @@ function renderSuivi(){
     const max = Math.max(1, ...fonctions.map(f => stats[f].n));
     const ns = escapeHtml(suiviNom(sel));
     h += '<div class="sv-detail sv-' + sel + '"><div class="sv-detail-tete"><b>Détail de ' + ns + '</b><button type="button" class="qdj-lien" data-sv-p="' + sel + '">Fermer ✕</button></div>';
-    if(fonctions.length){
-      h += '<div class="sv-table"><div class="sv-ligne sv-tete"><span>Fonction</span><span>Fois</span><span>Temps</span></div>'
-        + fonctions.map(f => '<div class="sv-ligne"><span>' + SUIVI_NOMS[f] + '<i style="width:' + Math.round(stats[f].n / max * 100) + '%"></i></span>'
-          + '<span>' + stats[f].n + '</span><span>' + (stats[f].dur ? suiviDuree(stats[f].dur) : '–') + '</span>'
-          + heures(stats[f].h) + '</div>').join('') + '</div>';
-    } else {
-      h += '<p class="sv-note">Aucun usage sur cette période.</p>';
-    }
-    if(jamais.length){
-      h += '<h4>😴 Jamais ouvert</h4><div class="sv-jamais">' + jamais.map(f => '<span>' + SUIVI_NOMS[f] + '</span>').join('') + '</div>';
-    }
-    h += suiviEffetNotifs(mes, ns);
+    // Les derniers usages en premier (demande du 23/11/2026), puis le détail par fonction.
     const fil = mes.slice().sort((a, b) => b.ts - a.ts).slice(0, 80);
     if(fil.length){
       h += '<h4>🕒 Derniers usages</h4><div class="sv-fil">';
@@ -271,6 +260,18 @@ function renderSuivi(){
       });
       h += '</div>';
     }
+    if(fonctions.length){
+      h += '<h4>📊 Par fonction</h4><div class="sv-table"><div class="sv-ligne sv-tete"><span>Fonction</span><span>Fois</span><span>Temps</span></div>'
+        + fonctions.map(f => '<div class="sv-ligne"><span>' + SUIVI_NOMS[f] + '<i style="width:' + Math.round(stats[f].n / max * 100) + '%"></i></span>'
+          + '<span>' + stats[f].n + '</span><span>' + (stats[f].dur ? suiviDuree(stats[f].dur) : '–') + '</span>'
+          + heures(stats[f].h) + '</div>').join('') + '</div>';
+    } else {
+      h += '<p class="sv-note">Aucun usage sur cette période.</p>';
+    }
+    if(jamais.length){
+      h += '<h4>😴 Jamais ouvert</h4><div class="sv-jamais">' + jamais.map(f => '<span>' + SUIVI_NOMS[f] + '</span>').join('') + '</div>';
+    }
+    h += suiviEffetNotifs(mes, ns);
     h += '</div>';
   }
   h += '</section>';

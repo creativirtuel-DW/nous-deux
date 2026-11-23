@@ -252,6 +252,7 @@ function render(){
   // Le bandeau et le picker sont maintenant gérés entièrement dans renderPendingCard()
 
   renderPendingCard();
+  if(typeof renderCatPage === 'function') renderCatPage();
   renderCartePlein();
   renderJDS();
   renderSoiree();
@@ -282,7 +283,7 @@ function render(){
 
 // Accueil (gros bouton « Jouer ») ou page des jeux (les 7 boutons) ?
 let jeuxOuvert = false;
-function panneauJeuOuvert(){ return jdsActive || photoActive || battleActive || soireeActive || (typeof synchroActive !== 'undefined' && synchroActive); }
+function panneauJeuOuvert(){ return jdsActive || photoActive || battleActive || soireeActive || (typeof synchroActive !== 'undefined' && synchroActive) || (typeof catPageActive !== 'undefined' && !!catPageActive); }
 function ouvrirJeux(){ jeuxOuvert = true; render(); window.scrollTo(0, 0); }
 function fermerJeux(){ jeuxOuvert = false; render(); window.scrollTo(0, 0); }
 // Vrai quand l'accueil est affiché : ni page des jeux, ni panneau de jeu ouvert.
@@ -317,7 +318,7 @@ function renderPendingCard(){
     turnBanner.style.display = jeuxOuvert ? '' : 'none';
   }
   // le bouton "Jeu de société" n'est jamais bloqué par la file d'attente
-  $$('.cat-btn').forEach(b => { if(['jds','photo','battle','soiree','synchro'].indexOf(b.dataset.cat) === -1) b.classList.toggle('disabled', full); });
+  $$('.cat-btn').forEach(b => { if(['jds','photo','battle','soiree','synchro'].concat(typeof CAT_PAGES !== 'undefined' ? CAT_PAGES : []).indexOf(b.dataset.cat) === -1) b.classList.toggle('disabled', full); });
   turnBanner.textContent = full
     ? `🚫 File pleine (${MAX_PENDING}/${MAX_PENDING}) — touche pour voir les cartes (dans les notifications)`
     : `✦ Pioche une carte (${allPending.length}/${MAX_PENDING} en attente)`;
@@ -339,51 +340,7 @@ function renderPendingCard(){
   const toValList = $('#pending-to-validate-list');
   toValSection.style.display = toValidate.length ? 'block' : 'none';
   toValList.innerHTML = '';
-  toValidate.forEach(([key, p]) => {
-    const row = document.createElement('div');
-    row.className = 'pending-card';
-    const answerBlock = p.answer
-      ? `<div class="pending-answer"><span class="pending-answer-label">Sa réponse :</span> ${escapeHtml(p.answer)}</div>`
-      : '';
-    const commentBlock = p.comment
-      ? `<div class="pending-answer"><span class="pending-answer-label">Son commentaire :</span> ${escapeHtml(p.comment)}</div>`
-      : '';
-    // Carte photo : tant qu'elle n'est pas ouverte, on ne peut pas valider —
-    // sinon on validerait sans avoir rien vu.
-    const photoBlock = p.sms
-      ? smsNoteValidation(state.players[p.by])
-      : p.photo
-      ? (p.photoData
-          ? `<div class="pc-ouvrir-zone" id="pc-zone-${key}">
-               <button class="btn-primary pc-ouvrir">📸 Ouvrir la photo (${Math.round(PC_VUE_MS/1000)} s)</button>
-               <p class="pc-note">Une seule fois : elle disparaît ensuite.</p>
-             </div>`
-          : `<div class="pc-note">📸 Photo déjà ouverte — elle reste 12 h dans le dev mod en cas de contestation.</div>`)
-      : '';
-    row.innerHTML = `
-      <div class="pending-card-top">
-        <span class="pending-cat">${labelMap[p.cat]||'Carte'}</span>
-        <span class="pending-who">${escapeHtml(state.players[p.by]||'')}</span>
-      </div>
-      <p class="pending-text">${escapeHtml(p.text)}</p>
-      ${photoBlock}
-      ${answerBlock}
-      ${commentBlock}
-      <div class="pending-actions" ${p.photo && p.photoData ? 'style="display:none;"' : ''}>
-        ${p.pdGage
-          ? `<button class="btn-ghost pending-refuse">Pas réalisé (+${PD_POINTS} pour moi)</button>
-             <button class="btn-primary pending-validate">Gage réalisé ✓</button>`
-          : `<button class="btn-ghost pending-refuse">Refuser</button>
-             <button class="btn-primary pending-validate">Valider ! +${p.pts}</button>`}
-      </div>
-      ${p.pdGage ? `<div class="skip-note">⏳ À valider avant le ${pdGageDeadlineLabel(p.pdGage.deadline)} (${pdGageRestant(p.pdGage.deadline)}). Sans validation, le gage s'annule et tu prends ${PD_POINTS} points.</div>` : ''}
-    `;
-    row.querySelector('.pending-refuse').addEventListener('click', () => validatePending(key, false));
-    row.querySelector('.pending-validate').addEventListener('click', () => validatePending(key, true));
-    const ouvrir = row.querySelector('.pc-ouvrir');
-    if(ouvrir) ouvrir.addEventListener('click', () => ouvrirPhotoCarte(key, p));
-    toValList.appendChild(row);
-  });
+  toValidate.forEach(([key, p]) => toValList.appendChild(construireCarteAValider(key, p)));
 
   // Mes cartes : soit je dois encore répondre/agir (drafting), soit j'attends la validation (review)
   const mineSection = $('#pending-mine-section');
@@ -431,6 +388,54 @@ function renderPendingCard(){
     if(retirer) retirer.addEventListener('click', () => roomRef.child('pendingCards/' + key).remove());
     autreList.appendChild(row);
   });
+}
+
+// Une carte jouée par l'autre, à valider (liste de la cloche ET page d'un jeu).
+function construireCarteAValider(key, p){
+  const labelMap = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Cap ou pas' };
+  const row = document.createElement('div');
+  row.className = 'pending-card';
+  const answerBlock = p.answer
+    ? `<div class="pending-answer"><span class="pending-answer-label">Sa réponse :</span> ${escapeHtml(p.answer)}</div>`
+    : '';
+  const commentBlock = p.comment
+    ? `<div class="pending-answer"><span class="pending-answer-label">Son commentaire :</span> ${escapeHtml(p.comment)}</div>`
+    : '';
+  // Carte photo : tant qu'elle n'est pas ouverte, on ne peut pas valider —
+  // sinon on validerait sans avoir rien vu.
+  const photoBlock = p.sms
+    ? smsNoteValidation(state.players[p.by])
+    : p.photo
+    ? (p.photoData
+        ? `<div class="pc-ouvrir-zone" id="pc-zone-${key}">
+             <button class="btn-primary pc-ouvrir">📸 Ouvrir la photo (${Math.round(PC_VUE_MS/1000)} s)</button>
+             <p class="pc-note">Une seule fois : elle disparaît ensuite.</p>
+           </div>`
+        : `<div class="pc-note">📸 Photo déjà ouverte — elle reste 12 h dans le dev mod en cas de contestation.</div>`)
+    : '';
+  row.innerHTML = `
+    <div class="pending-card-top">
+      <span class="pending-cat">${labelMap[p.cat]||'Carte'}</span>
+      <span class="pending-who">${escapeHtml(state.players[p.by]||'')}</span>
+    </div>
+    <p class="pending-text">${escapeHtml(p.text)}</p>
+    ${photoBlock}
+    ${answerBlock}
+    ${commentBlock}
+    <div class="pending-actions" ${p.photo && p.photoData ? 'style="display:none;"' : ''}>
+      ${p.pdGage
+        ? `<button class="btn-ghost pending-refuse">Pas réalisé (+${PD_POINTS} pour moi)</button>
+           <button class="btn-primary pending-validate">Gage réalisé ✓</button>`
+        : `<button class="btn-ghost pending-refuse">Refuser</button>
+           <button class="btn-primary pending-validate">Valider ! +${p.pts}</button>`}
+    </div>
+    ${p.pdGage ? `<div class="skip-note">⏳ À valider avant le ${pdGageDeadlineLabel(p.pdGage.deadline)} (${pdGageRestant(p.pdGage.deadline)}). Sans validation, le gage s'annule et tu prends ${PD_POINTS} points.</div>` : ''}
+  `;
+  row.querySelector('.pending-refuse').addEventListener('click', () => validatePending(key, false));
+  row.querySelector('.pending-validate').addEventListener('click', () => validatePending(key, true));
+  const ouvrir = row.querySelector('.pc-ouvrir');
+  if(ouvrir) ouvrir.addEventListener('click', () => ouvrirPhotoCarte(key, p, row.querySelector('.pc-ouvrir-zone')));
+  return row;
 }
 
 // Une de MES cartes (à jouer, ou en attente de validation). Sert à la liste
@@ -676,6 +681,7 @@ function setupPlayView(){
       if(btn.dataset.cat === 'battle'){ openBattle(); return; }
       if(btn.dataset.cat === 'synchro'){ openSynchro(); return; }
       if(btn.dataset.cat === 'soiree'){ openSoiree(); return; }
+      if(typeof CAT_PAGES !== 'undefined' && CAT_PAGES.indexOf(btn.dataset.cat) !== -1){ catPageOuvrir(btn.dataset.cat); return; }
       drawCard(btn.dataset.cat);
     });
   });
@@ -782,8 +788,10 @@ function envoyerPhotoCarte(key, row){
 
 // Ouverture par le/la destinataire : PC_VUE_MS d'affichage, puis la photo
 // quitte la carte pour l'archive — et les boutons de validation apparaissent.
-function ouvrirPhotoCarte(key, pending){
-  const zone = document.getElementById('pc-zone-' + key);
+function ouvrirPhotoCarte(key, pending, zoneEl){
+  // La même carte peut être affichée deux fois (cloche + page du jeu) : on
+  // prend la zone de la carte touchée.
+  const zone = zoneEl || document.getElementById('pc-zone-' + key);
   if(!zone || !pending.photoData) return;
 
   pcMontrer(zone, pending.photoData, () => {
