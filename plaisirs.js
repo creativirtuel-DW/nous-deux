@@ -157,11 +157,14 @@ function piBlocValider(){
   if(!l.length) return '';
   return '<section class="pi-valider"><h3>✍️ ' + escapeHtml(piNomAutre()) + ' t’a répondu</h3>'
     + l.map(r => '<div class="pi-rep"><div class="pi-rep-q">' + (r.sms || r.defi ? '🔥 ' : '💬 ') + escapeHtml(r.q || '') + '</div>'
-      + (r.sms ? '<div class="pi-rep-txt pi-rep-sms">📱 Photo envoyée par SMS : regarde tes messages.</div>'
+      + (r.photo ? '<div class="pc-ouvrir-zone pi-photo-zone" data-pi-photo-zone="' + r.k + '"><button type="button" class="pi-btn" data-pi-photo-ouvrir="' + r.k + '">📸 Ouvrir sa photo (' + Math.round(PC_VUE_MS / 1000) + ' s)</button><p class="pc-note">Une seule fois : elle disparaît ensuite.</p></div>'
+        : r.photoVue ? '<div class="pi-rep-txt pi-rep-sms">📸 Photo vue.</div>'
+        : r.sms ? '<div class="pi-rep-txt pi-rep-sms">📱 Photo envoyée par SMS : regarde tes messages.</div>'
         : r.defi ? '<div class="pi-rep-txt pi-rep-sms">🔥 ' + escapeHtml(piNomAutre()) + ' dit avoir relevé ce défi.</div>'
         : '<div class="pi-rep-txt">« ' + escapeHtml(r.rep || '') + ' »</div>')
-      + '<textarea class="pi-champ pi-retour" data-pi-retour="' + r.k + '" rows="2" maxlength="400" placeholder="Ta réponse à ' + escapeHtml(piNomAutre()) + ' (optionnel)…"></textarea>'
-      + '<button type="button" class="pi-btn" data-pi-valider="' + r.k + '">' + (r.sms ? '✓ Photo reçue, je valide' : r.defi ? '✓ Je valide son défi' : '✓ Je valide sa réponse') + '</button></div>').join('')
+      + (r.photo ? '' :   // on ne valide pas une photo sans l'avoir vue
+        '<textarea class="pi-champ pi-retour" data-pi-retour="' + r.k + '" rows="2" maxlength="400" placeholder="Ta réponse à ' + escapeHtml(piNomAutre()) + ' (optionnel)…"></textarea>'
+        + '<button type="button" class="pi-btn" data-pi-valider="' + r.k + '">' + (r.sms || r.photoVue ? '✓ Photo reçue, je valide' : r.defi ? '✓ Je valide son défi' : '✓ Je valide sa réponse') + '</button>') + '</div>').join('')
     + '</section>';
 }
 
@@ -194,6 +197,7 @@ function piPresentation(){
 // à la 1re entrée puis demandé à chaque entrée. Seule une empreinte (SHA-256) est
 // gardée sur le téléphone, jamais le code ni rien dans la base.
 // Code oublié : il se réinitialise avec le code du dev mod.
+let piPhotoEnVue = false;          // une photo reçue est affichée (5 s)
 let piPinOuvert = false;          // code tapé pour CETTE entrée dans le jeu
 function piPinCle(){ return 'nousdeux_pi_pin_' + roomCode + '_' + me.id; }
 function piPinLire(){ try{ return localStorage.getItem(piPinCle()) || ''; }catch(e){ return ''; } }
@@ -283,6 +287,7 @@ function piDessiner(){
   if(!c) return;
   const actif = document.activeElement;
   if(!piCarte && actif && actif.matches && actif.matches('.pi-retour') && c.contains(actif)) return;
+  if(piPhotoEnVue) return;   // photo affichée 5 s : on ne redessine pas pendant la vue
   if(!piCarte){
     c.innerHTML = '<div class="pi-logo">🔥</div>'
       + '<h2 class="pi-titre">Plaisirs Intimes</h2>'
@@ -306,6 +311,20 @@ function piDessiner(){
     const changer = c.querySelector('[data-pi-lieu-changer]');
     if(changer) changer.onclick = () => { piLieu = null; piDessiner(); };
     c.querySelectorAll('[data-pi-valider]').forEach(b => b.onclick = () => piValider(b.dataset.piValider));
+    c.querySelectorAll('[data-pi-photo-ouvrir]').forEach(b => b.onclick = () => {
+      const k = b.dataset.piPhotoOuvrir, r = (state.plaisirsReponses || {})[k];
+      const zone = c.querySelector('[data-pi-photo-zone="' + k + '"]');
+      if(!r || !r.photo || !zone) return;
+      piPhotoEnVue = true;
+      pcMontrer(zone, r.photo, () => {
+        piPhotoEnVue = false;
+        const maj = {};
+        maj['plaisirsReponses/' + k + '/photo'] = null;
+        maj['plaisirsReponses/' + k + '/photoVue'] = Date.now();
+        pcArchiver(maj, 'plaisirs-' + k, r.photo, r.de, r.q);   // 12 h en dev mod, comme les autres photos
+        roomRef.update(maj);
+      });
+    });
     c.querySelectorAll('[data-pi-retour-vu]').forEach(b => b.onclick = () => roomRef.child('plaisirsReponses/' + b.dataset.piRetourVu + '/retourVu').set(true));
     return;
   }
@@ -316,7 +335,9 @@ function piDessiner(){
     + '<div class="pi-carte-pied">Plaisirs Intimes</div></div>'
     + (q ? '<textarea class="pi-champ" maxlength="600" rows="4" placeholder="Écris ta réponse… ' + escapeHtml(piNomAutre()) + ' la lira et la validera."></textarea>' : '')
     + (!q && smsDemandePhoto(piCarte.t)
-        ? smsConsigne() + smsBouton('data-pi-sms-ouvrir') + '<button type="button" class="pi-btn sms-pi" data-pi-sms>✓ Le SMS est envoyé · défi suivant</button><p class="pi-sms-note">' + escapeHtml(piNomAutre()) + ' validera ton défi une fois la photo reçue.</p>'
+        ? smsConsigne(true)
+          + smsChoixAppli('<button type="button" class="pi-btn" data-pi-photo>📸 Envoyer depuis l’appli · défi suivant</button>')
+          + smsBouton('data-pi-sms-ouvrir') + '<button type="button" class="pi-btn sms-pi" data-pi-sms>✓ Le SMS est envoyé · défi suivant</button><p class="pi-sms-note">' + escapeHtml(piNomAutre()) + ' validera ton défi une fois la photo reçue.</p>'
         : '<button type="button" class="pi-btn" data-pi-fait>' + (q ? '📨 Envoyer ma réponse · question suivante' : '✓ Défi réalisé · défi suivant') + '</button>')
     + '<button type="button" class="pi-btn ghost" data-pi-passer>' + (q ? 'Passer cette question' : 'Passer ce défi') + ' <small>' + piTextePasses() + '</small></button>'
     + '<button type="button" class="pi-btn ghost" data-pi-retour>Changer de jeu</button>';
@@ -330,6 +351,21 @@ function piDessiner(){
   };
   const smsO = c.querySelector('[data-pi-sms-ouvrir]');
   if(smsO) smsO.onclick = () => smsOuvrir(piCarte.t);
+  // Photo prise dans l'appli (24/11/2026) : chiffrée (code secret), vue 5 s par l'autre puis effacée.
+  const photoB = c.querySelector('[data-pi-photo]');
+  if(photoB) photoB.onclick = () => {
+    const carte = piCarte;
+    pcChoisirPhoto(dataUrl => {
+      if(!dataUrl) return;
+      photoB.disabled = true; photoB.textContent = 'Envoi…';
+      pcProteger(dataUrl, protegee => {
+        roomRef.child('plaisirsReponses').push({ de: me.id, pour: piAutreId(), qid: carte.id, q: carte.t, rep: '📸 Photo', photo: protegee, defi: true, ts: Date.now(), valide: null });
+        if(typeof notifyPartner === 'function')
+          notifyPartner('🌶️ ' + me.name + ' t’a envoyé une photo HOT', 'Ouvre Plaisirs Intimes : tu ne la verras que ' + Math.round(PC_VUE_MS / 1000) + ' secondes !', 'plaisirs');
+        piCarte.fait = true; piTirer(piCarte.mode);
+      });
+    });
+  };
   const faitB = c.querySelector('[data-pi-fait]');
   if(faitB) faitB.onclick = () => {
     if(q){
