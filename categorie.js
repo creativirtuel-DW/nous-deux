@@ -52,7 +52,7 @@ function renderCatPage(){
   const body = $('#cat-body');
   const actif = document.activeElement;
   if(actif && /^(TEXTAREA|INPUT)$/.test(actif.tagName) && body.contains(actif)) return;
-  const signature = JSON.stringify([cat, tous, pleine, nomAutre, getSkipCount(me.id, cat), state.rappels || null]);
+  const signature = JSON.stringify([cat, tous, pleine, nomAutre, getSkipCount(me.id, cat), state.rappels || null, catRetours(cat)]);
   if(signature === catSignature) return;
   catSignature = signature;
 
@@ -78,10 +78,12 @@ function renderCatPage(){
       <h3 class="pending-title">Chez ${escapeHtml(nomAutre)} <span class="cat-compte">${chezAutre.length}</span></h3>
       <div class="pending-list"></div>
     </div>
-    ${!aValider.length && !miens.length && !chezAutre.length
+    ${catRetoursHTML(cat, nomAutre)}
+    ${!aValider.length && !miens.length && !chezAutre.length && !catRetours(cat).length
       ? `<p class="empty-state cat-vide">${info.aucun}.<br>Touche « ${info.nouveau} » pour commencer !</p>` : ''}
   `;
 
+  body.querySelectorAll('[data-retour-vu]').forEach(b => b.onclick = () => roomRef.child('retours/' + me.id + '/' + b.dataset.retourVu).remove());
   const nouveau = $('#cat-nouveau');
   if(nouveau) nouveau.addEventListener('click', () => { if(!pleine) drawCard(cat); });
 
@@ -110,3 +112,23 @@ function renderCatPage(){
 document.addEventListener('click', e => {
   if(e.target.closest && e.target.closest('#cat-back')) catPageFermer();
 });
+
+// Retours du/de la partenaire sur MES cartes jouées (validées ou refusées), avec sa réponse.
+function catRetours(cat){
+  return Object.entries((state && state.retours && state.retours[me.id]) || {})
+    .filter(([k, r]) => r && r.cat === cat)
+    .sort((a, b) => (b[1].ts || 0) - (a[1].ts || 0));
+}
+function catRetoursHTML(cat, nomAutre){
+  const l = catRetours(cat);
+  if(!l.length) return '';
+  return '<div class="cat-section"><h3 class="pending-title">💬 Retours de ' + escapeHtml(nomAutre) + ' <span class="cat-compte">' + l.length + '</span></h3>'
+    + l.map(([k, r]) => '<div class="pending-card cat-retour' + (r.valide ? ' ok' : ' ko') + '">'
+      + '<div class="pending-card-top"><span class="pending-cat">' + (r.valide ? '🎉 Validée · +' + (r.pts || 0) : '🙅 Refusée') + '</span>'
+      + '<button type="button" class="cat-retour-vu" data-retour-vu="' + k + '" aria-label="Retirer">✕</button></div>'
+      + '<p class="pending-text">' + escapeHtml(r.texte || '') + '</p>'
+      + (r.reponse ? '<div class="pending-answer"><span class="pending-answer-label">Ta réponse :</span> ' + escapeHtml(r.reponse) + '</div>' : '')
+      + (r.retour ? '<div class="pending-answer cat-retour-txt"><span class="pending-answer-label">' + escapeHtml(nomAutre) + ' :</span> ' + escapeHtml(r.retour) + '</div>'
+                  : '<p class="cat-note">Pas de commentaire.</p>')
+      + '</div>').join('') + '</div>';
+}

@@ -399,7 +399,7 @@ function construireCarteAValider(key, p){
     ? `<div class="pending-answer"><span class="pending-answer-label">Sa réponse :</span> ${escapeHtml(p.answer)}</div>`
     : '';
   const commentBlock = p.comment
-    ? `<div class="pending-answer"><span class="pending-answer-label">Son commentaire :</span> ${escapeHtml(p.comment)}</div>`
+    ? `<div class="pending-answer"><span class="pending-answer-label">${p.cat === 'gage' ? 'Sa réponse' : 'Son commentaire'} :</span> ${escapeHtml(p.comment)}</div>`
     : '';
   // Carte photo : tant qu'elle n'est pas ouverte, on ne peut pas valider —
   // sinon on validerait sans avoir rien vu.
@@ -422,6 +422,7 @@ function construireCarteAValider(key, p){
     ${photoBlock}
     ${answerBlock}
     ${commentBlock}
+    ${p.cat === 'gage' && !p.pdGage ? `<textarea class="pending-retour-input" rows="2" placeholder="Ta réponse à ${escapeHtml(state.players[p.by]||'ton/ta partenaire')} (optionnel)…"></textarea>` : ''}
     <div class="pending-actions" ${p.photo && p.photoData ? 'style="display:none;"' : ''}>
       ${p.pdGage
         ? `<button class="btn-ghost pending-refuse">Pas réalisé (+${PD_POINTS} pour moi)</button>
@@ -431,8 +432,9 @@ function construireCarteAValider(key, p){
     </div>
     ${p.pdGage ? `<div class="skip-note">⏳ À valider avant le ${pdGageDeadlineLabel(p.pdGage.deadline)} (${pdGageRestant(p.pdGage.deadline)}). Sans validation, le gage s'annule et tu prends ${PD_POINTS} points.</div>` : ''}
   `;
-  row.querySelector('.pending-refuse').addEventListener('click', () => validatePending(key, false));
-  row.querySelector('.pending-validate').addEventListener('click', () => validatePending(key, true));
+  const retour = () => { const c = row.querySelector('.pending-retour-input'); return c ? c.value.trim() : ''; };
+  row.querySelector('.pending-refuse').addEventListener('click', () => validatePending(key, false, retour()));
+  row.querySelector('.pending-validate').addEventListener('click', () => validatePending(key, true, retour()));
   const ouvrir = row.querySelector('.pc-ouvrir');
   if(ouvrir) ouvrir.addEventListener('click', () => ouvrirPhotoCarte(key, p, row.querySelector('.pc-ouvrir-zone')));
   return row;
@@ -541,8 +543,11 @@ function construireCarteMine(key, p){
         : (limitReached
           ? `<button class="btn-ghost pending-penalty">Accepter de perdre ${SKIP_PENALTY} points</button>`
           : `<button class="btn-ghost pending-nope">Non, je passe</button>`);
+      const nomAutre = escapeHtml(state.players[partnerId]||'ton/ta partenaire');
       const commentField = p.cat === 'defi'
-        ? `<textarea class="pending-comment-input" placeholder="Petit commentaire pour ${escapeHtml(state.players[partnerId]||'ton/ta partenaire')} (optionnel)…" rows="2"></textarea>`
+        ? `<textarea class="pending-comment-input" placeholder="Petit commentaire pour ${nomAutre} (optionnel)…" rows="2"></textarea>`
+        : p.cat === 'gage'   // Cap ou pas (24/11/2026) : certaines cartes demandent de décrire quelque chose
+        ? `<textarea class="pending-comment-input pending-cap-input" placeholder="Écris ici ta réponse ou ce que tu décris : ${nomAutre} la lira avant de valider…" rows="3"></textarea>`
         : '';
       row.innerHTML = `
         <div class="pending-card-top">
@@ -898,7 +903,7 @@ function cancelPending(key){
   roomRef.child('pendingCards/'+key).remove();
 }
 
-function validatePending(key, approved){
+function validatePending(key, approved, retour){
   const pending = state.pendingCards && state.pendingCards[key];
   if(!pending || pending.by === me.id) return; // seul le/la partenaire peut valider
 
@@ -918,15 +923,25 @@ function validatePending(key, approved){
   updates['history/' + histKey] = {
     who: state.players[drawerId], cat: pending.cat, text: pending.text,
     answer: pending.answer || '', comment: pending.comment || '',
-    pts: pts, validated: approved, ts: Date.now()
+    pts: pts, validated: approved, ts: Date.now(), retour: retour || ''
   };
+  // Retour à consulter par celui/celle qui a joué (24/11/2026) : la carte, sa réponse,
+  // la réponse du/de la partenaire, validé ou non. On garde les 20 derniers.
+  updates['retours/' + drawerId + '/' + histKey] = {
+    cat: pending.cat, texte: pending.text, reponse: pending.comment || pending.answer || '',
+    retour: retour || '', valide: !!approved, pts: pts, de: me.id, ts: Date.now()
+  };
+  Object.entries((state.retours && state.retours[drawerId]) || {})
+    .sort((a, b) => (b[1].ts || 0) - (a[1].ts || 0)).slice(19)
+    .forEach(([k]) => { updates['retours/' + drawerId + '/' + k] = null; });
 
   roomRef.update(updates);
 
+  const extrait = retour ? ' « ' + retour.slice(0, 90) + (retour.length > 90 ? '…' : '') + ' »' : '';
   notifyPartner(
     approved ? '🎉 Carte validée' : '🙅 Carte refusée',
-    approved ? me.name + ' a validé ta carte : +' + pts + ' points !'
-             : me.name + ' n' + String.fromCharCode(39) + 'a pas validé ta carte.',
+    (approved ? me.name + ' a validé ta carte : +' + pts + ' points !'
+              : me.name + ' n' + String.fromCharCode(39) + 'a pas validé ta carte.') + extrait,
     'resultat');
 }
 
