@@ -422,7 +422,7 @@ function construireCarteAValider(key, p){
     ${photoBlock}
     ${answerBlock}
     ${commentBlock}
-    ${p.cat === 'gage' && !p.pdGage ? `<textarea class="pending-retour-input" rows="2" placeholder="Ta réponse à ${escapeHtml(state.players[p.by]||'ton/ta partenaire')} (optionnel)…"></textarea>` : ''}
+    ${['question', 'defi', 'gage'].indexOf(p.cat) !== -1 && !p.pdGage ? `<textarea class="pending-retour-input" rows="2" placeholder="Ta réponse à ${escapeHtml(state.players[p.by]||'ton/ta partenaire')} (optionnel)…"></textarea>` : ''}
     <div class="pending-actions" ${p.photo && p.photoData ? 'style="display:none;"' : ''}>
       ${p.pdGage
         ? `<button class="btn-ghost pending-refuse">Pas réalisé (+${PD_POINTS} pour moi)</button>
