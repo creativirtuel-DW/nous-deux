@@ -1997,3 +1997,7 @@ main#views{ flex:1; min-height:0; position:relative; }
 .cat-retour.ko{ opacity:.85; }
 .cat-retour-txt{ border-left-color:#7BE495 !important; }
 .cat-retour-vu{ background:none; border:0; color: var(--muted); font-size:15px; cursor:pointer; padding:0 2px; }
+
+/* ====== PLAISIRS INTIMES : commentaire du validateur (24/11/2026) ====== */
+.pi-retour{ margin:8px 0 8px !important; min-height:0; font-size:15px; }
+.pi-rep-retour{ color:#FFE29A; font-weight:700; }
