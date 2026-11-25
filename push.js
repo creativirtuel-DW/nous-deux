@@ -144,7 +144,8 @@ const RAPPEL_TEXTES = {
   question: ['💬 Question en attente', 'Vous avez une question en attente ! Pensez à aller voir pour y répondre !'],
   defi:     ['🔥 Carte en attente',    'Vous avez une carte en attente ! Pensez à aller voir pour la jouer !'],
   valider:  ['✍️ Carte à valider',     'Vous avez une carte à valider ! Pensez à aller voir pour y répondre !'],
-  pensee:   ['💭 Pensée en attente',   'Vous avez une pensée du jour en attente ! Pensez à aller voir pour y répondre !']
+  pensee:   ['💭 Pensée en attente',   'Vous avez une pensée du jour en attente ! Pensez à aller voir pour y répondre !'],
+  plaisirs: ['🌶️ Plaisirs Intimes',    'Des cartes HOT t’attendent dans Plaisirs Intimes ! Va voir ce que ton/ta partenaire t’a envoyé et réponds-y 🔥']
 };
 
 function rappelDernier(cle){

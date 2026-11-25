@@ -336,8 +336,10 @@ function piDessiner(){
       + piBlocRetours()
       + (piLimiteAtteinte()
         ? '<div class="pi-limite"><div class="pi-limite-ic">⏳</div><p>' + PI_MSG_LIMITE + '</p>'
-          + '<small>' + piEnAttente().length + ' / ' + PI_MAX_ATTENTE + ' en attente chez ' + escapeHtml(piNomAutre()) + '</small></div>'
-        : (piEnAttente().length ? '<p class="pi-attente">⏳ ' + piEnAttente().length + ' / ' + PI_MAX_ATTENTE + (piEnAttente().length > 1 ? ' cartes envoyées attendent' : ' carte envoyée attend') + ' la validation de ' + escapeHtml(piNomAutre()) + '</p>' : ''))
+          + '<small>' + piEnAttente().length + ' / ' + PI_MAX_ATTENTE + ' en attente chez ' + escapeHtml(piNomAutre()) + '</small>'
+          + (typeof rappelHTML === 'function' ? rappelHTML('plaisirs_' + me.id, 'plaisirs') : '') + '</div>'
+        : (piEnAttente().length ? '<p class="pi-attente">⏳ ' + piEnAttente().length + ' / ' + PI_MAX_ATTENTE + (piEnAttente().length > 1 ? ' cartes envoyées attendent' : ' carte envoyée attend') + ' la validation de ' + escapeHtml(piNomAutre()) + '</p>'
+          + (typeof rappelHTML === 'function' ? '<div class="pi-relance">' + rappelHTML('plaisirs_' + me.id, 'plaisirs') + '</div>' : '') : ''))
       + (piLimiteAtteinte() ? '' : !piLieu
         ? '<p class="pi-lieu-q">Comment jouez-vous ?</p>'
           + '<button type="button" class="pi-choix pi-lieu" data-pi-lieu="e"><span>💑</span><b>Jouer ensemble</b><small>Vous êtes tous les deux au même endroit.</small></button>'

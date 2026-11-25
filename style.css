@@ -2039,3 +2039,7 @@ main#views{ flex:1; min-height:0; position:relative; }
 .pca-texte{ text-align:center; max-width:340px; animation: clocheFondu .5s 1.3s ease both; }
 .pca-texte h2{ margin:0 0 10px; font-family:'Cormorant Garamond', Georgia, serif; font-style:italic; font-size:32px; color:#FFE29A; }
 .pca-texte p{ margin:0 0 18px; font-size:15px; line-height:1.5; }
+
+/* Plaisirs Intimes : relancer le partenaire (25/11/2026) */
+.pi-relance{ margin:-6px 0 14px; }
+.pi-relance .rappel-btn, .pi-limite .rappel-btn{ width:100%; margin-top:8px; color:#FFE29A; border-color: rgba(255,226,154,.5); background: rgba(0,0,0,.25); }
