@@ -1437,6 +1437,49 @@ function renderHistory(){
     wrap.appendChild(row);
   });
 
+  // ---- Cartes laissées de côté (25/11/2026) : pour comprendre ce qui n'a pas plu ----
+  if(isAdminUnlocked()){
+    const labelsCartes = { question:'💬 Question', defi:'🔥 Défi', gage:'😈 Cap ou pas', distance:'🔥 Défi' };
+    const depuis = ts => {
+      const m = Math.max(0, Math.round((Date.now() - (ts || Date.now())) / 60000));
+      if(m < 60) return 'il y a ' + m + ' min';
+      const h = Math.round(m / 60);
+      if(h < 24) return 'il y a ' + h + ' h';
+      const j = Math.round(h / 24);
+      return 'il y a ' + j + ' jour' + (j > 1 ? 's' : '');
+    };
+    const quand = ts => { const d = new Date(ts); return d.toLocaleDateString('fr-FR', { day:'numeric', month:'short' }) + ' à ' + d.getHours() + 'h' + String(d.getMinutes()).padStart(2, '0'); };
+    const enAttente = Object.values(state.pendingCards || {})
+      .filter(p => p && p.by && p.status !== 'review' && labelsCartes[p.cat])
+      .sort((x, y) => (x.ts || 0) - (y.ts || 0));
+    const passees = Object.values(state.history || {})
+      .filter(h => h && (h.validated === 'skipped' || h.validated === 'penalty'))
+      .sort((x, y) => (y.ts || 0) - (x.ts || 0));
+    if(enAttente.length || passees.length){
+      const sec = document.createElement('div');
+      sec.className = 'jds-hist-section';
+      let html = `<h3 class="jds-hist-title">🙈 Cartes laissées de côté (${enAttente.length + passees.length})</h3>`;
+      if(enAttente.length){
+        html += '<div class="hist-cote-sous">⏳ Piochées, pas encore jouées</div>' + enAttente.map(p => `
+          <div class="jds-hist-row hist-cote">
+            <div class="hist-gage-owner">${escapeHtml(state.players[p.by] || '')} · ${labelsCartes[p.cat]}</div>
+            <div class="jds-hist-gain">${escapeHtml(p.text || '')}</div>
+            <div class="jds-hist-lose">Piochée ${depuis(p.ts)}${p.answer ? ' · réponse commencée' : ''}</div>
+          </div>`).join('');
+      }
+      if(passees.length){
+        html += '<div class="hist-cote-sous">⏭ Passées ou abandonnées</div>' + passees.map(h => `
+          <div class="jds-hist-row hist-cote">
+            <div class="hist-gage-owner">${escapeHtml(h.who || '')} · ${labelsCartes[h.cat] || 'Carte'}</div>
+            <div class="jds-hist-gain">${escapeHtml(h.text || '')}</div>
+            <div class="jds-hist-lose">${h.validated === 'penalty' ? 'Abandonnée avec pénalité (' + h.pts + ' pts)' : 'Passée'} le ${quand(h.ts)}</div>
+          </div>`).join('');
+      }
+      sec.innerHTML = html;
+      wrap.appendChild(sec);
+    }
+  }
+
   // ---- Gages de Défi Photo jamais révélés (admin, et seulement les miens) ----
   if(isAdminUnlocked() && state.photoGages){
     const tous = Object.entries(state.photoGages)

@@ -2053,3 +2053,7 @@ main#views{ flex:1; min-height:0; position:relative; }
 .bt-archive[open] summary::after{ content:' ▴'; }
 .bt-archive > .bt-resultat, .bt-archive > .bt-detail{ margin-left:10px; margin-right:10px; }
 .bt-archive[open]{ padding-bottom:8px; }
+
+/* Historique dev mod : cartes laissées de côté (25/11/2026) */
+.hist-cote-sous{ font-size:12px; font-weight:700; color: var(--cream); margin:14px 0 8px; }
+.hist-cote .jds-hist-lose{ font-size:12px; }
