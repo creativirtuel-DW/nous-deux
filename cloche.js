@@ -171,29 +171,59 @@ function clocheToutEffacer(){
   roomRef.child('notifs/' + me.id).remove();
 }
 
-// Un appui sur une notification : on ferme et on emmène au bon endroit.
+// Un appui sur une notification (dans la cloche OU sur la notification du
+// téléphone, via ?aller=<tag> / sw.js) : on emmène directement au bon endroit (25/11/2026).
+function clocheJeuCarteRecente(filtre){
+  const l = Object.values((state && state.pendingCards) || {}).filter(p => p && filtre(p))
+    .sort((x, y) => (y.ts || 0) - (x.ts || 0));
+  return l.length ? l[0].cat : null;
+}
 function clocheAller(tag){
-  const t = (tag || '').replace(/^rappel-/, '').replace(/-resultat$/, '');
-  // Cartes (à valider, à jouer…) : elles sont en tête de ce volet.
-  if(!t || t === 'valider' || t === 'question' || t === 'defi'){
-    const zone = $('#cloche-defile');
-    if(zone) zone.scrollTo({ top: 0, behavior: 'smooth' });
-    return;
+  tag = tag || '';
+  const rappel = /^rappel-/.test(tag);
+  const t = tag.replace(/^rappel-/, '').replace(/-resultat$/, '');
+  const resultat = /-resultat$/.test(tag);
+  const pagesCartes = typeof CAT_PAGES !== 'undefined' ? CAT_PAGES : [];
+  // Jeux de cartes (Question / Défi / Cap ou pas) : la page du jeu concerné.
+  let cat = null;
+  if(t === 'question' || t === 'defi' || t === 'gage') cat = t;
+  else if(t === 'valider') cat = clocheJeuCarteRecente(p => p.by !== me.id && p.status === 'review');
+  else if(t === 'resultat'){
+    const r = Object.values((state && state.retours && state.retours[me.id]) || {}).sort((x, y) => (y.ts || 0) - (x.ts || 0))[0];
+    cat = r && r.cat;
+  }
+  if(t === 'question' || t === 'defi' || t === 'valider' || t === 'resultat' || t === ''){
+    if(!cat || pagesCartes.indexOf(cat) === -1 || typeof catPageOuvrir !== 'function'){
+      // Rien de précis : on montre la cloche (cartes en attente + dernières notifications).
+      clocheOuvrir();
+      const zone = $('#cloche-defile');
+      if(zone) zone.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
   }
   clocheFermer();
   const accueil = document.querySelector('.tab[data-view="view-play"]');
   if(accueil && !accueil.classList.contains('active')) accueil.click();
   const actions = {
-    battle:   () => { battleFocusResultat = /-resultat$/.test(tag || ''); openBattle(); },
+    battle:   () => { battleFocusResultat = resultat; openBattle(); },
     synchro:  () => openSynchro(),
     photo:    () => openPhoto(),
     soiree:   () => openSoiree(),
     plaisirs: () => piOuvrir(),
-    pensee:   () => qdjOuvrir(),
+    // « 💌 pense à toi » → la pensée reçue ; rappel « pensée du jour » → la pensée par jour.
+    pensee:   () => {
+      const recues = !rappel && typeof ptRecues === 'function' ? ptRecues() : [];
+      if(recues.length && typeof ptOuvrirRecue === 'function') ptOuvrirRecue(recues[recues.length - 1][0]);
+      else qdjOuvrir();
+    },
     qdj:      () => qdjOuvrir(),
-    coffre:   () => cjOuvrirPage()
+    coffre:   () => cjOuvrirPage(),
+    envies:   () => envOuvrirListe(),
+    'mode-couple': () => { if(typeof piVisible === 'function' && piVisible()) piOuvrir(); }
   };
+  if(!cat && typeof catPageActive !== 'undefined' && catPageActive){ catPageActive = null; catSignature = ''; }
   try{
+    if(cat){ catPageOuvrir(cat); return; }
     if(actions[t]){ actions[t](); return; }
   }catch(e){}
   render();

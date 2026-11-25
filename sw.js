@@ -35,14 +35,18 @@ self.addEventListener('push', event => {
 
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  const target = (event.notification.data && event.notification.data.url) || './index.html';
+  let target = (event.notification.data && event.notification.data.url) || './index.html';
+  // Notifications du serveur (pensée du jour…) : pas de lien précis, on le déduit du type.
+  const tagNotif = (event.notification.data && event.notification.data.tag) || event.notification.tag || '';
+  if(tagNotif && target.indexOf('aller=') === -1 && tagNotif !== 'nous-deux')
+    target += (target.indexOf('?') === -1 ? '?' : '&') + 'aller=' + encodeURIComponent(tagNotif);
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
       // Si l'app est déjà ouverte quelque part, on la ramène au premier plan.
       // Appli déjà ouverte : on la ramène au premier plan et on lui dit où aller
       // (ex. « Battle terminée » → le détail de toutes les réponses).
-      const tag = (event.notification.data && event.notification.data.tag) || '';
+      const tag = tagNotif !== 'nous-deux' ? tagNotif : '';
       for(const client of list){
         if('focus' in client){
           if(tag) client.postMessage({ aller: tag });
