@@ -28,12 +28,16 @@ const PI_ACTIF = true;
 const PI_SEUIL = MC_SEUIL;     // même seuil que le Mode HOT (300)
 const PI_PASSES = 5;           // passes gratuites par jour
 const PI_MALUS = 20;
+const PI_SYNC_GAIN = 10;       // question « synchro » : même réponse = +10 chacun (compteur Plaisirs seulement)
+const PI_SYNC_PERTE = 5;       // réponses différentes = −5 chacun (jamais sous 0)
+const PI_DEFI_PTS = 20;        // défi validé = le double d'une question (pour celui/celle qui l'a relevé)
 const PI_MAX_ATTENTE = 5;      // cartes envoyées par personne en attente de validation (23/11/2026)
 function piLimiteAtteinte(){ return piEnAttente().length >= PI_MAX_ATTENTE; }
 const PI_MSG_LIMITE = PI_MAX_ATTENTE + ' cartes sont envoyées : ton/ta partenaire doit y répondre, ou les valider, pour que tu puisses en envoyer d’autres !';           // points perdus par passe au-delà
 
 let piOuvert = false;          // plein écran ouvert
 let piCarte = null;            // { mode, id, t } carte affichée
+let piChoix = null;            // réponse cochée sur la question en cours (format synchro, 25/11/2026)
 let piLieu = null;             // 'e' = ensemble, 'd' = à distance — choisi à chaque ouverture (23/11/2026)
 // Une carte se joue-t-elle dans ce lieu ? l = 'e' (ensemble), 'd' (distance) ou '2' (les deux).
 function piCarteJouable(x){ const l = x.l || '2'; return l === '2' || l === piLieu; }
@@ -87,6 +91,7 @@ document.addEventListener('click', e => {
 // ---------- case de la page des jeux ----------
 function renderPlaisirs(){
   renderHotBanniere();
+  if(piDebloque() && typeof piVerifierPaliers === 'function') piVerifierPaliers();
   const t = document.getElementById('pi-tuile');
   if(!t || !state || !me || !me.id) return;
   if(piOuvert && !piCarte) piDessiner();
@@ -118,14 +123,15 @@ function piReponses(){ return Object.entries((state && state.plaisirsReponses) |
 function piAValider(){ return piReponses().filter(r => r.pour === me.id && !r.valide).sort((a, b) => a.ts - b.ts); }
 // Mes réponses encore en attente
 // Mes cartes validées par l'autre avec un commentaire, pas encore marquées comme lues.
-function piRetours(){ return piReponses().filter(r => r.de === me.id && r.valide && r.retour && !r.retourVu).sort((a, b) => b.valide - a.valide); }
+function piRetours(){ return piReponses().filter(r => r.de === me.id && r.valide && (r.retour || r.sync) && !r.retourVu).sort((a, b) => b.valide - a.valide); }
 function piBlocRetours(){
   const l = piRetours();
   if(!l.length) return '';
   return '<section class="pi-valider pi-retours"><h3>💬 ' + escapeHtml(piNomAutre()) + ' t’a répondu</h3>'
-    + l.slice(0, 10).map(r => '<div class="pi-rep"><div class="pi-rep-q">' + (r.sms || r.defi ? '🔥 ' : '💬 ') + escapeHtml(r.q || '') + '</div>'
+    + l.slice(0, 10).map(r => '<div class="pi-rep' + (r.sync ? (r.ok ? ' pi-sync-ok' : ' pi-sync-ko') : '') + '"><div class="pi-rep-q">' + (r.sync ? (r.ok ? '💞 Synchro ! +' + PI_SYNC_GAIN + ' · ' : '💔 Pas synchro −' + PI_SYNC_PERTE + ' · ') : r.sms || r.defi ? '🔥 ' : '💬 ') + escapeHtml(r.q || '') + '</div>'
       + (r.defi || r.sms ? '' : '<div class="pi-rep-txt">Toi : « ' + escapeHtml(r.rep || '') + ' »</div>')
-      + '<div class="pi-rep-txt pi-rep-retour">' + escapeHtml(piNomAutre()) + ' : « ' + escapeHtml(r.retour) + ' »</div>'
+      + (r.sync ? '<div class="pi-rep-txt">' + escapeHtml(piNomAutre()) + ' a deviné : « ' + escapeHtml((r.a || [])[r.choixAutre] || '') + ' »</div>' : '')
+      + (r.retour ? '<div class="pi-rep-txt pi-rep-retour">' + escapeHtml(piNomAutre()) + ' : « ' + escapeHtml(r.retour) + ' »</div>' : '')
       + '<button type="button" class="pi-btn ghost" data-pi-retour-vu="' + r.k + '">Lu ✓</button></div>').join('')
     + '</section>';
 }
@@ -147,16 +153,47 @@ function piValider(k){
   const champ = document.querySelector('[data-pi-retour="' + k + '"]');
   const retour = champ ? champ.value.trim().slice(0, 400) : '';
   roomRef.child('plaisirsReponses/' + k).update({ valide: Date.now(), retour: retour || null });
+  piAjouterPoints(r.de, r.defi || r.sms ? PI_DEFI_PTS : PI_SYNC_GAIN);   // compteur Plaisirs (25/11/2026)
   const extrait = retour ? ' « ' + retour.slice(0, 90) + (retour.length > 90 ? '…' : '') + ' »' : '';
   if(typeof notifyPartner === 'function')
     notifyPartner(r.defi || r.sms ? '✓ Défi validé' : '✓ Réponse validée',
       me.name + (r.defi || r.sms ? ' a validé ton défi 🔥' : ' a lu et validé ta réponse 🔥') + extrait, 'plaisirs');
 }
+// Question « synchro » reçue : je dois deviner la réponse de l'autre.
+function piBlocDeviner(r){
+  return '<div class="pi-rep pi-sync"><div class="pi-rep-q">💞 ' + escapeHtml(r.q || '') + '</div>'
+    + '<p class="pi-sync-aide">Qu’a répondu ' + escapeHtml(piNomAutre()) + ' ? Devine la même réponse !</p>'
+    + '<div class="pi-sync-choix">' + (r.a || []).map((t, i) => '<button type="button" class="pi-sync-opt" data-pi-devine="' + r.k + '" data-i="' + i + '">' + escapeHtml(t) + '</button>').join('') + '</div>'
+    + '<textarea class="pi-champ pi-retour" data-pi-retour="' + r.k + '" rows="2" maxlength="400" placeholder="Un petit mot pour ' + escapeHtml(piNomAutre()) + ' (optionnel)…"></textarea>'
+    + '<button type="button" class="pi-btn" data-pi-sync-valider="' + r.k + '">💞 Valider ma réponse</button></div>';
+}
+const piDevine = {};   // clé -> réponse cochée (avant validation)
+
+// Je valide ma réponse : synchro ou pas, points pour les deux (compteur Plaisirs seulement).
+function piSyncValider(k){
+  const r = (state.plaisirsReponses || {})[k];
+  if(!r || r.pour !== me.id || r.valide || piDevine[k] === undefined) return false;
+  const choix = piDevine[k];
+  const ok = choix === r.choix;
+  const delta = ok ? PI_SYNC_GAIN : -PI_SYNC_PERTE;
+  const champ = document.querySelector('[data-pi-retour="' + k + '"]');
+  const retour = champ ? champ.value.trim().slice(0, 400) : '';
+  roomRef.child('plaisirsReponses/' + k).update({ valide: Date.now(), choixAutre: choix, ok: ok, gain: delta, retour: retour || null });
+  ['p1', 'p2'].forEach(pid => piAjouterPoints(pid, delta));
+  delete piDevine[k];
+  if(typeof synchroAnimer === 'function') synchroAnimer(ok, delta, r.q);
+  const extrait = retour ? ' « ' + retour.slice(0, 90) + (retour.length > 90 ? '…' : '') + ' »' : '';
+  if(typeof notifyPartner === 'function')
+    notifyPartner(ok ? '💞 Synchro !' : '💔 Pas synchro…',
+      (ok ? me.name + ' a deviné ta réponse : +' + PI_SYNC_GAIN + ' pts chacun 🔥' : me.name + ' n’a pas deviné ta réponse : −' + PI_SYNC_PERTE + ' pts chacun') + extrait, 'plaisirs');
+  return true;
+}
+
 function piBlocValider(){
   const l = piAValider();
   if(!l.length) return '';
   return '<section class="pi-valider"><h3>✍️ ' + escapeHtml(piNomAutre()) + ' t’a répondu</h3>'
-    + l.map(r => '<div class="pi-rep"><div class="pi-rep-q">' + (r.sms || r.defi ? '🔥 ' : '💬 ') + escapeHtml(r.q || '') + '</div>'
+    + l.map(r => r.sync ? piBlocDeviner(r) : '<div class="pi-rep"><div class="pi-rep-q">' + (r.sms || r.defi ? '🔥 ' : '💬 ') + escapeHtml(r.q || '') + '</div>'
       + (r.photo ? '<div class="pc-ouvrir-zone pi-photo-zone" data-pi-photo-zone="' + r.k + '"><button type="button" class="pi-btn" data-pi-photo-ouvrir="' + r.k + '">📸 Ouvrir sa photo (' + Math.round(PC_VUE_MS / 1000) + ' s)</button><p class="pc-note">Une seule fois : elle disparaît ensuite.</p></div>'
         : r.photoVue ? '<div class="pi-rep-txt pi-rep-sms">📸 Photo vue.</div>'
         : r.sms ? '<div class="pi-rep-txt pi-rep-sms">📱 Photo envoyée par SMS : regarde tes messages.</div>'
@@ -293,7 +330,9 @@ function piDessiner(){
       + '<h2 class="pi-titre">Plaisirs Intimes</h2>'
       + '<p class="pi-sous">Rien que vous deux. Choisis ton jeu…</p>'
       + (piDebloque() ? '' : '<p class="pi-dev">🔧 Aperçu dev mod : ce mode est encore verrouillé pour vous deux.</p>')
+      + (typeof piBlocCompteur === 'function' ? piBlocCompteur() : '')
       + piBlocValider()
+      + (typeof piBlocCadeaux === 'function' ? piBlocCadeaux() : '')
       + piBlocRetours()
       + (piLimiteAtteinte()
         ? '<div class="pi-limite"><div class="pi-limite-ic">⏳</div><p>' + PI_MSG_LIMITE + '</p>'
@@ -304,13 +343,27 @@ function piDessiner(){
           + '<button type="button" class="pi-choix pi-lieu" data-pi-lieu="e"><span>💑</span><b>Jouer ensemble</b><small>Vous êtes tous les deux au même endroit.</small></button>'
           + '<button type="button" class="pi-choix pi-lieu defi" data-pi-lieu="d"><span>📱</span><b>Jouer à distance</b><small>Chacun de son côté : seules les cartes faisables à distance sortent.</small></button>'
         : '<button type="button" class="pi-lieu-actuel" data-pi-lieu-changer>' + (piLieu === 'e' ? '💑 Ensemble' : '📱 À distance') + ' · changer</button>'
-          + '<button type="button" class="pi-choix" data-pi-mode="questions"><span>💬</span><b>Question</b><small>Une question très explicite : réponds par écrit, sans tabou.</small></button>'
+          + '<button type="button" class="pi-choix" data-pi-mode="questions"><span>💬</span><b>Question</b><small>Réponds, et ton/ta partenaire doit deviner la même réponse !</small></button>'
           + '<button type="button" class="pi-choix defi" data-pi-mode="defis"><span>🔥</span><b>Défi</b><small>' + (piLieu === 'd' ? 'Un défi HOT à relever chacun de son côté.' : 'Un défi très HOT à réaliser, maintenant.') + '</small></button>');
     c.querySelectorAll('[data-pi-mode]').forEach(b => b.onclick = () => piTirer(b.dataset.piMode));
     c.querySelectorAll('[data-pi-lieu]').forEach(b => b.onclick = () => { piLieu = b.dataset.piLieu; piDessiner(); });
     const changer = c.querySelector('[data-pi-lieu-changer]');
     if(changer) changer.onclick = () => { piLieu = null; piDessiner(); };
     c.querySelectorAll('[data-pi-valider]').forEach(b => b.onclick = () => piValider(b.dataset.piValider));
+    if(typeof piBrancherCadeaux === 'function') piBrancherCadeaux(c);
+    c.querySelectorAll('[data-pi-devine]').forEach(b => {
+      const k = b.dataset.piDevine;
+      if(piDevine[k] === +b.dataset.i) b.classList.add('sel');
+      b.onclick = () => {
+        piDevine[k] = +b.dataset.i;
+        c.querySelectorAll('[data-pi-devine="' + k + '"]').forEach(x => x.classList.toggle('sel', x === b));
+      };
+    });
+    c.querySelectorAll('[data-pi-sync-valider]').forEach(b => b.onclick = () => {
+      if(!piSyncValider(b.dataset.piSyncValider)){
+        const z = b.parentNode.querySelector('.pi-sync-choix'); z.classList.add('vide'); setTimeout(() => z.classList.remove('vide'), 900);
+      }
+    });
     c.querySelectorAll('[data-pi-photo-ouvrir]').forEach(b => b.onclick = () => {
       const k = b.dataset.piPhotoOuvrir, r = (state.plaisirsReponses || {})[k];
       const zone = c.querySelector('[data-pi-photo-zone="' + k + '"]');
@@ -333,7 +386,11 @@ function piDessiner(){
     + '<div class="pi-carte-type">' + (q ? '💬 Question' : '🔥 Défi') + '</div>'
     + '<p class="pi-carte-texte">' + escapeHtml(piCarte.t) + '</p>'
     + '<div class="pi-carte-pied">Plaisirs Intimes</div></div>'
-    + (q ? '<textarea class="pi-champ" maxlength="600" rows="4" placeholder="Écris ta réponse… ' + escapeHtml(piNomAutre()) + ' la lira et la validera."></textarea>' : '')
+    + (q && piCarte.a
+        ? '<p class="pi-sync-aide">Coche ta réponse : ' + escapeHtml(piNomAutre()) + ' devra deviner la même !</p>'
+          + '<div class="pi-sync-choix">' + piCarte.a.map((t, i) => '<button type="button" class="pi-sync-opt" data-pi-choix="' + i + '">' + escapeHtml(t) + '</button>').join('') + '</div>'
+          + '<textarea class="pi-champ pi-sync-com" maxlength="300" rows="2" placeholder="Un petit mot pour pimenter ta réponse (optionnel)…"></textarea>'
+        : q ? '<textarea class="pi-champ" maxlength="600" rows="4" placeholder="Écris ta réponse… ' + escapeHtml(piNomAutre()) + ' la lira et la validera."></textarea>' : '')
     + (!q && smsDemandePhoto(piCarte.t)
         ? smsConsigne(true)
           + smsChoixAppli('<button type="button" class="pi-btn" data-pi-photo>📸 Envoyer depuis l’appli · défi suivant</button>')
@@ -366,9 +423,25 @@ function piDessiner(){
       });
     });
   };
+  c.querySelectorAll('[data-pi-choix]').forEach(b => b.onclick = () => {
+    piChoix = +b.dataset.piChoix;
+    c.querySelectorAll('[data-pi-choix]').forEach(x => x.classList.toggle('sel', x === b));
+  });
   const faitB = c.querySelector('[data-pi-fait]');
   if(faitB) faitB.onclick = () => {
-    if(q){
+    if(q && piCarte.a){
+      if(piChoix === null){
+        const zone = c.querySelector('.pi-sync-choix');
+        zone.classList.add('vide'); setTimeout(() => zone.classList.remove('vide'), 900);
+        return;
+      }
+      const com = (c.querySelector('.pi-sync-com') || {}).value || '';
+      roomRef.child('plaisirsReponses').push({ de: me.id, pour: piAutreId(), qid: piCarte.id, q: piCarte.t, a: piCarte.a,
+        choix: piChoix, rep: piCarte.a[piChoix], com: com.trim().slice(0, 300) || null, sync: true, ts: Date.now(), valide: null });
+      if(typeof notifyPartner === 'function')
+        notifyPartner('💞 ' + me.name + ' a répondu à une question HOT', 'Devine sa réponse dans Plaisirs Intimes pour gagner des points !', 'plaisirs');
+    }
+    else if(q){
       const champ = c.querySelector('.pi-champ');
       if(!piEnvoyerReponse(champ.value)){
         champ.classList.add('vide'); champ.placeholder = 'Écris ta réponse avant de l’envoyer…'; champ.focus();
@@ -442,7 +515,8 @@ function piTirer(mode){
   }
   const x = dispo[Math.floor(Math.random() * dispo.length)];
   ref.child(x.id).set(true);
-  piCarte = { mode, id: x.id, t: x.t };
+  piCarte = { mode, id: x.id, t: x.t, a: x.a || null };
+  piChoix = null;
   piDessiner();
 }
 

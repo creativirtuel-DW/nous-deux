@@ -35,11 +35,12 @@ for onglet, lieu in ONGLETS:
     ws["A2"] = ("Questions puis défis jouables " + ("ENSEMBLE" if lieu == "e" else "À DISTANCE") + ". "
                 "Nouvelle carte : ajoute une ligne, ID VIDE, Type = Question ou Défi. "
                 "Une carte jouable dans les deux cas se met dans les DEUX onglets (même ID, ou même texte si l'ID est vide). "
-                "Pour retirer une carte de cet onglet : SUPPRIMER dans la colonne Action. Ne modifie jamais un ID existant.")
+                "Pour retirer une carte de cet onglet : SUPPRIMER dans la colonne Action. Ne modifie jamais un ID existant. "
+                "Questions : 4 réponses au choix (Réponse 1 à 4), identiques dans les deux onglets ; le partenaire doit deviner la réponse choisie.")
     ws["A2"].alignment = Alignment(wrap_text=True)
-    ws.merge_cells("A2:E2")
+    ws.merge_cells("A2:I2")
     ws.row_dimensions[2].height = 60
-    for c, t in enumerate(["ID", "Type", "Texte", "Action", "État"], 1):
+    for c, t in enumerate(["ID", "Type", "Texte", "Action", "État", "Réponse 1", "Réponse 2", "Réponse 3", "Réponse 4"], 1):
         cel = ws.cell(row=4, column=c, value=t)
         cel.font = Font(bold=True, color="FFFFFF"); cel.fill = ROUGE
     r = 5
@@ -52,6 +53,8 @@ for onglet, lieu in ONGLETS:
             ws.cell(row=r, column=3, value=it["t"]).alignment = Alignment(wrap_text=True, vertical="top")
             if not it.get("v"):
                 e = ws.cell(row=r, column=5, value="À VALIDER"); e.fill = ORANGE
+            for i, rep_ in enumerate(it.get("a") or [], 6):          # questions : 4 réponses au choix
+                ws.cell(row=r, column=i, value=rep_).alignment = Alignment(wrap_text=True, vertical="top")
             r += 1
         for (o, t2, texte, etat) in nouvelles:
             if o != onglet or t2 != typ:
@@ -66,6 +69,7 @@ for onglet, lieu in ONGLETS:
     ws.column_dimensions["C"].width = 90
     ws.column_dimensions["D"].width = 12
     ws.column_dimensions["E"].width = 12
+    for col in "FGHI": ws.column_dimensions[col].width = 26
     ws.freeze_panes = "A5"
 wb.save(XLSX)
 for onglet, lieu in ONGLETS:

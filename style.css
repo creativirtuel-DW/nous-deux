@@ -2001,3 +2001,41 @@ main#views{ flex:1; min-height:0; position:relative; }
 /* ====== PLAISIRS INTIMES : commentaire du validateur (24/11/2026) ====== */
 .pi-retour{ margin:8px 0 8px !important; min-height:0; font-size:15px; }
 .pi-rep-retour{ color:#FFE29A; font-weight:700; }
+
+/* ====== PLAISIRS INTIMES : questions synchro, compteur, cartes cadeau (25/11/2026) ====== */
+.pi-sync-aide{ margin:6px 0 8px; font-size:13.5px; font-weight:700; color:#FFE29A; text-align:center; }
+.pi-sync-choix{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; transition: transform .2s; }
+.pi-sync-choix.vide{ animation: syTremble .4s ease-in-out; }
+.pi-sync-opt{ padding:12px 8px; border-radius:14px; border:1px solid rgba(255,226,154,.45); background: rgba(0,0,0,.25); color:#fff;
+  font-family:inherit; font-size:14px; font-weight:700; line-height:1.25; cursor:pointer; min-height:54px; }
+.pi-sync-opt.sel{ background: linear-gradient(135deg, #FFE29A, #FFB04D); color:#6E0B2E; border-color:#FFE29A; box-shadow: 0 6px 16px -6px rgba(255,176,77,.9); }
+.pi-sync-ok{ border-color: rgba(123,228,149,.6) !important; }
+.pi-sync-ko{ opacity:.9; }
+.pi-compteur{ margin:-4px 0 14px; padding:10px 12px; border-radius:16px; background: rgba(0,0,0,.28); border:1px solid rgba(255,226,154,.4); }
+.pi-compteur-haut{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; font-size:14px; }
+.pi-compteur-haut b{ font-size:18px; color:#FFE29A; }
+.pi-compteur-haut small{ font-size:11.5px; opacity:.85; text-align:right; }
+.pi-jauge{ margin-top:8px; height:8px; border-radius:4px; background: rgba(255,255,255,.15); overflow:hidden; }
+.pi-jauge i{ display:block; height:100%; border-radius:4px; background: linear-gradient(90deg, #FFB04D, #FFE29A); }
+.pca-choix{ margin-bottom:8px; }
+.pca-choix.sel{ background: linear-gradient(90deg, #FFE29A, #FFB04D) !important; color:#6E0B2E !important; }
+#pi-cadeau-anim{ position:fixed; inset:0; z-index:9450; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; padding:0 24px;
+  background: radial-gradient(120% 80% at 50% 40%, #6E0B2E 0%, #2A0612 70%, #12030A 100%); animation: clocheFondu .3s ease both; color:#fff; }
+#pi-cadeau-anim.pca-sortie{ opacity:0; transition: opacity .35s ease; }
+.pca-scene{ position:relative; width:170px; height:240px; }
+.pca-carte{ position:absolute; inset:0; animation: pcaArrive .6s .2s cubic-bezier(.3,1.4,.5,1) both; }
+.pca-face{ position:absolute; inset:0; border-radius:18px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; }
+.pca-dos{ background: linear-gradient(135deg, #C8102E, #FF4D2E); font-size:64px; box-shadow: 0 20px 40px -10px rgba(0,0,0,.7); animation: pcaFerme .35s .9s ease-in forwards; }
+.pca-recto{ transform: scaleX(0); animation: pcaOuvre .4s 1.25s ease-out forwards; background: linear-gradient(150deg, #FFF1C4, #FFD27A 45%, #E8A93A); color:#6E0B2E;
+  box-shadow: 0 0 40px rgba(255,210,122,.75), 0 20px 40px -10px rgba(0,0,0,.7); border:2px solid #FFF6DA; }
+.pca-recto .pca-ic{ font-size:64px; animation: syBat 1s 1.6s ease-in-out 2; }
+.pca-recto b{ font-family:'Cormorant Garamond', Georgia, serif; font-style:italic; font-size:28px; }
+.pca-recto small{ font-size:11px; font-weight:800; letter-spacing:.15em; text-transform:uppercase; }
+@keyframes pcaArrive{ from{ transform: translateY(60px) scale(.6); opacity:0; } to{ transform:none; opacity:1; } }
+@keyframes pcaFerme{ to{ transform: scaleX(0); } }
+@keyframes pcaOuvre{ to{ transform: scaleX(1); } }
+.pca-eclat{ position:absolute; left:50%; top:50%; color:#FFE29A; font-size:18px; opacity:0; animation: pcaEclat 1.2s ease-out both; }
+@keyframes pcaEclat{ 0%{ transform: translate(-50%,-50%) rotate(var(--a)) translateY(0) scale(.4); opacity:1; } 100%{ transform: translate(-50%,-50%) rotate(var(--a)) translateY(calc(-1 * var(--d))) scale(1.1); opacity:0; } }
+.pca-texte{ text-align:center; max-width:340px; animation: clocheFondu .5s 1.3s ease both; }
+.pca-texte h2{ margin:0 0 10px; font-family:'Cormorant Garamond', Georgia, serif; font-style:italic; font-size:32px; color:#FFE29A; }
+.pca-texte p{ margin:0 0 18px; font-size:15px; line-height:1.5; }
