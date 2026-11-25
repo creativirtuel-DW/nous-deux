@@ -155,7 +155,7 @@ function synchroRepondre(cle){
 }
 
 // Animation plein écran « Gagné ! » / « Perdu… » (≈ 2,4 s, un appui la ferme).
-function synchroAnimer(ok, delta, question){
+function synchroAnimer(ok, delta, question, texte){
   const vieux = document.getElementById('sy-anim');
   if(vieux) vieux.remove();
   const el = document.createElement('div');
@@ -168,7 +168,7 @@ function synchroAnimer(ok, delta, question){
   el.innerHTML = coeurs + '<div class="sy-anim-centre">'
     + '<div class="sy-anim-ic">' + (ok ? '💞' : '💔') + '</div>'
     + '<div class="sy-anim-mot">' + (ok ? 'Gagné !' : 'Perdu…') + '</div>'
-    + '<div class="sy-anim-pts">' + (delta >= 0 ? '+' : '−') + Math.abs(delta) + ' pts chacun</div>'
+    + '<div class="sy-anim-pts">' + (texte ? escapeHtml(texte) : (delta >= 0 ? '+' : '−') + Math.abs(delta) + ' pts chacun') + '</div>'
     + (question ? '<div class="sy-anim-q">' + escapeHtml(question) + '</div>' : '')
     + '</div>';
   document.body.appendChild(el);

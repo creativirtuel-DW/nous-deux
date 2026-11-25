@@ -122,7 +122,7 @@ function notifyPartner(title, body, tag){
       method: 'POST',
       keepalive: true,   // l'envoi survit à la mise en veille de l'appli
       headers: { 'Content-Type': 'text/plain' },   // requête « simple » : pas de pré-vol CORS, compatible keepalive
-      body: JSON.stringify({ sub: sub, payload: { title: title, body: body, tag: tag || 'nous-deux', url: './index.html', badge: badgePartenaire(), src: 'app' } })
+      body: JSON.stringify({ sub: sub, payload: { title: title, body: body, tag: tag || 'nous-deux', url: './index.html?aller=' + encodeURIComponent(tag || ''), badge: badgePartenaire(), src: 'app' } })
     })
     .then(r => r.json())
     .then(res => {
@@ -230,3 +230,10 @@ function renderPushBanner(){
 }
 
 window.addEventListener('DOMContentLoaded', registerServiceWorker);
+
+// Notification touchée alors que l'appli était déjà ouverte (sw.js → message).
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.addEventListener('message', e => {
+    if(e.data && e.data.aller && typeof clocheAller === 'function' && typeof state !== 'undefined' && state) clocheAller(e.data.aller);
+  });
+}

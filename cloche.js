@@ -184,7 +184,7 @@ function clocheAller(tag){
   const accueil = document.querySelector('.tab[data-view="view-play"]');
   if(accueil && !accueil.classList.contains('active')) accueil.click();
   const actions = {
-    battle:   () => openBattle(),
+    battle:   () => { battleFocusResultat = /-resultat$/.test(tag || ''); openBattle(); },
     synchro:  () => openSynchro(),
     photo:    () => openPhoto(),
     soiree:   () => openSoiree(),

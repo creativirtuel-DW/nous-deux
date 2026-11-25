@@ -18,7 +18,7 @@ self.addEventListener('push', event => {
     badge: 'icon-192.png',
     tag: d.tag || 'nous-deux',       // une notif du même type remplace la précédente
     renotify: true,
-    data: { url: d.url || './index.html' }
+    data: { url: d.url || './index.html', tag: d.tag || '' }
   };
   // Pastille chiffrée sur l'icône de l'appli (iPhone 16.4+, appli installée).
   const pastille = (typeof d.badge === 'number' && self.navigator && 'setAppBadge' in self.navigator)
@@ -40,8 +40,14 @@ self.addEventListener('notificationclick', event => {
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
       // Si l'app est déjà ouverte quelque part, on la ramène au premier plan.
+      // Appli déjà ouverte : on la ramène au premier plan et on lui dit où aller
+      // (ex. « Battle terminée » → le détail de toutes les réponses).
+      const tag = (event.notification.data && event.notification.data.tag) || '';
       for(const client of list){
-        if('focus' in client) return client.focus();
+        if('focus' in client){
+          if(tag) client.postMessage({ aller: tag });
+          return client.focus();
+        }
       }
       if(self.clients.openWindow) return self.clients.openWindow(target);
     })

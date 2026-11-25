@@ -2043,3 +2043,13 @@ main#views{ flex:1; min-height:0; position:relative; }
 /* Plaisirs Intimes : relancer le partenaire (25/11/2026) */
 .pi-relance{ margin:-6px 0 14px; }
 .pi-relance .rappel-btn, .pi-limite .rappel-btn{ width:100%; margin-top:8px; color:#FFE29A; border-color: rgba(255,226,154,.5); background: rgba(0,0,0,.25); }
+
+/* ====== BATTLE : archives des Battles précédentes (25/11/2026) ====== */
+.bt-archives-titre{ margin-top:22px; }
+.bt-archive{ margin-bottom:10px; border:1px solid var(--line-2); border-radius:14px; background: var(--surface); overflow:hidden; }
+.bt-archive summary{ padding:12px 14px; cursor:pointer; font-size:14px; color: var(--cream); list-style:none; }
+.bt-archive summary::-webkit-details-marker{ display:none; }
+.bt-archive summary::after{ content:' ▾'; color: var(--muted); }
+.bt-archive[open] summary::after{ content:' ▴'; }
+.bt-archive > .bt-resultat, .bt-archive > .bt-detail{ margin-left:10px; margin-right:10px; }
+.bt-archive[open]{ padding-bottom:8px; }

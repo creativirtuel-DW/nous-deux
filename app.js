@@ -232,7 +232,17 @@ function startApp(){
   roomRef.on('value', snap => {
     state = snap.val();
     if(!state) return;
-    if(premiereFois){ premiereFois = false; pcPurgerArchives(); if(typeof rappelOuverture === 'function') rappelOuverture(); }
+    if(premiereFois){
+      premiereFois = false; pcPurgerArchives();
+      // Ouverte en touchant une notification : on va directement au bon jeu (25/11/2026).
+      let aller = '';
+      try{ aller = new URLSearchParams(location.search).get('aller') || ''; }catch(e){}
+      if(aller && typeof clocheAller === 'function'){
+        try{ history.replaceState(null, '', location.pathname); }catch(e){}
+        setTimeout(() => clocheAller(aller), 50);
+      }
+      else if(typeof rappelOuverture === 'function') rappelOuverture();
+    }
     render();
   });
 }

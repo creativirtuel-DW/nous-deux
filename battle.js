@@ -86,6 +86,7 @@ function battleGrilleComplete(questions, reponses, textes){
 }
 
 let battleActive = false;
+let battleFocusResultat = false; // ouverte depuis la notification « Battle terminée » : on montre le dernier résultat
 let battleBrouillon = null;   // réponses en cours de saisie, avant envoi
 let battleAOublier = [];      // ids à libérer : catégorie épuisée, nouveau cycle
 
@@ -226,6 +227,7 @@ function battleRepondre(reponses, mesTextes){
     if(battleReponsesConcordent(b.questions[i], i, r, propres, siennes[i], sesTextes, me.id, b.by)) communes++;
   });
   const delta = (communes * OSMOSE_PAR_REPONSE) - ((reponses.length - communes) * OSMOSE_PAR_REPONSE);
+  const hk = db.ref('rooms/' + roomCode + '/history').push().key;
 
   const updates = {};
   updates['battle/reponses/' + me.id] = reponses;
@@ -236,12 +238,23 @@ function battleRepondre(reponses, mesTextes){
   updates['osmose'] = osmoseGet() + delta;
   const gain = communes * BATTLE_PTS_PAR_COMMUNE;
   updates['battle/gain'] = gain;
+  updates['battle/archive'] = hk;
   if(gain){
     updates['scores/p1'] = ((state.scores && state.scores.p1) || 0) + gain;
     updates['scores/p2'] = ((state.scores && state.scores.p2) || 0) + gain;
   }
 
-  const hk = db.ref('rooms/' + roomCode + '/history').push().key;
+  // Archive complète (25/11/2026) : sans elle, lancer une nouvelle Battle effaçait
+  // définitivement les réponses de la précédente.
+  updates['battlesArchive/' + hk] = {
+    by: b.by, questions: b.questions,
+    reponses: Object.assign({}, b.reponses, { [me.id]: reponses }),
+    textes: Object.assign({}, b.textes || {}, { [me.id]: propres }),
+    communes, delta, gain: communes * BATTLE_PTS_PAR_COMMUNE, ts: b.ts, fin: Date.now()
+  };
+  Object.entries((state && state.battlesArchive) || {})
+    .sort((x, y) => (y[1].fin || 0) - (x[1].fin || 0)).slice(9)
+    .forEach(([k]) => { updates['battlesArchive/' + k] = null; });
   updates['history/' + hk] = {
     who: me.name, cat: 'battle',
     text: 'Battle — ' + communes + ' réponse' + (communes > 1 ? 's' : '') + ' commune' + (communes > 1 ? 's' : '') + ' sur 5',
@@ -249,8 +262,8 @@ function battleRepondre(reponses, mesTextes){
   };
 
   roomRef.update(updates).then(() => {
-    notifyPartner('⚔️ Battle terminée',
-      me.name + ' a répondu : ' + communes + '/5 en commun, ' + (delta >= 0 ? '+' : '') + delta + ' d’Osmose' + (gain ? ', +' + gain + ' pts chacun' : '') + '.', 'battle-resultat');
+    notifyPartner('⚔️ Battle terminée : ' + communes + '/5',
+      me.name + ' a répondu à ta Battle (' + (delta >= 0 ? '+' : '') + delta + ' d’Osmose' + (gain ? ', +' + gain + ' pts chacun' : '') + '). Touche pour voir toutes vos réponses !', 'battle-resultat');
   });
 }
 
@@ -268,8 +281,12 @@ function battleAnnuler(){
 
 // ---------- RENDU ----------
 function battleGrilleHTML(questions, reponses, verrouille, textes){
+  return questions.map((q, i) => battleQuestionHTML(q, i, reponses, verrouille, textes)).join('');
+}
+
+function battleQuestionHTML(q, i, reponses, verrouille, textes){
   textes = textes || {};
-  return questions.map((q, i) => `
+  return `
     <div class="bt-q">
       <div class="bt-q-num">Question ${i + 1}/5</div>
       <div class="bt-q-text">${escapeHtml(q.q)}</div>
@@ -284,7 +301,38 @@ function battleGrilleHTML(questions, reponses, verrouille, textes){
         `).join('')}
       </div>
     </div>
-  `).join('');
+  `;
+}
+
+// Une question déjà validée par celui/celle qui répond : sa réponse ET celle du lanceur (25/11/2026).
+function battleRevelationHTML(b, i, mesReponses, mesTextes){
+  const q = b.questions[i];
+  const siennes = (b.reponses && b.reponses[b.by]) || [];
+  const sesTextes = (b.textes && b.textes[b.by]) || {};
+  const ok = battleReponsesConcordent(q, i, mesReponses[i], mesTextes, siennes[i], sesTextes, me.id, b.by);
+  const memePersonne = ok && mesReponses[i] !== siennes[i] && battleDesigne(q.a[mesReponses[i]]);
+  return `
+    <div class="bt-detail ${ok ? 'ok' : 'ko'}">
+      <div class="bt-detail-q">${ok ? '💗' : '💔'} ${i + 1}/5 · ${escapeHtml(q.q)}</div>
+      <div class="bt-detail-rep"><span>Toi</span> ${escapeHtml(battleLibelle(q, mesReponses[i], mesTextes, i))}</div>
+      <div class="bt-detail-rep"><span>${escapeHtml(state.players[b.by] || '')}</span> ${escapeHtml(battleLibelle(q, siennes[i], sesTextes, i))}</div>
+      ${memePersonne ? `<div class="bt-detail-note">Vous désignez la même personne.</div>` : ''}
+    </div>`;
+}
+
+// Progression question par question, gardée sur le téléphone (on peut fermer l'appli en cours de route).
+function battleProgresLire(b){
+  try{
+    const p = JSON.parse(localStorage.getItem('nd_battle_' + b.ts) || 'null');
+    if(p && Array.isArray(p.rep) && p.rep.length === 5) return p;
+  }catch(e){}
+  return { rep: [null, null, null, null, null], txt: {}, etape: 0 };
+}
+function battleProgresEcrire(b, p){
+  try{ localStorage.setItem('nd_battle_' + b.ts, JSON.stringify(p)); }catch(e){}
+}
+function battleProgresOublier(b){
+  try{ localStorage.removeItem('nd_battle_' + b.ts); }catch(e){}
 }
 
 function battleBrancheChoix(racine, reponses, onChange, textes){
@@ -304,6 +352,50 @@ function battleBrancheChoix(racine, reponses, onChange, textes){
     });
     if(document.activeElement !== champ && champ.value === '') champ.focus();
   });
+}
+
+// Détail d'une Battle terminée (écran de résultat ET archives).
+function battleDetailHTML(b){
+  const rA = (b.reponses && b.reponses[b.by]) || [];
+  const autreId = b.by === 'p1' ? 'p2' : 'p1';
+  const rB = (b.reponses && b.reponses[autreId]) || [];
+  const tA = (b.textes && b.textes[b.by]) || {};
+  const tB = (b.textes && b.textes[autreId]) || {};
+  const nomA = state.players[b.by] || '';
+  const nomB = state.players[autreId] || '';
+  return `
+    <div class="bt-resultat ${b.delta >= 0 ? 'bon' : 'mauvais'}">
+      <div class="bt-score">${b.communes}<span>/5</span></div>
+      <div class="bt-score-label">réponse${b.communes > 1 ? 's' : ''} commune${b.communes > 1 ? 's' : ''}</div>
+      <div class="bt-delta">${b.delta >= 0 ? '+' : ''}${b.delta} d'Osmose${b.gain ? ` · +${b.gain} pts chacun` : ''}</div>
+    </div>
+    ${(b.questions || []).map((q, i) => {
+      const ok = battleReponsesConcordent(q, i, rA[i], tA, rB[i], tB, b.by, autreId);
+      const memePersonne = ok && rA[i] !== rB[i] && battleDesigne(q.a[rA[i]]);
+      return `
+        <div class="bt-detail ${ok ? 'ok' : 'ko'}">
+          <div class="bt-detail-q">${ok ? '💗' : '💔'} ${escapeHtml(q.q)}</div>
+          <div class="bt-detail-rep"><span>${escapeHtml(nomA)}</span> ${escapeHtml(battleLibelle(q, rA[i], tA, i))}</div>
+          <div class="bt-detail-rep"><span>${escapeHtml(nomB)}</span> ${escapeHtml(battleLibelle(q, rB[i], tB, i))}</div>
+          ${memePersonne ? `<div class="bt-detail-note">Vous désignez la même personne.</div>` : ''}
+        </div>
+      `;
+    }).join('')}`;
+}
+
+// Les Battles précédentes, consultables à tout moment (sauf celle affichée à l'écran).
+function battleArchivesHTML(exclureTs){
+  const l = Object.values((state && state.battlesArchive) || {})
+    .filter(a => a && a.questions && a.ts !== exclureTs)
+    .sort((x, y) => (y.fin || 0) - (x.fin || 0));
+  if(!l.length) return '';
+  return '<h3 class="pending-title bt-archives-titre">📜 Battles précédentes</h3>'
+    + l.map((a, idx) => {
+      const d = new Date(a.fin || a.ts);
+      const quand = d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' }) + ' à ' + d.getHours() + 'h' + String(d.getMinutes()).padStart(2, '0');
+      return '<details class="bt-archive"' + (battleFocusResultat && idx === 0 ? ' open' : '') + '><summary><b>' + a.communes + '/5</b> · ' + quand + ' · lancée par ' + escapeHtml(state.players[a.by] || '') + '</summary>'
+        + battleDetailHTML(a) + '</details>';
+    }).join('');
 }
 
 function renderBattle(){
@@ -357,8 +449,9 @@ function renderBattle(){
         <p class="pd-note">${mcDebloque() ? 'Chaque série mélange 1 question du quotidien, 1 souvenir et 3 plus intimes.' : 'Chaque série mélange 2 questions du quotidien, 2 souvenirs et 1 plus intime.'}</p>
       </div>
       <button class="btn-primary" id="bt-start">Lancer une Battle</button>
-    `;
+    ` + battleArchivesHTML();
     $('#bt-start').addEventListener('click', battleLancer);
+    battleAllerArchive(body);
     return;
   }
 
@@ -373,71 +466,72 @@ function renderBattle(){
         </div>
         ${rappelHTML('battle_' + b.ts, 'battle')}
         <button class="btn-ghost danger-btn" id="bt-cancel">Annuler cette Battle</button>
-      `;
+      ` + battleArchivesHTML();
       $('#bt-cancel').addEventListener('click', battleAnnuler);
+      battleAllerArchive(body);
       return;
     }
 
-    // C'est à moi de répondre
-    if(!battleBrouillon) battleBrouillon = null;
-    const mesReponses = window._btRep && window._btRep.length === 5 ? window._btRep : [null, null, null, null, null];
-    window._btRep = mesReponses;
-    if(!window._btTxt) window._btTxt = {};
-    const mesTextes = window._btTxt;
-    const complet = battleGrilleComplete(b.questions, mesReponses, mesTextes);
+    // C'est à moi de répondre : question par question, et après chaque réponse
+    // on découvre celle du lanceur avec l'animation Gagné / Perdu (25/11/2026).
+    const prog = battleProgresLire(b);
+    const nomLanceur = state.players[b.by] || '';
+    const i = Math.min(prog.etape, 4);
+    const fini = prog.etape >= 5;
+    const libreOk = prog.rep[i] !== null && (!battleEstLibre(b.questions[i].a[prog.rep[i]]) || !!(prog.txt[String(i)] || '').trim());
     body.innerHTML = `
       <div class="jds-intro">
         <span class="jds-emoji">⚔️</span>
-        <h3 class="jds-title">${escapeHtml(state.players[b.by] || '')} te défie</h3>
-        <p class="jds-sub">Réponds aux mêmes 5 questions. Essaie de tomber juste : chaque réponse identique vaut <strong>+10 d'Osmose</strong> et <strong>+${BATTLE_PTS_PAR_COMMUNE} pts chacun</strong>.</p>
+        <h3 class="jds-title">${escapeHtml(nomLanceur)} te défie</h3>
+        <p class="jds-sub">Réponds question par question : après chacune, tu découvres la réponse de ${escapeHtml(nomLanceur)}. Chaque réponse identique vaut <strong>+10 d'Osmose</strong> et <strong>+${BATTLE_PTS_PAR_COMMUNE} pts chacun</strong>.</p>
       </div>
-      ${battleGrilleHTML(b.questions, mesReponses, false, mesTextes)}
-      <button class="btn-primary" id="bt-answer"${complet ? '' : ' disabled'}>
-        ${complet ? 'Valider mes réponses' : 'Réponds aux 5 questions'}
+      ${b.questions.slice(0, prog.etape).map((q, k) => battleRevelationHTML(b, k, prog.rep, prog.txt)).join('')}
+      ${fini ? '' : battleQuestionHTML(b.questions[i], i, prog.rep, false, prog.txt)}
+      <button class="btn-primary" id="bt-answer"${fini || libreOk ? '' : ' disabled'}>
+        ${fini ? 'Voir le résultat' : libreOk ? 'Valider et découvrir sa réponse' : 'Choisis ta réponse'}
       </button>
-    `;
-    battleBrancheChoix(body, mesReponses, (saisie) => {
-      if(saisie) battleMajBouton('#bt-answer', b.questions, mesReponses, mesTextes, null);
+    ` + battleArchivesHTML();
+    if(!fini) battleBrancheChoix(body, prog.rep, (saisie) => {
+      battleProgresEcrire(b, prog);
+      if(saisie){
+        const btn = $('#bt-answer');
+        const ok = !!(prog.txt[String(i)] || '').trim();
+        if(btn){ btn.disabled = !ok; btn.textContent = ok ? 'Valider et découvrir sa réponse' : 'Choisis ta réponse'; }
+      }
       else renderBattle();
-    }, mesTextes);
+    }, prog.txt);
     $('#bt-answer').addEventListener('click', () => {
-      const r = window._btRep, t = window._btTxt;
-      window._btRep = null; window._btTxt = null;
-      battleRepondre(r, t);
+      if(fini){ battleRepondre(prog.rep, prog.txt); battleProgresOublier(b); return; }
+      const siennes = (b.reponses && b.reponses[b.by]) || [];
+      const ok = battleReponsesConcordent(b.questions[i], i, prog.rep[i], prog.txt, siennes[i], (b.textes && b.textes[b.by]) || {}, me.id, b.by);
+      prog.etape = i + 1;
+      battleProgresEcrire(b, prog);
+      if(typeof synchroAnimer === 'function')
+        synchroAnimer(ok, ok ? 1 : -1, b.questions[i].q, ok ? '+' + OSMOSE_PAR_REPONSE + ' d’Osmose · +' + BATTLE_PTS_PAR_COMMUNE + ' pts chacun' : '−' + OSMOSE_PAR_REPONSE + ' d’Osmose');
+      if(prog.etape >= 5){ battleRepondre(prog.rep, prog.txt); battleProgresOublier(b); return; }
+      renderBattle();
+      const der = body.querySelectorAll('.bt-detail');
+      if(der.length) der[der.length - 1].scrollIntoView({ block: 'start', behavior: 'smooth' });
     });
+    battleAllerArchive(body);
     return;
   }
 
   // ---------- RÉSULTAT ----------
-  const rA = b.reponses[b.by] || [];
-  const autreId = b.by === 'p1' ? 'p2' : 'p1';
-  const rB = b.reponses[autreId] || [];
-  const tA = (b.textes && b.textes[b.by]) || {};
-  const tB = (b.textes && b.textes[autreId]) || {};
-  const nomA = state.players[b.by] || '';
-  const nomB = state.players[autreId] || '';
-
-  body.innerHTML = `
-    <div class="bt-resultat ${b.delta >= 0 ? 'bon' : 'mauvais'}">
-      <div class="bt-score">${b.communes}<span>/5</span></div>
-      <div class="bt-score-label">réponse${b.communes > 1 ? 's' : ''} commune${b.communes > 1 ? 's' : ''}</div>
-      <div class="bt-delta">${b.delta >= 0 ? '+' : ''}${b.delta} d'Osmose${b.gain ? ` · +${b.gain} pts chacun` : ''}</div>
-    </div>
-    ${b.questions.map((q, i) => {
-      const ok = battleReponsesConcordent(q, i, rA[i], tA, rB[i], tB, b.by, autreId);
-      const memePersonne = ok && rA[i] !== rB[i] && battleDesigne(q.a[rA[i]]);
-      return `
-        <div class="bt-detail ${ok ? 'ok' : 'ko'}">
-          <div class="bt-detail-q">${ok ? '💗' : '💔'} ${escapeHtml(q.q)}</div>
-          <div class="bt-detail-rep"><span>${escapeHtml(nomA)}</span> ${escapeHtml(battleLibelle(q, rA[i], tA, i))}</div>
-          <div class="bt-detail-rep"><span>${escapeHtml(nomB)}</span> ${escapeHtml(battleLibelle(q, rB[i], tB, i))}</div>
-          ${memePersonne ? `<div class="bt-detail-note">Vous désignez la même personne.</div>` : ''}
-        </div>
-      `;
-    }).join('')}
+  body.innerHTML = battleDetailHTML(b) + `
     <button class="btn-primary" id="bt-new">⚔️ Nouvelle Battle</button>
-  `;
+  ` + battleArchivesHTML(b.ts);
   $('#bt-new').addEventListener('click', battleNouvelle);
+  battleFocusResultat = false;
+}
+
+// Ouverte depuis « Battle terminée » alors qu'une autre Battle a déjà été relancée :
+// on déplie le dernier résultat archivé et on y descend.
+function battleAllerArchive(body){
+  if(!battleFocusResultat) return;
+  battleFocusResultat = false;
+  const a = body.querySelector('.bt-archive');
+  if(a) setTimeout(() => a.scrollIntoView({ block: 'start', behavior: 'smooth' }), 60);
 }
 
 // Rafraîchit le seul bouton d'envoi, pour ne pas reconstruire la grille
